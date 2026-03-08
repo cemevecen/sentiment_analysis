@@ -68,9 +68,16 @@ def is_valid_comment(text):
     if re.search(r"version\s+\d+(\.\d+)*", sl):
         return False
         
-    # 5. Date Patterns (e.g. "Mar 2, 2026", "21 Feb 2026", "21.05.2025")
-    # Only block if the line is relatively short (metadata lines)
-    if len(s) < 40:
+    # 5. Date Patterns & Store Headers (e.g. "Mar 2, 2026", "21 Feb 2026")
+    # Also block lines starting with Month names (likely nickname/date rows in copy-paste)
+    months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+              "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık"]
+    
+    first_word = sl.split()[0].replace('.', '').replace(',', '') if sl.split() else ""
+    if first_word in months and len(s) < 60:
+        return False
+
+    if len(s) < 45:
         date_regex = r"(\d{1,4}[-./]\d{1,2}[-./]\d{1,4})|((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4})"
         if re.search(date_regex, s, re.IGNORECASE):
             return False
@@ -437,7 +444,7 @@ with tab1:
         raw_lines = text_input.split('\n')
         processed_comments = []
         
-        # Date regex for "Jan 23, 2026 - Cagatay Yalcin"
+        # Date regex for "Jan 23, 2026 - User"
         store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
         
         for line in raw_lines:
@@ -446,8 +453,8 @@ with tab1:
             
             # Detect Store Metadata (Date - User)
             if re.search(store_meta_regex, l, re.IGNORECASE):
-                # If we have a previous line in progress, it's likely a TITLE. Remove it.
-                if processed_comments and len(processed_comments[-1]["text"]) < 80:
+                # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
+                if processed_comments and len(processed_comments[-1]["text"]) < 85:
                     processed_comments.pop()
                 continue # Skip the date line too
                 
