@@ -642,11 +642,10 @@ if st.button("Analizini Yap", use_container_width=True):
                 "Tarih": date,
                 "Puan": entry.get('rating')
             })
+            remaining = len(comments_to_analyze) - (i + 1)
             if remaining == 0:
                 ticker_placeholder.empty() # Clear ticker on finish
             progress_bar.progress((i + 1) / len(comments_to_analyze))
-
-            remaining = len(comments_to_analyze) - (i + 1)
             if remaining > 0:
                 time.sleep(DELAY_SECS)
                 update_time(i + 1, len(comments_to_analyze), start_time)
