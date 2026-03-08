@@ -775,6 +775,29 @@ if "bulk_results" in st.session_state:
             st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum)")
             
         st.write("Aşağıdaki sekmelerden tüm yorumları tek tek inceleyebilir, grafik üzerinde tarihsel değişimleri takip edebilirsiniz.")
+
+    # NEW: Star Rating Trend Chart
+    if "Puan" in df.columns and df["Puan"].notnull().any():
+        st.markdown("---")
+        st.write("#### ⭐ Puan Trendi (Haftalık Ortalama)")
+        df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
+        try:
+            df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce')
+            df_puan = df_puan.dropna(subset=["Puan_val"])
+            if not df_puan.empty:
+                df_puan["Tarih"] = pd.to_datetime(df_puan["Tarih"])
+                df_puan['Hafta'] = df_puan['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
+                star_trend = df_puan.groupby('Hafta')['Puan_val'].mean().reset_index()
+                
+                fig_stars = px.bar(star_trend, x="Hafta", y="Puan_val", 
+                                  range_y=[0, 5],
+                                  labels={"Hafta": "Hafta", "Puan_val": "Ort. Puan"},
+                                  color_discrete_sequence=['#FBBF24'])
+                fig_stars.update_layout(height=250, margin={"t": 30, "b": 20, "l": 10, "r": 10},
+                                       xaxis_title="Zaman", yaxis_title="Ortalama Yıldız")
+                st.plotly_chart(fig_stars, use_container_width=True)
+        except: pass
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Chart & List Logic
