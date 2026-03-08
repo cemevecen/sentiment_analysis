@@ -1152,10 +1152,15 @@ if "bulk_results" in st.session_state:
                     date_tag = f"Tarih: {d.strftime('%d-%m-%Y')}"
                 except: pass
 
+            # Map sentiment to color dot
+            dot_colors = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
+            s_color = dot_colors.get(sentiment, "#94a3b8")
+            sentiment_indicator = f'<span style="display: inline-block; width: 10px; height: 10px; background-color: {s_color}; border-radius: 50%; margin: 0 4px; vertical-align: middle;"></span>'
+
             st.markdown(f"""
             <div class="{cls}">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment}{extra_info}</span>
+                    <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment_indicator}{extra_info}</span>
                     <span style="font-size: 0.8em; color: #94a3b8;">{date_tag}</span>
                 </div>
                 <div style="color: #1E293B; line-height: 1.5;">{row['Yorum']}</div>
