@@ -373,6 +373,11 @@ st.markdown("""
         font-weight: 600;
         letter-spacing: 0.5px;
     }
+
+    /* Reduce font size of st.metric values (Toplam Kelime, Ort. Boy) */
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+    }
     
     /* Plotly Legend Pagination (Text and Arrows) */
     .legendpaging text {
