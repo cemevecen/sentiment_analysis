@@ -58,12 +58,16 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-3-flash-preview')
+        # Using a more stable and widely available model name
+        model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analyze the sentiment of the following text with HIGH PRECISION.
-        Return ONLY a JSON response in this format:
-        {{"positive": score, "negative": score, "neutral": score}}
-        Use high-precision floats (e.g., 0.8234). The SUM must be EXACTLY 1.0.
+        Analyze the sentiment of the following Turkish text with EXTREME PRECISION.
+        
+        CRITICAL RULES:
+        1. If the text describes app crashes, freezes, or bugs (e.g. 'donuyor', 'kasıyor', 'açılmıyor'), it is HEAVILY NEGATIVE.
+        2. Return ONLY a JSON response in this exact format:
+           {{"positive": score, "negative": score, "neutral": score}}
+        3. Use high-precision floats. The SUM must be EXACTLY 1.0.
         
         Text: "{text}"
         """
@@ -72,7 +76,6 @@ def get_gemini_sentiment(text):
         match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             data = json.loads(match.group())
-            # Ensure all keys exist and sum to 1.0
             p = float(data.get("positive", 0))
             n = float(data.get("negative", 0))
             neu = float(data.get("neutral", 0))
@@ -87,28 +90,39 @@ def get_gemini_sentiment(text):
 def heuristic_analysis(text):
     text_lower = text.lower()
     # Expanded word list for more granularity
-    pos_list = ["iyi", "güzel", "harika", "sevindim", "mutlu", "aşk", "seviyorum", "başarılı", "hoş", "muhteşem", "süper", "kaliteli"]
-    neg_list = ["kötü", "berbat", "üzgün", "nefret", "başarısız", "korkunç", "çirkin", "zayıf", "yavaş", "bozuk", "rezalet"]
+    pos_list = [
+        "iyi", "güzel", "harika", "sevindim", "mutlu", "aşk", "seviyorum", 
+        "başarılı", "hoş", "muhteşem", "süper", "kaliteli", "mükemmel", 
+        "beğendim", "hızlı", "basit", "kolay", "memnun"
+    ]
+    neg_list = [
+        "kötü", "berbat", "üzgün", "nefret", "başarısız", "korkunç", "çirkin", 
+        "zayıf", "yavaş", "bozuk", "rezalet", "donuyor", "kasıyor", "açılmıyor", 
+        "hata", "sorun", "çalışmıyor", "berbat", "iğrenç", "beğenmedim", "sil", 
+        "çöp", "vakit kaybı", "donma", "kasılma"
+    ]
     
     pos_count = sum(text_lower.count(word) for word in pos_list)
     neg_count = sum(text_lower.count(word) for word in neg_list)
     
     total_words = len(text_lower.split())
     if total_words == 0:
-        return {"positive": 0.0, "negative": 0.0, "neutral": 1.0}
+        return {"positive": 0.0, "negative": 0.0, "neutral": 1.0, "method": "Heuristic"}
     
-    # Granular calculation based on word density
-    pos_ratio = pos_count / total_words
-    neg_ratio = neg_count / total_words
-    
-    # Scale to 0-1 range with a more "float-heavy" distribution
-    raw_score = 0.5 + (pos_ratio - neg_ratio) * 2.0
-    raw_score = max(0.0, min(1.0, raw_score))
-    
-    # Add minor "fuzziness" to make it feel like a real float analysis
-    positive = raw_score * 0.95
-    negative = (1.0 - raw_score) * 0.95
-    neutral = 1.0 - (positive + negative)
+    # Calculate impact weights
+    if pos_count > neg_count:
+        positive = 0.7 + (pos_count / (pos_count + neg_count + 1)) * 0.2
+        negative = 0.05
+        neutral = 1.0 - positive - negative
+    elif neg_count > pos_count:
+        negative = 0.7 + (neg_count / (pos_count + neg_count + 1)) * 0.2
+        positive = 0.05
+        neutral = 1.0 - negative - positive
+    else:
+        # If no keywords found, favor Neutral
+        positive = 0.15
+        negative = 0.15
+        neutral = 0.7
     
     return {"positive": positive, "negative": negative, "neutral": neutral, "method": "Heuristic"}
 
