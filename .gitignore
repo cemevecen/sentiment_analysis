@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Streamlit
+# Keep config, ignore secrets
+.streamlit/*
+!.streamlit/config.toml
+
+# OS/IDEs
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+*.log
