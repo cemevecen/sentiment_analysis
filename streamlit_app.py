@@ -734,9 +734,17 @@ if "bulk_results" in st.session_state:
             if highlight:
                 cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
             
+            # Format date
+            date_info = ""
+            if "Tarih" in row and pd.notnull(row["Tarih"]):
+                try:
+                    d = pd.to_datetime(row["Tarih"])
+                    date_info = f" | 📅 {d.strftime('%d-%m-%Y')}"
+                except: pass
+
             st.markdown(f"""
             <div class="{cls}">
-                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}</span><br>
+                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}{date_info}</span><br>
                 {row['Yorum']}
             </div>
             """, unsafe_allow_html=True)
