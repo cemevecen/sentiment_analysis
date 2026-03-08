@@ -280,11 +280,20 @@ st.markdown("""
         margin-bottom: 0px !important;
     }
 
-    /* Captions */
+    /* Captions & Legend Styling */
     .time-caption {
         color: #6366f1;
         font-weight: 600;
         letter-spacing: 0.5px;
+    }
+    
+    /* Plotly Legend Pagination (Text and Arrows) */
+    .legendpaging text {
+        fill: #000000 !important;
+    }
+    .legendpaging path {
+        fill: #000000 !important;
+        stroke: #000000 !important;
     }
 
     /* Result Cards */
