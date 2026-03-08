@@ -38,19 +38,170 @@ if API_KEY:
 else:
     HAS_GEMINI = False
 
-# Header Design
-st.title("🧠 AI Yorum Analizi")
+# --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
-Girdiğiniz yorumların duygu durumunu (Olumlu/Olumsuz/İstek-Görüş) yapay zeka analizi kullanarak çözümler.
-""")
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Gabarito:wght@400;700&display=swap');
 
+    /* Global Overrides */
+    .stApp {
+        background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 100%);
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Header Card */
+    .header-container {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%);
+        border: 1px solid rgba(124, 58, 237, 0.3);
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 40px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .header-title {
+        font-family: 'Gabarito', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #a78bfa, #f472b6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 20px;
+    }
+    .header-desc {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Custom Container */
+    .glass-card {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    /* Buttons */
+    .stButton>button {
+        background: linear-gradient(90deg, #7c3aed 0%, #ec4899 100%) !important;
+        border: none !important;
+        color: white !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        font-size: 1.1rem !important;
+        height: auto !important;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.5) !important;
+        filter: brightness(1.1);
+    }
+
+    /* Inputs & Toggles */
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+        color: white !important;
+    }
+    
+    /* Radio Buttons */
+    [data-testid="stRadio"] label {
+        color: #e2e8f0 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Custom divider */
+    .fancy-divider {
+        height: 2px;
+        background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.5), transparent);
+        margin: 40px 0;
+    }
+
+    /* Captions */
+    .time-caption {
+        color: #6366f1;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    /* Result Cards */
+    .result-card {
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-right: 4px solid #334155;
+        transition: all 0.2s ease;
+    }
+    .result-card:hover {
+        background: rgba(30, 41, 59, 0.8);
+        border-right-width: 6px;
+    }
+    .pos-border { border-right-color: #10b981 !important; }
+    .neg-border { border-right-color: #ef4444 !important; }
+    .neu-border { border-right-color: #3b82f6 !important; }
+
+    /* Custom Metric Cards */
+    .metric-container {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+    .metric-card {
+        flex: 1;
+        min-width: 150px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        backdrop-filter: blur(5px);
+    }
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Custom Header
+st.markdown(f"""
+    <div class="header-container">
+        <div class="header-title">🧠 AI Yorum Analizi</div>
+        <div class="header-desc">
+            En gelişmiş yapay zeka modelleri ile yorumlarınızdaki derin duyguları ve istekleri saniyeler içinde çözümler.
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 # Analysis Mode Toggle
-is_bulk = st.checkbox("Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
+is_bulk = st.checkbox("🔄 Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın / Dosya yükleyin)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Input Section
 comments_to_analyze = []
 
 if is_bulk:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
     
     with tab1:
@@ -61,7 +212,7 @@ if is_bulk:
         )
         if text_input.strip():
             raw_lines = text_input.split('\n')
-            comments_to_analyze = [line.strip() for line in raw_lines if len(line.strip()) > 2]
+            comments_to_analyze = [{"text": line.strip()} for line in raw_lines if len(line.strip()) > 2]
             
     with tab2:
         uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
@@ -74,9 +225,8 @@ if is_bulk:
                         for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
                             try:
                                 uploaded_file.seek(0)
-                                # Automatic delimiter detection with fallback to common ones
                                 df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
-                                if len(df_upload.columns) <= 1: # Delimiter detection failed
+                                if len(df_upload.columns) <= 1:
                                     uploaded_file.seek(0)
                                     df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=';')
                                 break
@@ -85,62 +235,48 @@ if is_bulk:
                         df_upload = pd.read_excel(uploaded_file)
                     
                     if df_upload is not None:
-                        st.write(f"📂 **Dosya İşleniyor:** {uploaded_file.name}")
+                        st.info(f"📁 **Dosya İşleniyor:** {uploaded_file.name}")
                         
-                        # --- Enhanced Smart Column Detection ---
-                        # 1. Target keywords
-                        target_keys = ["review text", "yorum metni", "yorum", "review", "text", "metin", "content", "body"]
-                        # 2. Avoidance keywords
-                        avoid_keys = ["language", "dil", "id", "name", "isim", "code", "vers", "date", "tarih", "star", "rating", "device", "millis", "epoch", "app"]
+                        # Smart Column Detection
+                        target_keys = ["review", "yorum", "text", "metin", "content", "body"]
+                        avoid_keys = ["id", "name", "isim", "name", "rating", "star", "vers", "date", "tarih", "saat"]
                         
                         scores = []
                         for col in df_upload.columns:
-                            col_lower = col.lower()
+                            col_l = col.lower()
                             score = 0
-                            # Keyword matching
-                            if any(tk in col_lower for tk in target_keys): score += 10
-                            if any(ak in col_lower for ak in avoid_keys): score -= 15
+                            if any(k in col_l for k in target_keys): score += 10
+                            if any(k in col_l for k in avoid_keys): score -= 15
                             
-                            # Content estimation (Check first 5 rows)
                             sample = df_upload[col].head(5).astype(str).tolist()
-                            avg_len = sum(len(s) for s in sample) / len(sample) if sample else 0
-                            if avg_len > 15: score += 10 # Likely a real sentence/comment
-                            elif avg_len < 5: score -= 10 # Likely short codes or names
-                            
+                            avg_len = sum(len(s) for s in sample) / 5 if sample else 0
+                            if avg_len > 15: score += 10
                             scores.append((score, col))
                         
-                        # Get the column with the highest score
                         scores.sort(key=lambda x: x[0], reverse=True)
                         best_col = scores[0][1] if scores else df_upload.columns[0]
-                        default_index = list(df_upload.columns).index(best_col)
-
-                        # --- Date Column Detection (Avoiding numeric ID/millis columns) ---
+                        
+                        # Date Column Detection
                         date_keys = ["date", "time", "tarih", "saat", "submit"]
                         date_col = None
-                        potential_date_cols = [c for c in df_upload.columns if any(dk in c.lower() for dk in date_keys) and "millis" not in c.lower() and "epoch" not in c.lower()]
-                        
-                        if potential_date_cols:
-                            # Prefer 'date' or 'tarih' keywords
-                            date_col = potential_date_cols[0]
-                            for pc in potential_date_cols:
-                                if "date" in pc.lower() or "tarih" in pc.lower():
-                                    date_col = pc
-                                    break
-                        
+                        for col in df_upload.columns:
+                            if any(dk in col.lower() for dk in date_keys):
+                                date_col = col
+                                break
+
                         col_name = st.selectbox(
-                            f"Analiz edilecek sütun ({uploaded_file.name}):", 
-                            df_upload.columns, 
-                            index=default_index,
+                            f"Analiz edilecek sütun ({uploaded_file.name}):",
+                            options=df_upload.columns,
+                            index=list(df_upload.columns).index(best_col),
                             key=f"col_{uploaded_file.name}"
                         )
                         
                         if col_name:
+                            # Pre-filter for valid comments in this specific file
                             def is_valid_comment(text):
-                                text_str = str(text).strip()
-                                text_lower = text_str.lower()
-                                
-                                if len(text_str) < 4: return False
-                                if text_lower in ['nan', 'null', 'none', 'tr', 'en']: return False
+                                s = str(text).strip()
+                                if len(s) < 4: return False
+                                if s.lower() in ['nan', 'null', 'none']: return False
                                 
                                 # 3. Developer/Owner Reply Patterns (Professional/Turkish Store Language)
                                 reply_patterns = [
@@ -154,80 +290,86 @@ if is_bulk:
                                 ]
                                 
                                 # Highly aggressive check: if any signature pattern exists, it's a dev reply
-                                if any(rp in text_lower for rp in reply_patterns):
+                                if any(rp in s.lower() for rp in reply_patterns):
                                     return False
                                 
                                 # Filter formal addresses "Ad Soyad Bey/Hanım,"
-                                if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', text_lower):
+                                if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', s.lower()):
                                     return False
                                 
                                 # 4. Metadata/Numeric IDs
-                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', text_str): return False
-                                if text_str.replace('.', '').replace('-', '').isdigit(): return False
-                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text_str): return False
+                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', s): return False
+                                if s.replace('.', '').replace('-', '').isdigit(): return False
+                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', s): return False
                                 
                                 return True
 
-                            # Store text and date together
-                            for idx, row in df_upload.iterrows():
-                                if col_name in row:
-                                    val = row[col_name]
-                                    if pd.notnull(val) and is_valid_comment(val):
-                                        entry = {"text": str(val).strip()}
-                                        if date_col:
-                                            # Robust parsing & Strict bounds
-                                            dt_val = row[date_col]
-                                            # Ensure we don't parse large integers as dates
-                                            if isinstance(dt_val, (int, float)):
-                                                parsed_date = pd.NaT
-                                            else:
-                                                # Convert to datetime and strip timezone for safe comparison
-                                                parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
-                                                if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
-                                                    parsed_date = parsed_date.tz_localize(None)
-                                            
-                                            # Limit: Up to Today (Mar 8, 2026) - Naive for safe comparison
-                                            today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
-                                            start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
-                                            
-                                            if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
-                                                entry["date"] = parsed_date
-                                        all_comments.append(entry)
-                            
+                            for _, row in df_upload.iterrows():
+                                if pd.notnull(row[col_name]) and is_valid_comment(row[col_name]):
+                                    entry = {"text": str(row[col_name]).strip()}
+                                    if date_col and pd.notnull(row[date_col]):
+                                        # Robust parsing & Strict bounds
+                                        dt_val = row[date_col]
+                                        # Ensure we don't parse large integers as dates
+                                        if isinstance(dt_val, (int, float)):
+                                            parsed_date = pd.NaT
+                                        else:
+                                            # Convert to datetime and strip timezone for safe comparison
+                                            parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                            if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
+                                                parsed_date = parsed_date.tz_localize(None)
+                                        
+                                        # Limit: Up to Today (Mar 8, 2026) - Naive for safe comparison
+                                        today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
+                                        start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
+                                        
+                                        if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
+                                            entry["date"] = parsed_date
+                                    all_comments.append(entry)
+                                    
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
                                 st.write([c["text"] for c in all_comments[-5:]] if all_comments else [])
+                                
                 except Exception as e:
                     st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
             
             if all_comments:
                 comments_to_analyze = all_comments
                 st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
+    st.markdown('</div>', unsafe_allow_html=True)
 else:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Güzel uygulama. Elinize sağlık!")
     if text_input:
-        comments_to_analyze = [{"text": text_input}]
+        comments_to_analyze = [{"text": text_input.strip()}]
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
 if is_bulk and comments_to_analyze:
-    st.markdown("---")
-    n = len(comments_to_analyze)
+    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### ⚙️ Analiz Yapılandırması")
+    
+    with st.container():
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        n = len(comments_to_analyze)
 
-    def fmt_time(secs):
-        m, s = divmod(secs, 60)
-        return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
+        def fmt_time(secs):
+            m, s = divmod(secs, 60)
+            return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
 
-    mode_idx = st.radio(
-        "Analiz hızı:",
-        options=[0, 1],
-        format_func=lambda x: ["Hızlı", "Yavaş"][x],
-        captions=[
-            f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
-            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
-        ],
-        horizontal=True,
-        key="analysis_mode"
-    )
-    st.markdown("")
+        mode_idx = st.radio(
+            "Analiz hızı ve doğruluk dengesini seçin:",
+            options=[0, 1],
+            format_func=lambda x: ["🚀 Hızlı", "🎯 Yavaş (Daha Tutarlı)"][x],
+            captions=[
+                f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
+                f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
+            ],
+            horizontal=True,
+            key="analysis_mode"
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 
@@ -427,36 +569,139 @@ if is_bulk and "bulk_results" in st.session_state:
     df = pd.DataFrame(st.session_state.bulk_results)
     counts = df["Baskın Duygu"].value_counts()
     
-    st.divider()
-    st.subheader("📊 Etkileşimli Analiz Paneli")
-    
-    # Styling
     st.markdown("""
     <style>
     .neon-pos { border: 1px solid #2ecc71; box-shadow: 0 0 3px #2ecc71; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(46, 204, 113, 0.05); }
     .neon-neg { border: 1px solid #e74c3c; box-shadow: 0 0 3px #e74c3c; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(231, 76, 60, 0.05); }
     .neon-neu { border: 1px solid #3498db; box-shadow: 0 0 3px #3498db; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(52, 152, 219, 0.05); }
     .normal-card { border: 1px solid #333; padding: 12px; border-radius: 8px; margin: 8px 0; background: #1e1e1e; opacity: 0.9; }
+    .fancy-divider {
+        height: 2px;
+        background: linear-gradient(to right, #3b82f6, #a78bfa, #f43f5e);
+        border-radius: 1px;
+        margin: 2rem 0;
+    }
+    .metric-container {
+        display: flex;
+        justify-content: space-around;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    .metric-card {
+        background: rgba(30, 41, 59, 0.7); /* slate-800 with transparency */
+        border: 1px solid rgba(71, 85, 105, 0.5); /* slate-600 with transparency */
+        border-radius: 12px;
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+        flex: 1;
+        min-width: 150px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease-in-out;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .metric-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        line-height: 1.2;
+    }
+    .metric-label {
+        font-size: 0.9em;
+        color: #94a3b8; /* slate-400 */
+        margin-top: 0.3rem;
+    }
+    .glass-card {
+        background: rgba(30, 41, 59, 0.6); /* slate-800 with transparency */
+        border: 1px solid rgba(71, 85, 105, 0.4); /* slate-600 with transparency */
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        backdrop-filter: blur(15px);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        color: #e2e8f0; /* slate-200 */
+    }
+    .sentiment-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.85em;
+        margin-right: 8px;
+    }
+    .sentiment-indicator.positive {
+        background-color: rgba(16, 185, 129, 0.2); /* emerald-500 */
+        color: #10b981;
+    }
+    .sentiment-indicator.negative {
+        background-color: rgba(244, 63, 94, 0.2); /* rose-500 */
+        color: #f43f5e;
+    }
+    .sentiment-indicator.neutral {
+        background-color: rgba(59, 130, 246, 0.2); /* blue-500 */
+        color: #3b82f6;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    col_pie, col_summary = st.columns([1, 1.5])
+    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### 📊 Analiz Özeti")
+    
+    # Custom Metric Cards
+    m_olumlu = counts.get("Olumlu", 0)
+    m_olumsuz = counts.get("Olumsuz", 0)
+    m_istek = counts.get("İstek/Görüş", 0)
+    
+    st.markdown(f"""
+    <div class="metric-container">
+        <div class="metric-card">
+            <div class="metric-value" style="color: #10b981;">{m_olumlu}</div>
+            <div class="metric-label">Olumlu</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #f43f5e;">{m_olumsuz}</div>
+            <div class="metric-label">Olumsuz</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #3b82f6;">{m_istek}</div>
+            <div class="metric-label">İstek / Görüş</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #a78bfa;">{len(df)}</div>
+            <div class="metric-label">Toplam Analiz</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    col_pie, col_summary = st.columns([1, 1])
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        fig_pie = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
-                      title="Genel Dağılım",
-                      color='Duygu', color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'})
-        fig_pie.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent')
-        fig_pie.update_layout(height=300, showlegend=True, 
+        fig_pie = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.6,
+                      color='Duygu', color_discrete_map={'Olumlu':'#10b981', 'Olumsuz':'#f43f5e', 'İstek/Görüş':'#3b82f6'})
+        fig_pie.update_traces(textinfo='percent', textfont_size=14, marker=dict(line=dict(color='#0f172a', width=2)))
+        fig_pie.update_layout(height=350, showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                             font=dict(color='#94a3b8'),
                              legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
-                             margin={"t": 40, "b": 40, "l": 10, "r": 10})
+                             margin={"t": 0, "b": 0, "l": 0, "r": 0})
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_summary:
-        st.write("#### 📈 Hızlı Özet")
-        st.write(f"Bugün toplam **{len(df)}** yorum incelendi. En baskın duygu: **{counts.idxmax()}**.")
-        st.info("Aşağıdaki sekmeleri kullanarak hem yorumları hem de tarihsel gelişimlerini detaylıca inceleyebilirsiniz.")
+        st.write("#### � Yapay Zeka Görüsü")
+        if counts.idxmax() == "Olumlu":
+            st.success(f"Topluluk genel olarak **Olumlu** bir tavır sergiliyor. ({m_olumlu} yorum)")
+        elif counts.idxmax() == "Olumsuz":
+            st.error(f"Dikkat çeken **Olumsuz** bir eğilim var. ({m_olumsuz} yorum)")
+        else:
+            st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum)")
+            
+        st.write("Aşağıdaki sekmelerden tüm yorumları tek tek inceleyebilir, grafik üzerinde tarihsel değişimleri takip edebilirsiniz.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Chart & List Logic
     def render_trend_chart(filtered_df, key, title_suffix=""):
