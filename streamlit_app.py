@@ -275,23 +275,29 @@ if is_bulk and "bulk_results" in st.session_state:
     </style>
     """, unsafe_allow_html=True)
 
-    col_stats, col_pie = st.columns([1, 1])
-    with col_stats:
-        st.write("#### 📊 Genel Dağılım")
-        st.write(f"**Pozitif:** {counts.get('Pozitif', 0)} | **Nötr:** {counts.get('Nötr', 0)} | **Negatif:** {counts.get('Negatif', 0)}")
-    
+    _, col_pie, _ = st.columns([1, 2, 1])
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
         fig = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
                      color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
         fig.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent+label')
-        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=220, showlegend=False)
+        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
     # Comments List
     st.write("### 💬 Yorum Listesi")
     
-    tab_all, tab_pos, tab_neg, tab_neu = st.tabs(["🌐 Tümü", "🟢 Pozitif", "🔴 Negatif", "🔵 Nötr"])
+    t_pos = counts.get('Pozitif', 0)
+    t_neg = counts.get('Negatif', 0)
+    t_neu = counts.get('Nötr', 0)
+    t_all = len(df)
+
+    tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
+        f"🌐 Tümü ({t_all})", 
+        f"🟢 Pozitif ({t_pos})", 
+        f"🔴 Negatif ({t_neg})", 
+        f"🔵 Nötr ({t_neu})"
+    ])
     
     def display_comments(filtered_df, highlight=True):
         if filtered_df.empty:
