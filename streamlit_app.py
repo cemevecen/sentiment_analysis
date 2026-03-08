@@ -311,7 +311,7 @@ if is_bulk and "bulk_results" in st.session_state:
             fig_trend = px.area(trend_data, x="Gün", y="Adet", color="Baskın Duygu",
                                title="Zaman İçinde Duygu Gelişimi (Tarihsel)",
                                color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
-                               line_shape="smooth")
+                               line_shape="spline")
             
             fig_trend.update_layout(height=320, margin={"t": 50, "b": 50, "l": 10, "r": 10},
                                    legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
