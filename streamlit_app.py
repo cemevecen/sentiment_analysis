@@ -357,12 +357,13 @@ if is_bulk and "bulk_results" in st.session_state:
             df_dates['Hafta'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
             trend_data = df_dates.groupby(['Hafta', "Baskın Duygu"]).size().reset_index(name='Adet')
             
-            # Custom data for selection processing
+            # Custom data for robust selection processing (includes exact Hafta and Sentiment)
+            trend_data['Hafta_str'] = trend_data['Hafta'].astype(str)
             fig_trend = px.bar(trend_data, x="Hafta", y="Adet", color="Baskın Duygu",
                                title=f"Haftalık Duygu Dağılımı {title_suffix}",
                                color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
                                barmode='group',
-                               custom_data=["Baskın Duygu"])
+                               custom_data=["Hafta_str", "Baskın Duygu"])
             
             fig_trend.update_layout(height=280, margin={"t": 50, "b": 20, "l": 10, "r": 10},
                                    legend={"orientation": "h", "yanchor": "bottom", "y": -0.4, "xanchor": "center", "x": 0.5},
@@ -374,16 +375,16 @@ if is_bulk and "bulk_results" in st.session_state:
             
             if selection and "selection" in selection and selection["selection"]["points"]:
                 point = selection["selection"]["points"][0]
-                # Seçilen tarihi hafta başlangıcına normalize et (Plotly farklı gün döndürebilir)
-                raw_x = pd.to_datetime(point["x"]).tz_localize(None)
-                sel_week = raw_x.to_period('W').start_time
-                sel_sentiment = str(point["customdata"][0]).strip()
+                # Use Hafta directly from custom_data for 100% precision
+                sel_week_str = point["customdata"][0]
+                sel_week = pd.to_datetime(sel_week_str).tz_localize(None)
+                sel_sentiment = str(point["customdata"][1]).strip()
                 
-                # Dataframe'deki haftaları da normalize et (Garanti olması için)
-                df_dates['Hafta_filter'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None).dt.to_period('W').apply(lambda r: r.start_time)
+                # Standardize database weeks for comparison
+                df_dates['Hafta_compare'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None)
                 
                 final_filtered = df_dates[
-                    (df_dates['Hafta_filter'] == sel_week) & 
+                    (df_dates['Hafta_compare'] == sel_week) & 
                     (df_dates['Baskın Duygu'] == sel_sentiment)
                 ]
                 
