@@ -286,7 +286,7 @@ if is_bulk and "bulk_results" in st.session_state:
     </style>
     """, unsafe_allow_html=True)
 
-    col_pie, col_trend = st.columns([1, 1.5])
+    col_pie, col_summary = st.columns([1, 1.5])
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
@@ -294,47 +294,34 @@ if is_bulk and "bulk_results" in st.session_state:
                       title="Genel Dağılım",
                       color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
         fig_pie.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent')
-        fig_pie.update_layout(height=320, showlegend=True, 
+        fig_pie.update_layout(height=300, showlegend=True, 
                              legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
-                             margin={"t": 50, "b": 50, "l": 10, "r": 10})
+                             margin={"t": 40, "b": 40, "l": 10, "r": 10})
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    with col_trend:
-        # Check if we have valid dates
-        df_dates = df.dropna(subset=["Tarih"])
+    with col_summary:
+        st.write("#### 📈 Hızlı Özet")
+        st.write(f"Bugün toplam **{len(df)}** yorum incelendi. En baskın duygu: **{counts.idxmax()}**.")
+        st.info("Aşağıdaki sekmeleri kullanarak hem yorumları hem de tarihsel gelişimlerini detaylıca inceleyebilirsiniz.")
+
+    # Chart & List Logic
+    def render_trend_chart(filtered_df, title_suffix=""):
+        df_dates = filtered_df.dropna(subset=["Tarih"])
         if not df_dates.empty:
             df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
-            # Group by day and sentiment
             df_dates['Gün'] = df_dates['Tarih'].dt.date
             trend_data = df_dates.groupby(['Gün', "Baskın Duygu"]).size().reset_index(name='Adet')
             
             fig_trend = px.area(trend_data, x="Gün", y="Adet", color="Baskın Duygu",
-                               title="Zaman İçinde Duygu Gelişimi (Tarihsel)",
+                               title=f"Zaman İçinde Duygu Gelişimi {title_suffix}",
                                color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
                                line_shape="spline")
             
-            fig_trend.update_layout(height=320, margin={"t": 50, "b": 50, "l": 10, "r": 10},
-                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
-                                   xaxis_title="Tarih", yaxis_title="Yorum Sayısı")
+            fig_trend.update_layout(height=280, margin={"t": 50, "b": 20, "l": 10, "r": 10},
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.3, "xanchor": "center", "x": 0.5},
+                                   xaxis_title="Tarih", yaxis_title="Adet")
             st.plotly_chart(fig_trend, use_container_width=True)
-        else:
-            st.info("📅 Dosyada tarih bilgisi (Review Submit Date vb.) bulunamadığı için tarihsel grafik oluşturulamadı.")
 
-    # Comments List
-    st.write("### 💬 Yorum Listesi")
-    
-    t_pos = counts.get('Pozitif', 0)
-    t_neg = counts.get('Negatif', 0)
-    t_neu = counts.get('Nötr', 0)
-    t_all = len(df)
-
-    tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
-        f"🌐 Tümü ({t_all})", 
-        f"🟢 Pozitif ({t_pos})", 
-        f"🔴 Negatif ({t_neg})", 
-        f"🔵 Nötr ({t_neu})"
-    ])
-    
     def display_comments(filtered_df, highlight=True):
         if filtered_df.empty:
             st.info("Bu kategoride henüz yorum bulunmuyor.")
@@ -352,17 +339,39 @@ if is_bulk and "bulk_results" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
 
+    # --- Tabs and Unified Display ---
+    st.write("### 💬 Yorum Listesi")
+    
+    t_pos = counts.get('Pozitif', 0)
+    t_neg = counts.get('Negatif', 0)
+    t_neu = counts.get('Nötr', 0)
+    t_all = len(df)
+
+    tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
+        f"🌐 Tümü ({t_all})", 
+        f"🟢 Pozitif ({t_pos})", 
+        f"🔴 Negatif ({t_neg})", 
+        f"🔵 Nötr ({t_neu})"
+    ])
+
     with tab_all:
+        render_trend_chart(df, "(Genel)")
         display_comments(df, highlight=False)
     
     with tab_pos:
-        display_comments(df[df["Baskın Duygu"] == "Pozitif"])
+        pos_df = df[df["Baskın Duygu"] == "Pozitif"]
+        render_trend_chart(pos_df, "(Pozitif)")
+        display_comments(pos_df)
         
     with tab_neg:
-        display_comments(df[df["Baskın Duygu"] == "Negatif"])
+        neg_df = df[df["Baskın Duygu"] == "Negatif"]
+        render_trend_chart(neg_df, "(Negatif)")
+        display_comments(neg_df)
         
     with tab_neu:
-        display_comments(df[df["Baskın Duygu"] == "Nötr"])
+        neu_df = df[df["Baskın Duygu"] == "Nötr"]
+        render_trend_chart(neu_df, "(Nötr)")
+        display_comments(neu_df)
 
     # Excel Download
     try:
