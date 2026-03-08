@@ -306,20 +306,21 @@ if is_bulk and "bulk_results" in st.session_state:
 
     # Chart & List Logic
     def render_trend_chart(filtered_df, title_suffix=""):
-        df_dates = filtered_df.dropna(subset=["Tarih"])
+        df_dates = filtered_df.dropna(subset=["Tarih"]).copy()
         if not df_dates.empty:
             df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
-            df_dates['Gün'] = df_dates['Tarih'].dt.date
-            trend_data = df_dates.groupby(['Gün', "Baskın Duygu"]).size().reset_index(name='Adet')
+            # Haftalık gruplandırma
+            df_dates['Hafta'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
+            trend_data = df_dates.groupby(['Hafta', "Baskın Duygu"]).size().reset_index(name='Adet')
             
-            fig_trend = px.area(trend_data, x="Gün", y="Adet", color="Baskın Duygu",
-                               title=f"Zaman İçinde Duygu Gelişimi {title_suffix}",
+            fig_trend = px.bar(trend_data, x="Hafta", y="Adet", color="Baskın Duygu",
+                               title=f"Haftalık Duygu Dağılımı {title_suffix}",
                                color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
-                               line_shape="spline")
+                               barmode='group')
             
             fig_trend.update_layout(height=280, margin={"t": 50, "b": 20, "l": 10, "r": 10},
-                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.3, "xanchor": "center", "x": 0.5},
-                                   xaxis_title="Tarih", yaxis_title="Adet")
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.4, "xanchor": "center", "x": 0.5},
+                                   xaxis_title="Hafta (Başlangıç)", yaxis_title="Yorum Sayısı")
             st.plotly_chart(fig_trend, use_container_width=True)
 
     def display_comments(filtered_df, highlight=True):
