@@ -212,25 +212,27 @@ def get_gemini_sentiment(text):
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analyze the sentiment and INTENT of this app review with focus on technical functionality.
-        Categorize into:
-        - [OLUMSUZ]: Complaints, technical failures (won't open, crashes, cannot log in), performance issues (slow, lagging), DATA LOSS (erased, gone), or clear frustration.
-        - [OLUMLU]: Gratitude, praise, success stories, high satisfaction.
-        - [ISTEK/GORUS]: Constructive feedback, feature requests, questions, or layout suggestions WITHOUT a complaint or failure description.
+        You are an expert Turkish app review sentiment analyzer.
 
-        STRICT CRITERIA for OLUMSUZ (Negative): 
-        1. Access issues: "giremiyorum", "girilmiyor", "açılmıyor" are always OLUMSUZ.
-        2. Technical failures: "bozuldu", "çalışmıyor", "hata veriyor" are always OLUMSUZ.
-        3. Data issues: "silinmiş", "veriler gitmiş", "kayboldu" are always OLUMSUZ.
-        4. Performance: "yavaş", "kasıyor", "donuyor" are always OLUMSUZ.
+        Read the ENTIRE review carefully and determine the DOMINANT, FINAL emotional tone.
+        Do NOT focus on individual words — understand the full meaning and context.
 
-        CRITERIA for ISTEK/GORUS (Request/Opinion):
-        - ONLY if there's no technical failure. e.g., "şu özellik gelse", "widget boyutu değişse".
+        Categories:
+        - OLUMLU: The overall tone is positive. Gratitude, praise, satisfaction. Even if the user mentions a past problem that was RESOLVED, the review is OLUMLU if they are happy now.
+        - OLUMSUZ: The overall tone is negative. Active complaints, unresolved technical problems (opens with difficulty, crashes, freezes, data loss). If a problem is STILL ongoing ("problem devam ediyor", "hâlâ açılmıyor"), it is OLUMSUZ.
+        - ISTEK/GORUS: Neutral suggestions or feature requests with no strong positive or negative emotion.
 
-        Return ONLY a JSON response: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
-        The sum must be exactly 1.0. 
-        
-        Text: "{text}"
+        EXAMPLES:
+        - "Çok başarılı bir uygulama. Tüm ekibe çok teşekkür ederim." → OLUMLU (clear praise)
+        - "Önce sorun yaşadım ama ekip çözdü, teşekkürler." → OLUMLU (problem was resolved, ends positively)
+        - "Popup reklamlar var kafam şişti. Edit: Problem halen devam." → OLUMSUZ (unresolved problem)
+        - "Giremiyorum artık bozuldu uygulama" → OLUMSUZ (active access failure)
+        - "Keşke ekranda makas farkı da gösterilse çok iyi olurdu..." → ISTEK/GORUS (feature request)
+
+        Return ONLY a JSON: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
+        Sum must equal 1.0.
+
+        Review: "{text}"
         """
         response = model.generate_content(prompt)
         content = response.text
@@ -250,31 +252,41 @@ def get_gemini_sentiment(text):
 
 def heuristic_analysis(text):
     text_lower = text.lower()
-    
-    # Intent-based word lists
-    pos_words = ["iyi", "güzel", "harika", "başarılı", "süper", "mükemmel", "beğen", "memnun", "teşekkür", "sev", "hızlı"]
-    neg_words = [
-        "kötü", "berbat", "bozuk", "hata", "sorun", "açılmıyor", "donuyor", "kasıyor", 
-        "yavaş", "zor", "rezalet", "çöp", "giremiyorum", "girilmiyor", "silinmiş", 
-        "gitmiş", "bozuldu", "rezil", "mağdur"
+
+    # Strong positive signals
+    pos_words = [
+        "teşekkür", "harika", "başarılı", "mükemmel", "süper", "güzel", "iyi",
+        "memnun", "sev", "beğen", "hızlı", "kolay", "kaliteli", "çözdü", "giderildi"
     ]
-    neutral_intent = ["gelse", "gelebilir", "olsa", "istiyorum", "bekliyoruz", "eklense", "mı?", "mi?", "nasıl", "neden"]
+    # Strong negative signals — words indicating ACTIVE, UNRESOLVED problems
+    neg_words = [
+        "açılmıyor", "giremiyorum", "girilmiyor", "donuyor", "kasıyor", "dondu",
+        "berbat", "rezalet", "bozuk", "bozuldu", "çalışmıyor", "silinmiş",
+        "kayboldu", "rezil", "mağdur", "kötü", "yavaş", "hata veriyor", "devam ediyor", "hâlâ", "hala"
+    ]
+    # Request / suggestion markers
+    neutral_intent = ["keşke", "gelse", "olurdu", "gelebilir", "olsa", "eklense", "mı?", "mi?"]
 
     pos_score = sum(1 for w in pos_words if w in text_lower)
     neg_score = sum(1 for w in neg_words if w in text_lower)
     neu_score = sum(1 for w in neutral_intent if w in text_lower)
 
-    # Heuristic weighting - Priority to Negative on technical failure
-    if neg_score > 0:
-        # If there's any technical failure word, it's very likely negative
+    # Balanced weighting: compare NET scores, not just presence of any negative word
+    if neg_score > pos_score and neg_score > neu_score:
         p, n, neu = 0.05, 0.85, 0.1
     elif pos_score > neg_score and pos_score > neu_score:
         p, n, neu = 0.85, 0.05, 0.1
-    elif neu_score > 0:
+    elif neu_score > 0 and neg_score == 0:
         p, n, neu = 0.15, 0.15, 0.7
+    elif pos_score > 0 and neg_score > 0:
+        # Mixed review: let the positive score have slight edge (resolved situation)
+        if pos_score >= neg_score:
+            p, n, neu = 0.65, 0.25, 0.1
+        else:
+            p, n, neu = 0.1, 0.8, 0.1
     else:
         p, n, neu = 0.2, 0.2, 0.6
-        
+
     return {"olumlu": p, "olumsuz": n, "istek_gorus": neu, "method": "Heuristic"}
 
 # Analysis Trigger
