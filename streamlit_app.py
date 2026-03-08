@@ -39,10 +39,9 @@ else:
     HAS_GEMINI = False
 
 # Header Design
-st.title("🧠 AI Sentiment Analysis (Duygu Analizi)")
+st.title("🧠 AI Yorum Analizi")
 st.markdown("""
-Bu uygulama, girdiğiniz metnin duygu durumunu (Olumlu/Olumsuz/İstek-Görüş) yapay zeka kullanarak analiz eder.
-Google Gemini AI desteği ile güçlendirilmiştir.
+Girdiğiniz yorumların duygu durumunu (Olumlu/Olumsuz/İstek-Görüş) yapay zeka analizi kullanarak çözümler.
 """)
 
 # Analysis Mode Toggle
