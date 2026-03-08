@@ -914,16 +914,18 @@ if "bulk_results" in st.session_state:
                                      "4 Yıldız": "#6baed6",
                                      "5 Yıldız": "#deebf7"
                                  },
-                                 category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]})
+                                 category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]},
+                                 labels={"Puan_Label": "", "Grup": "Zaman", "Oy Sayısı": "Sayı"})
                 
                 fig_dist.update_layout(
                     height=450, 
-                    margin={"t": 60, "b": 20, "l": 10, "r": 10},
+                    margin={"t": 60, "b": 40, "l": 10, "r": 10},
                     xaxis_title="Zaman Dönemi",
                     yaxis_title="Yorum / Puan Sayısı",
-                    legend_title="Puan",
+                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
                     barmode='stack',
-                    bargap=0.1
+                    bargap=0.1,
+                    template="plotly_white"
                 )
                 
                 # Dynamic X-axis formatting
@@ -951,11 +953,13 @@ if "bulk_results" in st.session_state:
                                title=f"Haftalık Duygu Dağılımı {title_suffix}",
                                color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'},
                                barmode='group',
+                               labels={"Baskın Duygu": ""},
                                custom_data=["Hafta_str", "Baskın Duygu"])
             
-            fig_trend.update_layout(height=280, margin={"t": 50, "b": 20, "l": 10, "r": 10},
-                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.4, "xanchor": "center", "x": 0.5},
-                                   xaxis_title="Hafta (Başlangıç)", yaxis_title="Yorum Sayısı",
+            fig_trend.update_layout(height=350, margin={"t": 80, "b": 40, "l": 10, "r": 10},
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+                                   xaxis_title="Tarih (Haftalık)", yaxis_title="Yorum Sayısı",
+                                   template="plotly_white",
                                    clickmode='event+select')
             
             # Use on_select for interactivity (Streamlit 1.35+)
