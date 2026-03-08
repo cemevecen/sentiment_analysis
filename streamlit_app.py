@@ -210,11 +210,7 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        # Try latest model first, fall back to previous stable
-        try:
-            model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
-        except Exception:
-            model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
 Sen bir uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
@@ -250,9 +246,15 @@ Yorum: "{text}"
             if total > 0:
                 return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
     except Exception as e:
-        st.warning(f"⚠️ Gemini API hatası: {e}")
+        err_str = str(e)
+        if "429" in err_str or "quota" in err_str.lower():
+            st.info("ℹ️ Gemini 2.5-Flash, ücretsiz planda dakikada en fazla 10 istek analiz edebilir. Kota aşıldı; bu yorum yerel motorla değerlendirildi.")
+        else:
+            st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
         return None
     return None
+
+
 
 
 def heuristic_analysis(text):
