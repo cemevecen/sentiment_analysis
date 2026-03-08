@@ -39,7 +39,7 @@ else:
 # Header Design
 st.title("🧠 AI Sentiment Analysis (Duygu Analizi)")
 st.markdown("""
-Bu uygulama, girdiğiniz metnin duygu durumunu (Pozitif/Negatif) yapay zeka kullanarak analiz eder.
+Bu uygulama, girdiğiniz metnin duygu durumunu (Olumlu/Olumsuz/İstek-Görüş) yapay zeka kullanarak analiz eder.
 Google Gemini AI desteği ile güçlendirilmiştir.
 """)
 
@@ -214,16 +214,16 @@ def get_gemini_sentiment(text):
         prompt = f"""
         Analyze the sentiment and INTENT of this app review. 
         Categorize into:
-        - [POSITIVE]: Gratitude, praise, success stories, high satisfaction.
-        - [NEGATIVE]: Complaints, technical failures (won't open, crashes), performance issues (slow, lagging), clear frustration.
-        - [NEUTRAL]: Constructive feedback, feature requests (e.g., 'it would be better if...', 'please add...'), questions, or layout suggestions without strong emotional valence.
+        - [OLUMLU]: Gratitude, praise, success stories, high satisfaction.
+        - [OLUMSUZ]: Complaints, technical failures (won't open, crashes), performance issues (slow, lagging), clear frustration.
+        - [ISTEK/GORUS]: Constructive feedback, feature requests (e.g., 'it would be better if...', 'please add...'), questions, or layout suggestions without strong emotional valence.
 
         IMPORTANT: 
-        1. If someone says "it opens very slowly", it is NEGATIVE (performance issue).
-        2. If someone says "a 2x2 widget could be added", it is NEUTRAL (feature request).
-        3. If someone says "excellent, 5 stars", it is POSITIVE.
+        1. If someone says "it opens very slowly", it is OLUMSUZ (performance issue).
+        2. If someone says "a 2x2 widget could be added", it is ISTEK/GORUS (feature request).
+        3. If someone says "excellent, 5 stars", it is OLUMLU.
 
-        Return ONLY a JSON response: {{"positive": score, "negative": score, "neutral": score}}
+        Return ONLY a JSON response: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
         The sum must be exactly 1.0. Use high-precision floats.
         
         Text: "{text}"
@@ -233,12 +233,12 @@ def get_gemini_sentiment(text):
         match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             data = json.loads(match.group())
-            p = float(data.get("positive", 0))
-            n = float(data.get("negative", 0))
-            neu = float(data.get("neutral", 0))
+            p = float(data.get("olumlu", 0))
+            n = float(data.get("olumsuz", 0))
+            neu = float(data.get("istek_gorus", 0))
             total = p + n + neu
             if total > 0:
-                return {"positive": p/total, "negative": n/total, "neutral": neu/total}
+                return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
             return data
     except Exception:
         return None
@@ -266,7 +266,7 @@ def heuristic_analysis(text):
     else:
         p, n, neu = 0.2, 0.2, 0.6
         
-    return {"positive": p, "negative": n, "neutral": neu, "method": "Heuristic"}
+    return {"olumlu": p, "olumsuz": n, "istek_gorus": neu, "method": "Heuristic"}
 
 # Analysis Trigger
 if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
@@ -283,12 +283,12 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 date = entry.get("date")
                 status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)})...")
                 res = get_gemini_sentiment(comment) or heuristic_analysis(comment)
-                scores = {"Pozitif": res['positive'], "Negatif": res['negative'], "Nötr": res['neutral']}
+                scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
                 verdict = max(scores, key=scores.get)
                 
                 bulk_results.append({
                     "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                    "Pozitif %": f"{res['positive']:.2%}", "Nötrlük %": f"{res['neutral']:.2%}", "Negatiflik %": f"{res['negative']:.2%}",
+                    "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
                     "Tarih": date
                 })
                 progress_bar.progress((i + 1) / len(comments_to_analyze))
@@ -327,7 +327,7 @@ if is_bulk and "bulk_results" in st.session_state:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
         fig_pie = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
                       title="Genel Dağılım",
-                      color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
+                      color='Duygu', color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'})
         fig_pie.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent')
         fig_pie.update_layout(height=300, showlegend=True, 
                              legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
@@ -351,7 +351,7 @@ if is_bulk and "bulk_results" in st.session_state:
             trend_data['Hafta_str'] = trend_data['Hafta'].astype(str)
             fig_trend = px.bar(trend_data, x="Hafta", y="Adet", color="Baskın Duygu",
                                title=f"Haftalık Duygu Dağılımı {title_suffix}",
-                               color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
+                               color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'},
                                barmode='group',
                                custom_data=["Hafta_str", "Baskın Duygu"])
             
@@ -393,7 +393,7 @@ if is_bulk and "bulk_results" in st.session_state:
             sentiment = row["Baskın Duygu"]
             cls = "normal-card"
             if highlight:
-                cls = "neon-pos" if sentiment == "Pozitif" else ("neon-neg" if sentiment == "Negatif" else "neon-neu")
+                cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
             
             st.markdown(f"""
             <div class="{cls}">
@@ -405,16 +405,16 @@ if is_bulk and "bulk_results" in st.session_state:
     # --- Tabs and Unified Display ---
     st.write("### 💬 Yorum Listesi")
     
-    t_pos = counts.get('Pozitif', 0)
-    t_neg = counts.get('Negatif', 0)
-    t_neu = counts.get('Nötr', 0)
+    t_pos = counts.get('Olumlu', 0)
+    t_neg = counts.get('Olumsuz', 0)
+    t_neu = counts.get('İstek/Görüş', 0)
     t_all = len(df)
 
     tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
         f"🌐 Tümü ({t_all})", 
-        f"🟢 Pozitif ({t_pos})", 
-        f"🔴 Negatif ({t_neg})", 
-        f"🔵 Nötr ({t_neu})"
+        f"🟢 Olumlu ({t_pos})", 
+        f"🔴 Olumsuz ({t_neg})", 
+        f"🔵 İstek/Görüş ({t_neu})"
     ])
 
     with tab_all:
@@ -422,18 +422,18 @@ if is_bulk and "bulk_results" in st.session_state:
         display_comments(f_df, highlight=False)
     
     with tab_pos:
-        pos_df = df[df["Baskın Duygu"] == "Pozitif"]
-        f_df = render_trend_chart(pos_df, "pos", "(Pozitif)")
+        pos_df = df[df["Baskın Duygu"] == "Olumlu"]
+        f_df = render_trend_chart(pos_df, "pos", "(Olumlu)")
         display_comments(f_df)
         
     with tab_neg:
-        neg_df = df[df["Baskın Duygu"] == "Negatif"]
-        f_df = render_trend_chart(neg_df, "neg", "(Negatif)")
+        neg_df = df[df["Baskın Duygu"] == "Olumsuz"]
+        f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)")
         display_comments(f_df)
         
     with tab_neu:
-        neu_df = df[df["Baskın Duygu"] == "Nötr"]
-        f_df = render_trend_chart(neu_df, "neu", "(Nötr)")
+        neu_df = df[df["Baskın Duygu"] == "İstek/Görüş"]
+        f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)")
         display_comments(neu_df)
 
     # Excel Download
@@ -449,20 +449,20 @@ elif not is_bulk and "single_result" in st.session_state:
     st.divider()
     st.success("Analiz Tamamlandı")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Pozitiflik", f"{result['positive']:.4f}")
-    c2.metric("Nötrlük", f"{result['neutral']:.4f}")
-    c3.metric("Negatiflik", f"{result['negative']:.4f}")
+    c1.metric("Olumlu", f"{result['olumlu']:.4f}")
+    c2.metric("İstek/Görüş", f"{result['istek_gorus']:.4f}")
+    c3.metric("Olumsuz", f"{result['olumsuz']:.4f}")
     
-    scores = {"Pozitif": result['positive'], "Negatif": result['negative'], "Nötr": result['neutral']}
+    scores = {"Olumlu": result['olumlu'], "Olumsuz": result['olumsuz'], "İstek/Görüş": result['istek_gorus']}
     verdict = max(scores, key=scores.get)
     st.subheader(f"Sonuç: {verdict}")
     
-    if verdict == "Pozitif":
-        st.info(f"Bu metin genel olarak **Pozitif** bir duygu taşıyor (%{result['positive']:.2%}). 😊")
-    elif verdict == "Negatif":
-        st.info(f"Bu metin genel olarak **Negatif** bir duygu taşıyor (%{result['negative']:.2%}). 😔")
+    if verdict == "Olumlu":
+        st.info(f"Bu metin genel olarak **Olumlu** bir duygu taşıyor (%{result['olumlu']:.2%}). 😊")
+    elif verdict == "Olumsuz":
+        st.info(f"Bu metin genel olarak **Olumsuz** bir duygu taşıyor (%{result['olumsuz']:.2%}). 😔")
     else:
-        st.info(f"Bu metin **Nötr** bir duruş sergiliyor (%{result['neutral']:.2%}). 😐")
+        st.info(f"Bu metin **İstek/Görüş** kategorisine giriyor (%{result['istek_gorus']:.2%}). 😐")
 
 # Footer
 st.divider()
