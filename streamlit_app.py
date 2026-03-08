@@ -212,17 +212,19 @@ def get_gemini_sentiment(text):
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analyze the sentiment of the following Turkish app review with EXTREME PRECISION.
-        
-        SENSITIVITY RULES:
-        1. POSITIVE signals: '5 yıldız' (5 stars), 'devam eder' (keep it up), 'teşekkürler', absence of ads ('reklamsız', 'reklam olmadan').
-        2. NEGATIVE signals: 'açılmıyor', 'donuyor', 'kasıyor', 'berbat', '1 yıldız'.
-        3. CONTEXT: If a user says 'without wild ads' (vahşi reklam anlayışı olmadan), it's a COMPLIMENT.
-        
-        Return ONLY a JSON response:
-        {{"positive": score, "negative": score, "neutral": score}}
-        
-        High-precision floats. The SUM must be EXACTLY 1.0.
+        Analyze the sentiment and INTENT of this app review. 
+        Categorize into:
+        - [POSITIVE]: Gratitude, praise, success stories, high satisfaction.
+        - [NEGATIVE]: Complaints, technical failures (won't open, crashes), performance issues (slow, lagging), clear frustration.
+        - [NEUTRAL]: Constructive feedback, feature requests (e.g., 'it would be better if...', 'please add...'), questions, or layout suggestions without strong emotional valence.
+
+        IMPORTANT: 
+        1. If someone says "it opens very slowly", it is NEGATIVE (performance issue).
+        2. If someone says "a 2x2 widget could be added", it is NEUTRAL (feature request).
+        3. If someone says "excellent, 5 stars", it is POSITIVE.
+
+        Return ONLY a JSON response: {{"positive": score, "negative": score, "neutral": score}}
+        The sum must be exactly 1.0. Use high-precision floats.
         
         Text: "{text}"
         """
@@ -244,42 +246,27 @@ def get_gemini_sentiment(text):
 
 def heuristic_analysis(text):
     text_lower = text.lower()
-    # Expanded word list for more granularity
-    pos_list = [
-        "iyi", "güzel", "harika", "sevindim", "mutlu", "aşk", "seviyorum", 
-        "başarılı", "hoş", "muhteşem", "süper", "kaliteli", "mükemmel", 
-        "beğendim", "hızlı", "basit", "kolay", "memnun"
-    ]
-    neg_list = [
-        "kötü", "berbat", "üzgün", "nefret", "başarısız", "korkunç", "çirkin", 
-        "zayıf", "yavaş", "bozuk", "rezalet", "donuyor", "kasıyor", "açılmıyor", 
-        "hata", "sorun", "çalışmıyor", "berbat", "iğrenç", "beğenmedim", "sil", 
-        "çöp", "vakit kaybı", "donma", "kasılma"
-    ]
     
-    pos_count = sum(text_lower.count(word) for word in pos_list)
-    neg_count = sum(text_lower.count(word) for word in neg_list)
-    
-    total_words = len(text_lower.split())
-    if total_words == 0:
-        return {"positive": 0.0, "negative": 0.0, "neutral": 1.0, "method": "Heuristic"}
-    
-    # Calculate impact weights
-    if pos_count > neg_count:
-        positive = 0.7 + (pos_count / (pos_count + neg_count + 1)) * 0.2
-        negative = 0.05
-        neutral = 1.0 - positive - negative
-    elif neg_count > pos_count:
-        negative = 0.7 + (neg_count / (pos_count + neg_count + 1)) * 0.2
-        positive = 0.05
-        neutral = 1.0 - negative - positive
+    # Intent-based word lists
+    pos_words = ["iyi", "güzel", "harika", "başarılı", "süper", "mükemmel", "beğen", "memnun", "teşekkür", "sev", "hızlı"]
+    neg_words = ["kötü", "berbat", "bozuk", "hata", "sorun", "açılmıyor", "donuyor", "kasıyor", "yavaş", "zor", "rezalet", "çöp"]
+    neutral_intent = ["gelse", "gelebilir", "olsa", "istiyorum", "bekliyoruz", "eklense", "mı?", "mi?", "nasıl", "neden"]
+
+    pos_score = sum(1 for w in pos_words if w in text_lower)
+    neg_score = sum(1 for w in neg_words if w in text_lower)
+    neu_score = sum(1 for w in neutral_intent if w in text_lower)
+
+    # Heuristic weighting
+    if neg_score > pos_score and neg_score > neu_score:
+        p, n, neu = 0.05, 0.85, 0.1
+    elif pos_score > neg_score and pos_score > neu_score:
+        p, n, neu = 0.85, 0.05, 0.1
+    elif neu_score > 0:
+        p, n, neu = 0.15, 0.15, 0.7
     else:
-        # If no keywords found, favor Neutral
-        positive = 0.15
-        negative = 0.15
-        neutral = 0.7
-    
-    return {"positive": positive, "negative": negative, "neutral": neutral, "method": "Heuristic"}
+        p, n, neu = 0.2, 0.2, 0.6
+        
+    return {"positive": p, "negative": n, "neutral": neu, "method": "Heuristic"}
 
 # Analysis Trigger
 if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
