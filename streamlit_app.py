@@ -422,8 +422,6 @@ with tab2:
                                     valid_in_file += 1
                                     
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
-                            st.write("**Onizleme (Ilk 3 Yorum):**")
-                            st.write([str(row[col_name])[:100] + '...' for _, row in df_upload.head(3).iterrows()])
                             
             except Exception as e:
                 st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
