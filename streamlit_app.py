@@ -254,10 +254,10 @@ if is_bulk and "bulk_results" in st.session_state:
     # Styling
     st.markdown("""
     <style>
-    .neon-pos { border: 2px solid #2ecc71; box-shadow: 0 0 10px #2ecc71; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(46, 204, 113, 0.1); }
-    .neon-neg { border: 2px solid #e74c3c; box-shadow: 0 0 10px #e74c3c; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(231, 76, 60, 0.1); }
-    .neon-neu { border: 2px solid #3498db; box-shadow: 0 0 10px #3498db; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(52, 152, 219, 0.1); }
-    .normal-card { border: 1px solid #444; padding: 12px; border-radius: 8px; margin: 8px 0; background: #1e1e1e; opacity: 0.8; }
+    .neon-pos { border: 1px solid #2ecc71; box-shadow: 0 0 3px #2ecc71; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(46, 204, 113, 0.05); }
+    .neon-neg { border: 1px solid #e74c3c; box-shadow: 0 0 3px #e74c3c; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(231, 76, 60, 0.05); }
+    .neon-neu { border: 1px solid #3498db; box-shadow: 0 0 3px #3498db; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(52, 152, 219, 0.05); }
+    .normal-card { border: 1px solid #333; padding: 12px; border-radius: 8px; margin: 8px 0; background: #1e1e1e; opacity: 0.9; }
     </style>
     """, unsafe_allow_html=True)
 
