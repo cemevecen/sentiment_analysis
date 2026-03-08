@@ -192,140 +192,139 @@ st.markdown(f"""
 comments_to_analyze = []
 
 tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
-    tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
-    
-    with tab1:
-        text_input = st.text_area(
-            "Yorumları alt alta girin:",
-            height=200,
-            placeholder="Örn: Harika uygulama!\nKötü performans..."
-        )
-        if text_input.strip():
-            raw_lines = text_input.split('\n')
-            comments_to_analyze = [{"text": line.strip()} for line in raw_lines if len(line.strip()) > 2]
-            
-    with tab2:
-        uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
-        if uploaded_files:
-            all_comments = []
-            for uploaded_file in uploaded_files:
-                df_upload = None
-                try:
-                    if uploaded_file.name.endswith('.csv'):
-                        for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
-                            try:
+
+with tab1:
+    text_input = st.text_area(
+        "Yorumları alt alta girin:",
+        height=200,
+        placeholder="Örn: Harika uygulama!\nKötü performans..."
+    )
+    if text_input.strip():
+        raw_lines = text_input.split('\n')
+        comments_to_analyze = [{"text": line.strip()} for line in raw_lines if len(line.strip()) > 2]
+        
+with tab2:
+    uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
+    if uploaded_files:
+        all_comments = []
+        for uploaded_file in uploaded_files:
+            df_upload = None
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
+                        try:
+                            uploaded_file.seek(0)
+                            df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
+                            if len(df_upload.columns) <= 1:
                                 uploaded_file.seek(0)
-                                df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
-                                if len(df_upload.columns) <= 1:
-                                    uploaded_file.seek(0)
-                                    df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=';')
-                                break
-                            except Exception: continue
-                    else:
-                        df_upload = pd.read_excel(uploaded_file)
+                                df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=';')
+                            break
+                        except Exception: continue
+                else:
+                    df_upload = pd.read_excel(uploaded_file)
+                
+                if df_upload is not None:
+                    st.info(f"📁 **Dosya İşleniyor:** {uploaded_file.name}")
                     
-                    if df_upload is not None:
-                        st.info(f"📁 **Dosya İşleniyor:** {uploaded_file.name}")
+                    # Smart Column Detection
+                    target_keys = ["review", "yorum", "text", "metin", "content", "body"]
+                    avoid_keys = ["id", "name", "isim", "name", "rating", "star", "vers", "date", "tarih", "saat"]
+                    
+                    scores = []
+                    for col in df_upload.columns:
+                        col_l = col.lower()
+                        score = 0
+                        if any(k in col_l for k in target_keys): score += 10
+                        if any(k in col_l for k in avoid_keys): score -= 15
                         
-                        # Smart Column Detection
-                        target_keys = ["review", "yorum", "text", "metin", "content", "body"]
-                        avoid_keys = ["id", "name", "isim", "name", "rating", "star", "vers", "date", "tarih", "saat"]
-                        
-                        scores = []
-                        for col in df_upload.columns:
-                            col_l = col.lower()
-                            score = 0
-                            if any(k in col_l for k in target_keys): score += 10
-                            if any(k in col_l for k in avoid_keys): score -= 15
+                        sample = df_upload[col].head(5).astype(str).tolist()
+                        avg_len = sum(len(s) for s in sample) / 5 if sample else 0
+                        if avg_len > 15: score += 10
+                        scores.append((score, col))
+                    
+                    scores.sort(key=lambda x: x[0], reverse=True)
+                    best_col = scores[0][1] if scores else df_upload.columns[0]
+                    
+                    # Date Column Detection
+                    date_keys = ["date", "time", "tarih", "saat", "submit"]
+                    date_col = None
+                    for col in df_upload.columns:
+                        if any(dk in col.lower() for dk in date_keys):
+                            date_col = col
+                            break
+
+                    col_name = st.selectbox(
+                        f"Analiz edilecek sütun ({uploaded_file.name}):",
+                        options=df_upload.columns,
+                        index=list(df_upload.columns).index(best_col),
+                        key=f"col_{uploaded_file.name}"
+                    )
+                    
+                    if col_name:
+                        # Pre-filter for valid comments in this specific file
+                        def is_valid_comment(text):
+                            s = str(text).strip()
+                            if len(s) < 4: return False
+                            if s.lower() in ['nan', 'null', 'none']: return False
                             
-                            sample = df_upload[col].head(5).astype(str).tolist()
-                            avg_len = sum(len(s) for s in sample) / 5 if sample else 0
-                            if avg_len > 15: score += 10
-                            scores.append((score, col))
-                        
-                        scores.sort(key=lambda x: x[0], reverse=True)
-                        best_col = scores[0][1] if scores else df_upload.columns[0]
-                        
-                        # Date Column Detection
-                        date_keys = ["date", "time", "tarih", "saat", "submit"]
-                        date_col = None
-                        for col in df_upload.columns:
-                            if any(dk in col.lower() for dk in date_keys):
-                                date_col = col
-                                break
+                            # 3. Developer/Owner Reply Patterns (Professional/Turkish Store Language)
+                            reply_patterns = [
+                                "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
+                                "iyi günler dileriz", "rica etsek", "geri bildirimleriniz", 
+                                "değerlendirmenizi bekler", "saygılarımızla", "ekibimiz", 
+                                "talebini", "incelemelerimiz sonucunda", "güncellememizi",
+                                "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında",
+                                "yaşamış olduğunuz", "aksaklık için üzgünüz", "memnun oluruz",
+                                "bizimle iletişime", "iletmenizi rica ederiz"
+                            ]
+                            
+                            # Highly aggressive check: if any signature pattern exists, it's a dev reply
+                            if any(rp in s.lower() for rp in reply_patterns):
+                                return False
+                            
+                            # Filter formal addresses "Ad Soyad Bey/Hanım,"
+                            if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', s.lower()):
+                                return False
+                            
+                            # 4. Metadata/Numeric IDs
+                            if re.match(r'^\d{4}-\d{2}-\d{2}.*', s): return False
+                            if s.replace('.', '').replace('-', '').isdigit(): return False
+                            if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', s): return False
+                            
+                            return True
 
-                        col_name = st.selectbox(
-                            f"Analiz edilecek sütun ({uploaded_file.name}):",
-                            options=df_upload.columns,
-                            index=list(df_upload.columns).index(best_col),
-                            key=f"col_{uploaded_file.name}"
-                        )
-                        
-                        if col_name:
-                            # Pre-filter for valid comments in this specific file
-                            def is_valid_comment(text):
-                                s = str(text).strip()
-                                if len(s) < 4: return False
-                                if s.lower() in ['nan', 'null', 'none']: return False
-                                
-                                # 3. Developer/Owner Reply Patterns (Professional/Turkish Store Language)
-                                reply_patterns = [
-                                    "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
-                                    "iyi günler dileriz", "rica etsek", "geri bildirimleriniz", 
-                                    "değerlendirmenizi bekler", "saygılarımızla", "ekibimiz", 
-                                    "talebini", "incelemelerimiz sonucunda", "güncellememizi",
-                                    "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında",
-                                    "yaşamış olduğunuz", "aksaklık için üzgünüz", "memnun oluruz",
-                                    "bizimle iletişime", "iletmenizi rica ederiz"
-                                ]
-                                
-                                # Highly aggressive check: if any signature pattern exists, it's a dev reply
-                                if any(rp in s.lower() for rp in reply_patterns):
-                                    return False
-                                
-                                # Filter formal addresses "Ad Soyad Bey/Hanım,"
-                                if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', s.lower()):
-                                    return False
-                                
-                                # 4. Metadata/Numeric IDs
-                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', s): return False
-                                if s.replace('.', '').replace('-', '').isdigit(): return False
-                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', s): return False
-                                
-                                return True
-
-                            for _, row in df_upload.iterrows():
-                                if pd.notnull(row[col_name]) and is_valid_comment(row[col_name]):
-                                    entry = {"text": str(row[col_name]).strip()}
-                                    if date_col and pd.notnull(row[date_col]):
-                                        # Robust parsing & Strict bounds
-                                        dt_val = row[date_col]
-                                        # Ensure we don't parse large integers as dates
-                                        if isinstance(dt_val, (int, float)):
-                                            parsed_date = pd.NaT
-                                        else:
-                                            # Convert to datetime and strip timezone for safe comparison
-                                            parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
-                                            if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
-                                                parsed_date = parsed_date.tz_localize(None)
-                                        
-                                        # Limit: Up to Today (Mar 8, 2026) - Naive for safe comparison
-                                        today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
-                                        start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
-                                        
-                                        if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
-                                            entry["date"] = parsed_date
-                                    all_comments.append(entry)
+                        for _, row in df_upload.iterrows():
+                            if pd.notnull(row[col_name]) and is_valid_comment(row[col_name]):
+                                entry = {"text": str(row[col_name]).strip()}
+                                if date_col and pd.notnull(row[date_col]):
+                                    # Robust parsing & Strict bounds
+                                    dt_val = row[date_col]
+                                    # Ensure we don't parse large integers as dates
+                                    if isinstance(dt_val, (int, float)):
+                                        parsed_date = pd.NaT
+                                    else:
+                                        # Convert to datetime and strip timezone for safe comparison
+                                        parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                        if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
+                                            parsed_date = parsed_date.tz_localize(None)
                                     
-                            with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
-                                st.write([c["text"] for c in all_comments[-5:]] if all_comments else [])
+                                    # Limit: Up to Today (Mar 8, 2026) - Naive for safe comparison
+                                    today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
+                                    start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
+                                    
+                                    if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
+                                        entry["date"] = parsed_date
+                                all_comments.append(entry)
                                 
-                except Exception as e:
-                    st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
-            
-            if all_comments:
-    comments_to_analyze = all_comments
-    st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
+                        with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
+                            st.write([c["text"] for c in all_comments[-5:]] if all_comments else [])
+                            
+            except Exception as e:
+                st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
+        
+        if all_comments:
+            comments_to_analyze = all_comments
+            st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 
 # ── Analiz Yapılandırması ──────────────────────
