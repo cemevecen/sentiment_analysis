@@ -192,16 +192,14 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-# Analysis Mode Toggle
+# --- Analysis Configuration Section ---
 is_bulk = st.checkbox("🔄 Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın / Dosya yükleyin)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Input Section
 comments_to_analyze = []
 
 if is_bulk:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.divider()
     tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
     
     with tab1:
@@ -336,13 +334,11 @@ if is_bulk:
             if all_comments:
                 comments_to_analyze = all_comments
                 st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
-    st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.divider()
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Güzel uygulama. Elinize sağlık!")
     if text_input:
         comments_to_analyze = [{"text": text_input.strip()}]
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
@@ -350,26 +346,23 @@ if is_bulk and comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### ⚙️ Analiz Yapılandırması")
     
-    with st.container():
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        n = len(comments_to_analyze)
+    n = len(comments_to_analyze)
 
-        def fmt_time(secs):
-            m, s = divmod(secs, 60)
-            return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
+    def fmt_time(secs):
+        m, s = divmod(secs, 60)
+        return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
 
-        mode_idx = st.radio(
-            "Analiz hızı ve doğruluk dengesini seçin:",
-            options=[0, 1],
-            format_func=lambda x: ["🚀 Hızlı", "🎯 Yavaş (Daha Tutarlı)"][x],
-            captions=[
-                f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
-                f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
-            ],
-            horizontal=True,
-            key="analysis_mode"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+    mode_idx = st.radio(
+        "Analiz hızı ve doğruluk dengesini seçin:",
+        options=[0, 1],
+        format_func=lambda x: ["🚀 Hızlı", "🎯 Yavaş (Daha Tutarlı)"][x],
+        captions=[
+            f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
+            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
+        ],
+        horizontal=True,
+        key="analysis_mode"
+    )
 
 
 
