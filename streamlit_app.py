@@ -130,12 +130,33 @@ if is_bulk:
                         
                         if col_name:
                             def is_valid_comment(text):
-                                text = str(text).strip()
-                                if len(text) < 4: return False
-                                if text.lower() in ['nan', 'null', 'none', 'tr', 'en']: return False
-                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', text): return False
-                                if text.replace('.', '').replace('-', '').isdigit(): return False
-                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text): return False
+                                text_str = str(text).strip()
+                                text_lower = text_str.lower()
+                                
+                                # 1. Too short
+                                if len(text_str) < 4: return False
+                                
+                                # 2. Metadata/Nulls
+                                if text_lower in ['nan', 'null', 'none', 'tr', 'en']: return False
+                                
+                                # 3. Developer/Owner Reply Patterns (Turkish Specific)
+                                reply_keywords = [
+                                    "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
+                                    "iyi günler dileriz", "iyi seyirler", "iyi oyunlar", "rica etsek",
+                                    "geri bildiriminiz", "incelemelerimiz sonucunda", "değerlendirmenizi bekler",
+                                    "saygılarımızla", "ekibimiz", "talebini"
+                                ]
+                                # If the text is long enough but common "owner reply" phrases are found, skip it
+                                if any(rk in text_lower for rk in reply_keywords):
+                                    # Still might be a user comment, so we check if it's too systematic
+                                    if text_lower.startswith(("merhaba", "teşekkür ederiz")) and len(text_str) < 200:
+                                        return False
+                                
+                                # 4. ISO Timestamps or numeric IDs
+                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', text_str): return False
+                                if text_str.replace('.', '').replace('-', '').isdigit(): return False
+                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text_str): return False
+                                
                                 return True
 
                             # Store text and date together
@@ -145,10 +166,16 @@ if is_bulk:
                                     if pd.notnull(val) and is_valid_comment(val):
                                         entry = {"text": str(val).strip()}
                                         if date_col:
-                                            parsed_date = pd.to_datetime(row[date_col], errors='coerce')
-                                            # Mantıklı bir tarih aralığı (Örn: 2024-2030) kontrolü
-                                            if pd.notnull(parsed_date) and 2024 <= parsed_date.year <= 2030:
-                                                entry["date"] = parsed_date
+                                            # Robust date parsing
+                                            dt_val = row[date_col]
+                                            parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                            # Precise date range filter (based on user data context)
+                                            # Allow Nov 2025 to April 2026 to be safe
+                                            if pd.notnull(parsed_date):
+                                                year = parsed_date.year
+                                                month = parsed_date.month
+                                                if (year == 2025 and month >= 11) or (year == 2026 and month <= 4):
+                                                    entry["date"] = parsed_date
                                         all_comments.append(entry)
                             
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
