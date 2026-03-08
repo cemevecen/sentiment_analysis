@@ -221,13 +221,16 @@ if is_bulk and comments_to_analyze:
         key="analysis_mode"
     )
     n = len(comments_to_analyze)
-    secs_per = 2 if mode == "Hızlı" else 4
+    # Index-based karşılaştırma: Yavaş ikinci seçenek (index 1)
+    is_slow = (mode == "Yavaş")
+    secs_per = 4 if is_slow else 2
     total_secs = n * secs_per
     total_min = total_secs // 60
     total_sec = total_secs % 60
     time_str = f"~{total_min}dk {total_sec}sn" if total_min > 0 else f"~{total_sec}sn"
     st.caption(f"📊 {n} yorum için tahmini süre: **{time_str}**")
     st.markdown("")
+
 
 def get_gemini_sentiment(text, model_name='gemini-3.1-flash-lite-preview'):
     if not HAS_GEMINI:
