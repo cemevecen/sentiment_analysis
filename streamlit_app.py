@@ -67,26 +67,28 @@ if is_bulk:
         if uploaded_files:
             all_comments = []
             for uploaded_file in uploaded_files:
+                df_upload = None
                 try:
                     if uploaded_file.name.endswith('.csv'):
-                        # Enhanced CSV detection with delimiter support
-                        df_upload = None
-                        for encoding in ['utf-8', 'latin-1', 'cp1252']:
+                        # Try different encodings for CSV files
+                        for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
                             try:
                                 uploaded_file.seek(0)
-                                # Try to detect delimiter automatically (sep=None handles , or ;)
+                                # sep=None with engine='python' automatically detects delimiter (, or ;)
                                 df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
                                 break
                             except Exception:
                                 continue
+                        
+                        if df_upload is None:
+                            st.error(f"❌ {uploaded_file.name} okunamadı: Kodlama hatası (Lütfen UTF-8 olarak kaydedin).")
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                     
                     if df_upload is not None:
-                        st.write(f"📂 **Dosya:** {uploaded_file.name}")
+                        st.write(f"📂 **Dosya İşleniyor:** {uploaded_file.name}")
                         
                         # --- Smart Column Detection ---
-                        # Look for common sentiment columns
                         keywords = ["review", "yorum", "text", "metin", "content", "mesaj", "body"]
                         default_index = 0
                         for i, col in enumerate(df_upload.columns):
@@ -104,15 +106,14 @@ if is_bulk:
                         if col_name:
                             file_comments = df_upload[col_name].dropna().astype(str).tolist()
                             all_comments.extend(file_comments)
-                            # Show a small preview so user knows it's the right data
-                            with st.expander(f"👀 Veri Önizleme ({uploaded_file.name})"):
+                            with st.expander(f"👀 {uploaded_file.name} Önizleme"):
                                 st.write(df_upload[col_name].head(3).tolist())
                 except Exception as e:
-                    st.error(f"{uploaded_file.name} okuma hatası: {e}")
+                    st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
             
             if all_comments:
                 comments_to_analyze = all_comments
-                st.info(f"✅ Toplam **{len(comments_to_analyze)}** satır veri analiz için hazır.")
+                st.success(f"📋 Toplam **{len(comments_to_analyze)}** yorum analiz için hazır!")
 else:
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
     if text_input:
