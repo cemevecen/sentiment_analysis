@@ -157,60 +157,98 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 df = pd.DataFrame(results)
                 counts = df["Baskın Duygu"].value_counts()
                 
-                st.subheader("📊 Genel Dağılım Özeti")
+                st.subheader("📊 Etkileşimli Dağılım Özeti")
+                st.markdown("""
+                <style>
+                .neon-pos { border: 2px solid #2ecc71; box-shadow: 0 0 10px #2ecc71; padding: 10px; border-radius: 5px; margin: 5px 0; }
+                .neon-neg { border: 2px solid #e74c3c; box-shadow: 0 0 10px #e74c3c; padding: 10px; border-radius: 5px; margin: 5px 0; }
+                .neon-neu { border: 2px solid #3498db; box-shadow: 0 0 10px #3498db; padding: 10px; border-radius: 5px; margin: 5px 0; }
+                .normal-card { border: 1px solid #333; padding: 10px; border-radius: 5px; margin: 5px 0; opacity: 0.8; }
+                </style>
+                """, unsafe_allow_html=True)
+
                 sum_col1, sum_col2 = st.columns([1, 1])
                 
                 with sum_col1:
-                    st.write("#### Sayısal Dağılım")
-                    st.metric("Toplam Pozitif", counts.get("Pozitif", 0))
-                    st.metric("Toplam Nötr", counts.get("Nötr", 0))
-                    st.metric("Toplam Negatif", counts.get("Negatif", 0))
+                    st.write("#### Filtrelemek için Tıklayın")
+                    # Use a session state for persistent filtering
+                    if "filter" not in st.session_state:
+                        st.session_state.filter = "Hepsi"
+
+                    # Interactive Selection
+                    filter_choice = st.radio(
+                        "Duyguya Göre Highlight Et:",
+                        ["Hepsi", "Pozitif", "Nötr", "Negatif"],
+                        horizontal=True
+                    )
+                    st.session_state.filter = filter_choice
+
+                    st.write(f"**Toplam Pozitif:** {counts.get('Pozitif', 0)}")
+                    st.write(f"**Toplam Nötr:** {counts.get('Nötr', 0)}")
+                    st.write(f"**Toplam Negatif:** {counts.get('Negatif', 0)}")
                 
                 with sum_col2:
                     st.write("#### Görsel Dağılım")
-                    # Prepare data for pie chart
-                    pie_data = pd.DataFrame({
-                        "Duygu": counts.index,
-                        "Sayı": counts.values
-                    })
+                    pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
                     fig = px.pie(
-                        pie_data, 
-                        values='Sayı', 
-                        names='Duygu',
-                        color='Duygu',
-                        color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#95a5a6'},
-                        hole=0.4
+                        pie_data, values='Sayı', names='Duygu', hole=0.4,
+                        color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'}
                     )
-                    fig.update_layout(showlegend=True, margin=dict(t=0, b=0, l=0, r=0))
+                    fig.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=200)
                     st.plotly_chart(fig, use_container_width=True)
                 
                 st.divider()
                 
-                # 2. Detailed Interactive Grid
-                st.subheader("📝 Detaylı Yorum Analizi")
-                # Showing as dataframe allows horizontal scrolling and better column separation
-                st.dataframe(
-                    df[["No", "Yorum", "Baskın Duygu", "Pozitif %", "Nötrlük %", "Negatiflik %"]],
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                # Excel Export logic
+                # Excel Export logic (Prepare before showing results to avoid reference errors)
+                excel_data = None
                 try:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
                     excel_data = output.getvalue()
+                except Exception as e:
+                    st.error(f"Excel hazırlama hatası: {e}")
+
+                # 2. Detailed Neon Highlights
+                st.subheader(f"📝 Yorumlar ({st.session_state.filter} Modu)")
+                
+                # Filter/Highlight logic
+                for _, row in df.iterrows():
+                    highlight_mode = st.session_state.filter
+                    sentiment = row["Baskın Duygu"]
                     
+                    is_match = (highlight_mode == "Hepsi") or (sentiment == highlight_mode)
+                    
+                    if is_match:
+                        # Use different neon colors
+                        if sentiment == "Pozitif":
+                            cls = "neon-pos"
+                        elif sentiment == "Negatif":
+                            cls = "neon-neg"
+                        else:
+                            cls = "neon-neu"
+                            
+                        st.markdown(f"""
+                        <div class="{cls}">
+                            <span style="font-size: 0.8em; opacity: 0.7;">#{row['No']} | {sentiment}</span><br>
+                            {row['Yorum']}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="normal-card">
+                            <span style="font-size: 0.8em; opacity: 0.5;">#{row['No']}</span>: {row['Yorum'][:80]}...
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Footer Action
+                if excel_data:
                     st.download_button(
                         label="📥 Sonuçları Excel Olarak İndir (.xlsx)",
                         data=excel_data,
                         file_name="sentiment_analizi.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        help="Tüm verileri Excel formatında (sütun sütun) indirir."
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-                except Exception as e:
-                    st.error(f"Excel oluşturma hatası: {e}")
             
         else:
             with st.spinner("Yapay Zeka analiz ediyor..."):
