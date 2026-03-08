@@ -121,10 +121,24 @@ if is_bulk:
                         )
                         
                         if col_name:
-                            # Filter out very short strings and non-string values
+                            def is_valid_comment(text):
+                                text = str(text).strip()
+                                # 1. Too short
+                                if len(text) < 4: return False
+                                # 2. Common metadata/null values
+                                if text.lower() in ['nan', 'null', 'none', 'tr', 'en']: return False
+                                # 3. ISO Timestamps (e.g. 2026-03-01T...)
+                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', text): return False
+                                # 4. Pure numeric or ID-like values
+                                if text.replace('.', '').replace('-', '').isdigit(): return False
+                                # 5. Simple date patterns (e.g. 01.01.2024 or 2024/01/01)
+                                if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text): return False
+                                
+                                return True
+
                             valid_comments = [
                                 str(c).strip() for c in df_upload[col_name].dropna() 
-                                if len(str(c).strip()) > 3 and str(c).lower() != 'nan'
+                                if is_valid_comment(c)
                             ]
                             all_comments.extend(valid_comments)
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
