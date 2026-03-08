@@ -38,6 +38,57 @@ if API_KEY:
 else:
     HAS_GEMINI = False
 
+# --- UTILS: Content Cleanup Filter ---
+def is_valid_comment(text):
+    """
+    Sophisticated filter to remove metadata, developer responses, and garbage lines.
+    Useful for App Store Connect / Play Store copy-pastes.
+    """
+    if not text: return False
+    s = str(text).strip()
+    sl = s.lower()
+    
+    # 1. Basic length check
+    if len(s) < 3: return False
+    
+    # 2. Null values
+    if sl in ['nan', 'null', 'none']: return False
+    
+    # 3. Metadata Keywords / Headers
+    meta_keywords = [
+        "developer response", "geliştirici cevabı", "developer answer", 
+        "customer review", "müşteri yorumu", "app store connect",
+        "review details", "yorum detayları", "version:", "versiyon:"
+    ]
+    if any(k in sl for k in meta_keywords):
+        return False
+        
+    # 4. Date Patterns (e.g. "Mar 2, 2026", "21 Feb 2026", "21.05.2025")
+    # Only block if the line is relatively short (metadata lines)
+    if len(s) < 40:
+        date_regex = r"(\d{1,4}[-./]\d{1,2}[-./]\d{1,4})|((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4})"
+        if re.search(date_regex, s, re.IGNORECASE):
+            return False
+
+    # 5. Formal Developer Canned Replies
+    formal_patterns = [
+        "merhaba, geri bildiriminiz için",
+        "teşekkür ederiz. yaşadığınız",
+        "good day, thank you for the feedback",
+        "support team", "destek ekibi",
+        "iletişime geçtiğiniz için teşekkür",
+        "bize ulaştığınız için teşekkür",
+        "ilgili birimlerimize iletiyoruz",
+        "çözüm için çalışıyoruz",
+        "güncelleme ile giderilmiştir",
+        "sorununuz devam ediyorsa",
+        "iyi günler dileriz"
+    ]
+    if any(fp in sl for fp in formal_patterns):
+        return False
+        
+    return True
+
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
 <style>
@@ -379,7 +430,10 @@ with tab1:
     )
     if text_input.strip():
         raw_lines = text_input.split('\n')
-        comments_to_analyze = [{"text": line.strip()} for line in raw_lines if len(line.strip()) > 2]
+        for line in raw_lines:
+            clean_l = line.strip()
+            if is_valid_comment(clean_l):
+                comments_to_analyze.append({"text": clean_l})
         
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
@@ -485,14 +539,6 @@ with tab2:
                                 st.write("**Bulunan Ek Veriler:**")
                                 st.write(", ".join(meta_status) if meta_status else "Yok")
 
-                            # Pre-filter logic
-                            def is_valid_comment(text):
-                                s = str(text).strip()
-                                if len(s) < 4: return False
-                                if s.lower() in ['nan', 'null', 'none']: return False
-                                reply_patterns = ["merhaba", "tesekkur ederiz", "bilginize sunar", "iyi gunler dileriz"]
-                                if any(rp in s.lower() for rp in reply_patterns): return False
-                                return True
 
                             valid_in_file = 0
                             for _, row in df_upload.iterrows():
