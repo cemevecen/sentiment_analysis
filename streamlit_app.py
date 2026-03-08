@@ -206,7 +206,7 @@ st.markdown("""
         margin-left: 10px !important;
     }
     [data-testid="stFileUploaderDeleteBtn"]::after {
-        content: "Dosyayi Cikar";
+        content: "Dosyayı Çıkar";
         font-size: 11px !important;
         margin-left: 5px !important;
         color: #B91C1C !important;
