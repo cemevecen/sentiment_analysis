@@ -47,12 +47,40 @@ Google Gemini AI desteği ile güçlendirilmiştir.
 is_bulk = st.checkbox("Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
 
 # Input Section
-placeholder = "Örn: Bugün hava çok güzel!\nHarika bir uygulama, bayıldım.\nKargo çok geç geldi, hiç beğenmedim." if is_bulk else "Örn: Bugün hava çok güzel, kendimi harika hissediyorum!"
-text_input = st.text_area(
-    "Analiz edilecek metni girin:",
-    height=200 if is_bulk else 150,
-    placeholder=placeholder
-)
+comments_to_analyze = []
+
+if is_bulk:
+    tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
+    
+    with tab1:
+        text_input = st.text_area(
+            "Yorumları alt alta girin:",
+            height=200,
+            placeholder="Örn: Harika uygulama!\nKötü performans..."
+        )
+        if text_input.strip():
+            raw_lines = text_input.split('\n')
+            comments_to_analyze = [line.strip() for line in raw_lines if len(line.strip()) > 2]
+            
+    with tab2:
+        uploaded_file = st.file_uploader("CSV veya Excel dosyası yükleyin", type=["csv", "xlsx"])
+        if uploaded_file:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df_upload = pd.read_csv(uploaded_file)
+                else:
+                    df_upload = pd.read_excel(uploaded_file)
+                
+                col_name = st.selectbox("Yorumların bulunduğu sütunu seçin:", df_upload.columns)
+                if col_name:
+                    comments_to_analyze = df_upload[col_name].dropna().astype(str).tolist()
+                    st.success(f"{len(comments_to_analyze)} yorum dosyadan yüklendi.")
+            except Exception as e:
+                st.error(f"Dosya okuma hatası: {e}")
+else:
+    text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
+    if text_input:
+        comments_to_analyze = [text_input]
 
 def get_gemini_sentiment(text):
     if not HAS_GEMINI:
@@ -127,40 +155,34 @@ def heuristic_analysis(text):
     return {"positive": positive, "negative": negative, "neutral": neutral, "method": "Heuristic"}
 
 # Analysis Trigger
-# Analysis Trigger
 if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
-    if not text_input.strip():
-        st.warning("Lütfen bir metin girin.")
+    if not comments_to_analyze:
+        st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
         if is_bulk:
-            raw_lines = text_input.split('\n')
-            comments = [line.strip() for line in raw_lines if len(line.strip()) > 2]
+            bulk_results = []
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            if not comments:
-                st.error("Analiz edilecek geçerli yorum bulunamadı.")
-            else:
-                bulk_results = []
-                progress_bar = st.progress(0)
-                status_text = st.empty()
+            for i, comment in enumerate(comments_to_analyze):
+                status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)})...")
+                res = get_gemini_sentiment(comment) or heuristic_analysis(comment)
+                scores = {"Pozitif": res['positive'], "Negatif": res['negative'], "Nötr": res['neutral']}
+                verdict = max(scores, key=scores.get)
                 
-                for i, comment in enumerate(comments):
-                    status_text.text(f"Analiz ediliyor ({i+1}/{len(comments)})...")
-                    res = get_gemini_sentiment(comment) or heuristic_analysis(comment)
-                    scores = {"Pozitif": res['positive'], "Negatif": res['negative'], "Nötr": res['neutral']}
-                    verdict = max(scores, key=scores.get)
-                    
-                    bulk_results.append({
-                        "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                        "Pozitif %": f"{res['positive']:.2%}", "Nötrlük %": f"{res['neutral']:.2%}", "Negatiflik %": f"{res['negative']:.2%}"
-                    })
-                    progress_bar.progress((i + 1) / len(comments))
-                
-                st.session_state.bulk_results = bulk_results
-                status_text.success("Analiz Başarıyla Tamamlandı!")
+                bulk_results.append({
+                    "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
+                    "Pozitif %": f"{res['positive']:.2%}", "Nötrlük %": f"{res['neutral']:.2%}", "Negatiflik %": f"{res['negative']:.2%}"
+                })
+                progress_bar.progress((i + 1) / len(comments_to_analyze))
+            
+            st.session_state.bulk_results = bulk_results
+            status_text.success("Analiz Başarıyla Tamamlandı!")
         else:
-            # Single analysis logic preserved
-            with st.spinner("Yapay Zeka analiz ediyor..."):
-                result = get_gemini_sentiment(text_input) or heuristic_analysis(text_input)
+            # Single analysis logic
+            with st.spinner("Analiz ediliyor..."):
+                comment = comments_to_analyze[0]
+                result = get_gemini_sentiment(comment) or heuristic_analysis(comment)
                 st.session_state.single_result = result
 
 # --- Persistent Results Display ---
