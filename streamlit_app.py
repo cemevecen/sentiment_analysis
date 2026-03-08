@@ -43,9 +43,9 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-    /* Global Overrides - Safe for Icons */
+    /* Global Overrides - COMPONENT WHITE SWEEP */
     html, body, .stApp {
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
     }
     
     p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
@@ -53,13 +53,14 @@ st.markdown("""
         color: #1E293B !important;
     }
 
-    /* Fix Selectbox (removing dark mode leftovers) */
-    .stSelectbox div[data-baseweb="select"] {
+    /* Fix Selectbox & Inputs to WHITE */
+    .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
         background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
-        background-color: transparent !important;
+        background-color: #FFFFFF !important;
         color: #1E293B !important;
         border-color: #FFE4D6 !important;
     }
@@ -76,41 +77,68 @@ st.markdown("""
         color: #1E293B !important;
     }
     
-    /* Header Card */
+    /* Header Card - WHITE */
     .header-container {
-        background-color: #E0F2FE; /* Solid Pastel Light Blue/Green */
-        border: 2px solid #BAE6FD;
+        background-color: #FFFFFF !important;
+        border: 2px solid #E0F2FE;
         border-radius: 20px;
         padding: 40px;
         margin-bottom: 40px;
         text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
     }
     .header-title {
         font-family: 'Poppins', sans-serif;
         font-size: 3.2rem;
         font-weight: 700;
-        color: #6366F1; /* Solid Pastel Indigo */
+        color: #6366F1;
         margin-bottom: 15px;
     }
     .header-desc {
-        color: #94a3b8;
+        color: #64748b;
         font-size: 1.1rem;
         max-width: 600px;
         margin: 0 auto;
     }
-
-    /* Custom Container */
-    .glass-card {
-        background-color: #FFFFFF;
-        border: 2px solid #F1F5F9;
+    
+    /* File Uploader - WHITE */
+    [data-testid="stFileUploader"] {
+        background-color: #FFFFFF !important;
+        border: 2px dashed #FFD1B3 !important;
         border-radius: 16px;
-        padding: 30px;
-        margin-bottom: 25px;
+        padding: 20px;
     }
-
-    /* Buttons */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 12px;
+    }
+    [data-testid="stFileUploader"] section {
+        background-color: transparent !important;
+    }
+    
+    /* Info/Alert boxes - WHITE */
+    .stAlert {
+        background-color: #FFFFFF !important;
+        color: #1E293B !important;
+        border: 2px solid #FFD1B3 !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Force checkbox to be light */
+    .stCheckbox [data-testid="stCheckbox"] > div:first-child {
+        background-color: white !important;
+        border: 2px solid #E2E8F0 !important;
+    }
+    
+    .stCheckbox label, .stRadio label {
+        color: #475569 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Buttons - Restored */
     .stButton>button {
-        background-color: #FFB067 !important; /* Lighter Pastel Orange */
+        background-color: #FFB067 !important;
         border: none !important;
         color: white !important;
         font-weight: 600 !important;
@@ -123,64 +151,20 @@ st.markdown("""
         background-color: #FB923C !important;
         transform: scale(1.02);
     }
-
-    /* Inputs & Toggles */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stSelectbox [data-baseweb="select"] {
-        background-color: #FFFFFF !important;
-        border: 2px solid #FFE4D6 !important; /* Pastel Orange Border */
-        border-radius: 10px !important;
-        color: #1E293B !important;
-    }
     
-    /* File Uploader - Complete Makeover */
-    [data-testid="stFileUploader"] {
-        background-color: #FFFFFF !important;
-        border: 2px dashed #FFD1B3 !important;
-        border-radius: 16px;
-        padding: 20px;
-    }
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #FFF9F5 !important; /* Very light pastel orange */
-        border: none !important;
-        border-radius: 12px;
-    }
-    [data-testid="stFileUploader"] section {
-        background-color: transparent !important;
-    }
-    /* Change Browse Files Text */
+    /* File Uploader Button - Restored */
     [data-testid="stFileUploader"] button {
         background-color: #FFB067 !important;
         color: white !important;
         border: none !important;
-        font-size: 0px !important; /* Hide original text */
+        font-size: 0px !important;
         border-radius: 8px !important;
     }
     [data-testid="stFileUploader"] button::after {
-        content: "Dosya Yükle";
+        content: "Dosya Yukle";
         font-size: 14px !important;
         font-weight: 600;
         visibility: visible;
-    }
-    [data-testid="stFileUploader"] button:hover {
-        background-color: #FB923C !important;
-    }
-    
-    /* Info/Alert boxes - Pastelize */
-    .stAlert {
-        background-color: #FFF5ED !important; /* Light Pastel Orange Background */
-        color: #C2410C !important; /* Brownish Orange text */
-        border: 1px solid #FFD1B3 !important;
-    }
-    
-    /* Force checkbox to be light */
-    .stCheckbox [data-testid="stCheckbox"] > div:first-child {
-        background-color: white !important;
-        border: 2px solid #E2E8F0 !important;
-    }
-    
-    .stCheckbox label, .stRadio label {
-        color: #475569 !important;
-        font-weight: 500 !important;
     }
     
     /* Custom divider */
@@ -572,17 +556,12 @@ if "bulk_results" in st.session_state:
     counts = df["Baskın Duygu"].value_counts()
     
     st.markdown("""
-    <style>
-    .neon-pos { border: 1px solid #2ecc71; box-shadow: 0 0 3px #2ecc71; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(46, 204, 113, 0.05); }
-    .neon-neg { border: 1px solid #e74c3c; box-shadow: 0 0 3px #e74c3c; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(231, 76, 60, 0.05); }
-    .neon-neu { border: 1px solid #3498db; box-shadow: 0 0 3px #3498db; padding: 12px; border-radius: 8px; margin: 8px 0; background: rgba(52, 152, 219, 0.05); }
-    .normal-card { border: 1px solid #333; padding: 12px; border-radius: 8px; margin: 8px 0; background: #1e1e1e; opacity: 0.9; }
-    .fancy-divider {
-        height: 2px;
-        background: linear-gradient(to right, #3b82f6, #a78bfa, #f43f5e);
-        border-radius: 1px;
-        margin: 2rem 0;
-    }
+    /* Results WHITE Swipe */
+    .neon-pos { border: 2px solid #34D399; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
+    .neon-neg { border: 2px solid #F87171; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
+    .neon-neu { border: 2px solid #60A5FA; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
+    .normal-card { border: 1px solid #E2E8F0; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
+    
     .metric-container {
         display: flex;
         justify-content: space-around;
@@ -591,20 +570,14 @@ if "bulk_results" in st.session_state:
         flex-wrap: wrap;
     }
     .metric-card {
-        background: rgba(30, 41, 59, 0.7); /* slate-800 with transparency */
-        border: 1px solid rgba(71, 85, 105, 0.5); /* slate-600 with transparency */
+        background: #FFFFFF !important;
+        border: 2px solid #FFE4D6 !important;
         border-radius: 12px;
         padding: 1.2rem 1.5rem;
         text-align: center;
         flex: 1;
         min-width: 150px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease-in-out;
-    }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
     .metric-value {
         font-size: 2.5em;
@@ -613,19 +586,19 @@ if "bulk_results" in st.session_state:
     }
     .metric-label {
         font-size: 0.9em;
-        color: #94a3b8; /* slate-400 */
+        color: #64748b;
         margin-top: 0.3rem;
     }
     .glass-card {
-        background: rgba(30, 41, 59, 0.6); /* slate-800 with transparency */
-        border: 1px solid rgba(71, 85, 105, 0.4); /* slate-600 with transparency */
+        background: #FFFFFF !important;
+        border: 2px solid #F1F5F9 !important;
         border-radius: 15px;
         padding: 20px;
         margin-bottom: 25px;
-        backdrop-filter: blur(15px);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-        color: #e2e8f0; /* slate-200 */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        color: #1E293B !important;
     }
+    
     .sentiment-indicator {
         display: inline-flex;
         align-items: center;
@@ -634,19 +607,11 @@ if "bulk_results" in st.session_state:
         font-weight: 600;
         font-size: 0.85em;
         margin-right: 8px;
+        background-color: #FFFFFF !important; /* Fills must be white */
     }
-    .sentiment-indicator.positive {
-        background-color: rgba(16, 185, 129, 0.2); /* emerald-500 */
-        color: #10b981;
-    }
-    .sentiment-indicator.negative {
-        background-color: rgba(244, 63, 94, 0.2); /* rose-500 */
-        color: #f43f5e;
-    }
-    .sentiment-indicator.neutral {
-        background-color: rgba(59, 130, 246, 0.2); /* blue-500 */
-        color: #3b82f6;
-    }
+    .sentiment-indicator.positive { border: 1px solid #10b981; color: #10b981; }
+    .sentiment-indicator.negative { border: 1px solid #f43f5e; color: #f43f5e; }
+    .sentiment-indicator.neutral { border: 1px solid #3b82f6; color: #3b82f6; }
     </style>
     """, unsafe_allow_html=True)
 
