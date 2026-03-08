@@ -212,19 +212,23 @@ def get_gemini_sentiment(text):
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analyze the sentiment and INTENT of this app review. 
+        Analyze the sentiment and INTENT of this app review with focus on technical functionality.
         Categorize into:
+        - [OLUMSUZ]: Complaints, technical failures (won't open, crashes, cannot log in), performance issues (slow, lagging), DATA LOSS (erased, gone), or clear frustration.
         - [OLUMLU]: Gratitude, praise, success stories, high satisfaction.
-        - [OLUMSUZ]: Complaints, technical failures (won't open, crashes), performance issues (slow, lagging), clear frustration.
-        - [ISTEK/GORUS]: Constructive feedback, feature requests (e.g., 'it would be better if...', 'please add...'), questions, or layout suggestions without strong emotional valence.
+        - [ISTEK/GORUS]: Constructive feedback, feature requests, questions, or layout suggestions WITHOUT a complaint or failure description.
 
-        IMPORTANT: 
-        1. If someone says "it opens very slowly", it is OLUMSUZ (performance issue).
-        2. If someone says "a 2x2 widget could be added", it is ISTEK/GORUS (feature request).
-        3. If someone says "excellent, 5 stars", it is OLUMLU.
+        STRICT CRITERIA for OLUMSUZ (Negative): 
+        1. Access issues: "giremiyorum", "girilmiyor", "açılmıyor" are always OLUMSUZ.
+        2. Technical failures: "bozuldu", "çalışmıyor", "hata veriyor" are always OLUMSUZ.
+        3. Data issues: "silinmiş", "veriler gitmiş", "kayboldu" are always OLUMSUZ.
+        4. Performance: "yavaş", "kasıyor", "donuyor" are always OLUMSUZ.
+
+        CRITERIA for ISTEK/GORUS (Request/Opinion):
+        - ONLY if there's no technical failure. e.g., "şu özellik gelse", "widget boyutu değişse".
 
         Return ONLY a JSON response: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
-        The sum must be exactly 1.0. Use high-precision floats.
+        The sum must be exactly 1.0. 
         
         Text: "{text}"
         """
@@ -249,15 +253,20 @@ def heuristic_analysis(text):
     
     # Intent-based word lists
     pos_words = ["iyi", "güzel", "harika", "başarılı", "süper", "mükemmel", "beğen", "memnun", "teşekkür", "sev", "hızlı"]
-    neg_words = ["kötü", "berbat", "bozuk", "hata", "sorun", "açılmıyor", "donuyor", "kasıyor", "yavaş", "zor", "rezalet", "çöp"]
+    neg_words = [
+        "kötü", "berbat", "bozuk", "hata", "sorun", "açılmıyor", "donuyor", "kasıyor", 
+        "yavaş", "zor", "rezalet", "çöp", "giremiyorum", "girilmiyor", "silinmiş", 
+        "gitmiş", "bozuldu", "rezil", "mağdur"
+    ]
     neutral_intent = ["gelse", "gelebilir", "olsa", "istiyorum", "bekliyoruz", "eklense", "mı?", "mi?", "nasıl", "neden"]
 
     pos_score = sum(1 for w in pos_words if w in text_lower)
     neg_score = sum(1 for w in neg_words if w in text_lower)
     neu_score = sum(1 for w in neutral_intent if w in text_lower)
 
-    # Heuristic weighting
-    if neg_score > pos_score and neg_score > neu_score:
+    # Heuristic weighting - Priority to Negative on technical failure
+    if neg_score > 0:
+        # If there's any technical failure word, it's very likely negative
         p, n, neu = 0.05, 0.85, 0.1
     elif pos_score > neg_score and pos_score > neu_score:
         p, n, neu = 0.85, 0.05, 0.1
