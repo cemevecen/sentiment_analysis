@@ -625,7 +625,7 @@ if st.button("Analizini Yap", use_container_width=True):
                 "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
                 "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
                 "Tarih": date,
-                "Puan": results_df.iloc[i].get('rating', None) if 'rating' in results_df.columns else None
+                "Puan": entry.get('rating')
             })
             progress_bar.progress((i + 1) / len(comments_to_analyze))
 
