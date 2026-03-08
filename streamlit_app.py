@@ -53,8 +53,8 @@ st.markdown("""
         color: #1E293B !important;
     }
     
-    /* Ensure Icons stay as icons, not text names */
-    [data-testid="stIcon"], [class*="stIcon"], svg {
+    /* Corrected Global Icon Protection */
+    [data-testid="stIcon"], [class*="st-emotion-cache-"], [class*="stIcon"], svg, span[aria-hidden="true"] {
         font-family: inherit !important;
     }
 
@@ -93,7 +93,8 @@ st.markdown("""
         padding: 5px 15px !important;
     }
     
-    [data-testid="stExpander"] summary * {
+    [data-testid="stExpander"] summary p, 
+    [data-testid="stExpander"] summary span:not([data-testid="stIcon"]) {
         font-family: 'Poppins', sans-serif !important;
         color: #1E293B !important;
         background-color: transparent !important;
