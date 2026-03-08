@@ -624,10 +624,15 @@ if st.button("Analizini Yap", use_container_width=True):
                 quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
 
             # Update Ticker
+            ticker_date = ""
+            if date:
+                try: ticker_date = f" | 📅 {date.strftime('%d-%m-%Y')}"
+                except: pass
+
             ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
             ticker_placeholder.markdown(f"""
             <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
-                <div style="font-size: 0.85em; color: #64748b; margin-bottom: 5px;">⚡ ŞU AN ANALİZ EDİLİYOR (#{i+1})</div>
+                <div style="font-size: 0.85em; color: #64748b; margin-bottom: 5px;">⚡ ŞU AN ANALİZ EDİLİYOR (#{i+1}{ticker_date})</div>
                 <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
                 <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
                     {verdict.upper()}
