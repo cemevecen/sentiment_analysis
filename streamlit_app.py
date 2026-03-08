@@ -206,82 +206,32 @@ else:
     if text_input:
         comments_to_analyze = [{"text": text_input}]
 
-def preprocess_review(text):
-    """
-    Extracts the decisive (final) segment of a review.
-    If there are Edit: sections, the LAST one is decisive.
-    Returns (full_text, decisive_segment).
-    """
-    # Match "Edit:", "2.Edit:", "3.Edit:", "EDIT:" etc.
-    edit_pattern = re.split(r'\d*\.?\s*[Ee]dit\s*:', text)
-    if len(edit_pattern) > 1:
-        # Last edit segment is decisive
-        decisive = edit_pattern[-1].strip()
-    else:
-        # No edits: last 2 sentences are most important
-        sentences = re.split(r'[.!?]', text.strip())
-        decisive = '. '.join([s for s in sentences[-2:] if s.strip()])
-    return text, decisive
-
-
-def has_terminal_negative(segment):
-    """Check if the decisive segment clearly indicates an unresolved problem."""
-    s = segment.lower()
-    terminal_neg = [
-        "devam ediyor", "halen devam", "hâlâ devam", "düzelmedi", "hâlâ açılmıyor",
-        "hala açılmıyor", "açılmıyor", "giremiyorum", "girilmiyor", "donuyor",
-        "kasıyor", "çökmüş", "bozuldu", "çalışmıyor", "kayboldu", "silinmiş",
-        "rezalet", "berbat", "hiç iyi değil", "kötü", "mağdur", "hata veriyor"
-    ]
-    return any(kw in s for kw in terminal_neg)
-
-
-def has_terminal_positive(segment):
-    """Check if the decisive segment clearly indicates satisfaction."""
-    s = segment.lower()
-    terminal_pos = [
-        "teşekkür", "harika", "mükemmel", "süper", "memnun", "başarılı",
-        "güzel", "düzeldi", "giderildi", "çözüldü", "sağolun", "seviyorum"
-    ]
-    return any(kw in s for kw in terminal_pos)
-
-
-def has_request_only(segment):
-    """Check if the decisive segment is purely a request/suggestion."""
-    s = segment.lower()
-    request_markers = ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "eklenirse"]
-    neg_present = has_terminal_negative(s)
-    pos_present = has_terminal_positive(s)
-    has_request = any(kw in s for kw in request_markers)
-    return has_request and not neg_present and not pos_present
-
-
 def get_gemini_sentiment(text):
-    _, decisive = preprocess_review(text)
-
-    # Fast-path: deterministic overrides based on decisive segment
-    if has_terminal_negative(decisive):
-        return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05}
-    if has_request_only(decisive):
-        return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80}
-
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
-        You are a Turkish app review classifier. Classify the review into ONE of:
-        - OLUMLU: Positive / satisfied / grateful
-        - OLUMSUZ: Negative / complaint / unresolved problem  
-        - ISTEK_GORUS: Neutral suggestion or feature request
+Sen bir uygulama yorumu duygu analizi uzmanısın.
+Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
 
-        The FINAL PART of the review is the most important:
-        [FINAL PART]: "{decisive}"
+Kategoriler:
+- olumlu: Kullanıcı memnun, teşekkür ediyor, övgü yapıyor.
+- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, hayal kırıklığı var. Çözülmemiş teknik sorunlar, performans problemleri.
+- istek_gorus: Kullanıcı bir özellik istiyor veya tarafsız bir öneri sunuyor, ne memnun ne şikayetçi.
 
-        [FULL REVIEW]: "{text}"
+Önemli kurallar:
+1. Yorumun SON cümlesi veya son edit bölümü en belirleyicidir.
+2. "Teşekkürler ama problem devam ediyor" → olumsuz
+3. "Sorun vardı ama çözdüler, harika" → olumlu
+4. "Şu özellik gelse iyi olur" → istek_gorus
 
-        Return ONLY JSON: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}} — sum must be 1.0.
-        """
+SADECE JSON döndür:
+{{"olumlu": puan, "olumsuz": puan, "istek_gorus": puan}}
+Toplam 1.0 olmalı.
+
+Yorum: "{text}"
+"""
         response = model.generate_content(prompt)
         content = response.text
         match = re.search(r'\{.*\}', content, re.DOTALL)
@@ -293,44 +243,21 @@ def get_gemini_sentiment(text):
             total = p + n + neu
             if total > 0:
                 return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
-            return data
     except Exception:
         return None
     return None
 
 
 def heuristic_analysis(text):
-    _, decisive = preprocess_review(text)
-    decisive_lower = decisive.lower()
-    text_lower = text.lower()
-
-    # Deterministic overrides from decisive segment
-    if has_terminal_negative(decisive):
-        return {"olumlu": 0.05, "olumsuz": 0.85, "istek_gorus": 0.10, "method": "Heuristic"}
-    if has_terminal_positive(decisive) and not has_terminal_negative(decisive):
-        return {"olumlu": 0.85, "olumsuz": 0.05, "istek_gorus": 0.10, "method": "Heuristic"}
-    if has_request_only(decisive):
-        return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
-
-    # Fallback: full text scoring
-    pos_words = ["teşekkür", "harika", "başarılı", "mükemmel", "süper", "güzel", "iyi", "memnun", "sev", "beğen"]
-    neg_words = ["kötü", "berbat", "bozuk", "bozuldu", "açılmıyor", "donuyor", "kasıyor", "yavaş", "rezalet", "çöp"]
-    neutral_intent = ["keşke", "gelse", "olurdu", "gelebilir", "olsa", "eklense"]
-
-    pos_score = sum(1 for w in pos_words if w in text_lower)
-    neg_score = sum(1 for w in neg_words if w in text_lower)
-    neu_score = sum(1 for w in neutral_intent if w in text_lower)
-
-    if neg_score > pos_score:
-        p, n, neu = 0.05, 0.85, 0.1
-    elif pos_score > neg_score:
-        p, n, neu = 0.85, 0.05, 0.1
-    elif neu_score > 0:
-        p, n, neu = 0.15, 0.15, 0.7
-    else:
-        p, n, neu = 0.2, 0.2, 0.6
-
-    return {"olumlu": p, "olumsuz": n, "istek_gorus": neu, "method": "Heuristic"}
+    """Minimal fallback — only used when Gemini API is unavailable."""
+    t = text.lower()
+    pos = sum(1 for w in ["teşekkür", "harika", "başarılı", "mükemmel", "güzel", "iyi", "memnun"] if w in t)
+    neg = sum(1 for w in ["kötü", "berbat", "bozuk", "açılmıyor", "donuyor", "kasıyor", "yavaş", "rezalet", "giremiyorum"] if w in t)
+    neu = sum(1 for w in ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense"] if w in t)
+    if neg > pos: return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic"}
+    if pos > neg: return {"olumlu": 0.90, "olumsuz": 0.05, "istek_gorus": 0.05, "method": "Heuristic"}
+    if neu > 0:   return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
+    return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic"}
 
 
 # Analysis Trigger
