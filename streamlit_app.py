@@ -59,9 +59,11 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
-    /* Corrected Global Icon Protection */
+    /* Global Icon and Text color enforcement */
     [data-testid="stIcon"], [class*="st-emotion-cache-"], [class*="stIcon"], svg, span[aria-hidden="true"] {
         font-family: inherit !important;
+        color: #000000 !important;
+        fill: #000000 !important;
     }
 
     /* Fix Selectbox & Inputs to Light Blue with DARK TEXT */
