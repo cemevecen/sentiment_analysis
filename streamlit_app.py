@@ -43,9 +43,9 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-    /* Global Overrides - COMPONENT WHITE SWEEP */
+    /* Global Overrides - Light Blue Sweep */
     html, body, .stApp {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
     }
     
     p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stButton, .stTextInput, .stTextArea {
@@ -58,23 +58,23 @@ st.markdown("""
         font-family: inherit !important;
     }
 
-    /* Fix Selectbox & Inputs to WHITE with DARK TEXT */
+    /* Fix Selectbox & Inputs to Light Blue with DARK TEXT */
     .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         color: #1E293B !important;
     }
     
     /* Selectbox Popover (Dropdown) fixes */
     [data-baseweb="popover"], [data-baseweb="menu"], [data-baseweb="list"] {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
     }
     [data-baseweb="popover"] * {
         color: #1E293B !important;
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         color: #1E293B !important;
         border-color: #FFE4D6 !important;
     }
@@ -83,8 +83,8 @@ st.markdown("""
     [data-testid="stExpander"], 
     [data-testid="stExpander"] summary, 
     [data-testid="stExpander"] section {
-        background-color: #FFFFFF !important;
-        background: #FFFFFF !important;
+        background-color: #F0F9FF !important;
+        background: #F0F9FF !important;
         border-color: #FFE4D6 !important;
     }
     
@@ -102,13 +102,13 @@ st.markdown("""
 
     /* Target Streamlit's internal header containers for expanders */
     .st-emotion-cache-p5mtransition, .st-emotion-cache-1vt4y6f {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         color: #1E293B !important;
     }
     
-    /* Header Card - WHITE */
+    /* Header Card - Light Blue */
     .header-container {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         border: 2px solid #E0F2FE;
         border-radius: 20px;
         padding: 40px;
@@ -130,15 +130,15 @@ st.markdown("""
         margin: 0 auto;
     }
     
-    /* File Uploader - WHITE */
+    /* File Uploader - Light Blue */
     [data-testid="stFileUploader"] {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         border: 2px dashed #FFD1B3 !important;
         border-radius: 16px;
         padding: 20px;
     }
     [data-testid="stFileUploadDropzone"] {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         border: none !important;
         border-radius: 12px;
     }
@@ -146,9 +146,9 @@ st.markdown("""
         background-color: transparent !important;
     }
     
-    /* Info/Alert boxes - WHITE */
+    /* Info/Alert boxes - Light Blue */
     .stAlert {
-        background-color: #FFFFFF !important;
+        background-color: #F0F9FF !important;
         color: #1E293B !important;
         border: 2px solid #FFD1B3 !important;
         border-radius: 12px !important;
@@ -668,10 +668,10 @@ if "bulk_results" in st.session_state:
     st.markdown("""
 <style>
 /* Results Card Styling */
-.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; }
+.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; }
 
 .neon-pos *, .neon-neg *, .neon-neu *, .normal-card * {
     color: #1E293B !important;
@@ -685,7 +685,7 @@ if "bulk_results" in st.session_state:
     flex-wrap: wrap;
 }
 .metric-card {
-    background: #FFFFFF !important;
+    background: #F0F9FF !important;
     border: 2px solid #FFE4D6 !important;
     border-radius: 12px;
     padding: 1.2rem 1.5rem;
@@ -697,7 +697,7 @@ if "bulk_results" in st.session_state:
 .metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
 
 .glass-card {
-    background: #FFFFFF !important;
+    background: #F0F9FF !important;
     border: 2px solid #F1F5F9 !important;
     border-radius: 15px;
     padding: 20px;
