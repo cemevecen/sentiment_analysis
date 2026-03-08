@@ -111,8 +111,8 @@ st.markdown("""
         background-color: #F0F9FF !important;
         border: 2px solid #E0F2FE;
         border-radius: 20px;
-        padding: 40px;
-        margin-bottom: 40px;
+        padding: 25px;
+        margin-bottom: 20px;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.02);
     }
@@ -144,6 +144,31 @@ st.markdown("""
     }
     [data-testid="stFileUploader"] section {
         background-color: transparent !important;
+    }
+    
+    /* Tighter vertical spacing for the whole app */
+    [data-testid="stVerticalBlock"] > div {
+        margin-top: -5px !important;
+        margin-bottom: -5px !important;
+    }
+    [data-testid="stVerticalBlock"] {
+        gap: 0.8rem !important;
+    }
+    
+    .stMarkdown p {
+        margin-bottom: 4px !important;
+    }
+    
+    /* Column Badge Styling */
+    .column-badge {
+        display: inline-block;
+        background-color: #64748b;
+        color: white !important;
+        padding: 2px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 5px;
     }
     
     /* Info/Alert boxes - Light Blue */
@@ -230,9 +255,9 @@ st.markdown("""
     
     /* Custom divider */
     .fancy-divider {
-        height: 3px;
+        height: 2px;
         background-color: #E2E8F0;
-        margin: 40px 0;
+        margin: 20px 0;
     }
 
     /* Captions */
@@ -389,11 +414,15 @@ with tab2:
                         
                         scores.sort(key=lambda x: x[0], reverse=True)
                         col_name = scores[0][1] if scores else df_upload.columns[0]
-                        st.caption(f"✨ **Otomatik Secilen Sutun:** `{col_name}`")
+                        st.markdown(f"""
+                        <div style="font-size: 0.95rem; font-weight: 600; color: #475569; margin-bottom: 10px;">
+                            ✨ Otomatik Seçilen Sütun: <span class="column-badge">{col_name}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                         if col_name:
                             # NEW FEATURE: Dosya Istatistikleri
-                            st.markdown("---")
+                            # Removed line separator for tighter look
                             col_vals = df_upload[col_name].astype(str)
                             total_words = col_vals.apply(lambda x: len(x.split())).sum()
                             avg_len = col_vals.apply(len).mean()
@@ -716,7 +745,7 @@ if "bulk_results" in st.session_state:
     display: flex;
     justify-content: space-around;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
     flex-wrap: wrap;
 }
 .metric-card {
@@ -735,8 +764,8 @@ if "bulk_results" in st.session_state:
     background: #F0F9FF !important;
     border: 2px solid #F1F5F9 !important;
     border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 25px;
+    padding: 15px;
+    margin-bottom: 15px;
     color: #1E293B !important;
 }
 
