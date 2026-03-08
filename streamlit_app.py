@@ -323,16 +323,28 @@ with tab2:
                         st.info(f"Dosya okundu: {len(df_upload)} satir")
                         
                         # Date & Rating Detection
-                        date_keys = ["date", "time", "tarih", "saat", "submit"]
+                        # Priority: 1. Review Last Update, 2. General date keys (excluding 'submit')
+                        date_keys = ["date", "time", "tarih", "saat"]
                         rate_keys = ["rating", "star", "puan", "yildiz", "skor", "score"]
                         
                         date_col = None
                         rate_col = None
                         
+                        # Explicit check for Priority Column
+                        for col in df_upload.columns:
+                            if "Review Last Update Date and Time" in col:
+                                date_col = col
+                                break
+                        
                         for col in df_upload.columns:
                             col_l = col.lower()
-                            if not date_col and any(dk in col_l for dk in date_keys): date_col = col
-                            if not rate_col and any(rk in col_l for rk in rate_keys): rate_col = col
+                            # Never use Submit date
+                            if "Review Submit Date and Time" in col:
+                                continue
+                            if not date_col and any(dk in col_l for dk in date_keys): 
+                                date_col = col
+                            if not rate_col and any(rk in col_l for rk in rate_keys): 
+                                rate_col = col
 
                         # Advanced Sentiment Column Scoring
                         scores = []
