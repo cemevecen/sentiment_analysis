@@ -46,3 +46,4 @@ Bu proje MIT Lisansı ile lisanslanmıştır.
 
 ---
 Geliştiren: **Cem Evecen**
+# yorum_duygu_analizi
