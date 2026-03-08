@@ -48,15 +48,24 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
     
-    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
+    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, span, div {
         font-family: 'Poppins', sans-serif !important;
         color: #1E293B !important;
     }
 
-    /* Fix Selectbox & Inputs to WHITE */
+    /* Fix Selectbox & Inputs to WHITE with DARK TEXT */
     .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
         background-color: #FFFFFF !important;
-        background: #FFFFFF !important;
+        color: #1E293B !important;
+    }
+    
+    /* Selectbox Popover (Dropdown) fixes */
+    [data-baseweb="popover"], [data-baseweb="menu"], [data-baseweb="list"] {
+        background-color: #FFFFFF !important;
+    }
+    [data-baseweb="popover"] * {
+        color: #1E293B !important;
+        background-color: #FFFFFF !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
@@ -575,10 +584,14 @@ if "bulk_results" in st.session_state:
     st.markdown("""
 <style>
 /* Results Card Styling */
-.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 .normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; }
+
+.neon-pos *, .neon-neg *, .neon-neu *, .normal-card * {
+    color: #1E293B !important;
+}
 
 .metric-container {
     display: flex;
@@ -597,7 +610,7 @@ if "bulk_results" in st.session_state:
     min-width: 150px;
 }
 .metric-value { font-size: 2.5em; font-weight: bold; line-height: 1.2; }
-.metric-label { font-size: 0.9em; color: #64748b; margin-top: 0.3rem; }
+.metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
 
 .glass-card {
     background: #FFFFFF !important;
@@ -605,6 +618,10 @@ if "bulk_results" in st.session_state:
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 25px;
+    color: #1E293B !important;
+}
+
+.glass-card * {
     color: #1E293B !important;
 }
 
