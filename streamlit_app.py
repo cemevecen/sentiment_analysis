@@ -402,8 +402,12 @@ with tab2:
 
                             valid_in_file = 0
                             for _, row in df_upload.iterrows():
-                                if pd.notnull(row[col_name]) and is_valid_comment(row[col_name]):
-                                    entry = {"text": str(row[col_name]).strip()}
+                                comment_text = str(row[col_name]).strip() if pd.notnull(row[col_name]) else ""
+                                valid_text = is_valid_comment(comment_text)
+                                has_rating = rate_col and pd.notnull(row[rate_col])
+                                
+                                if valid_text or has_rating:
+                                    entry = {"text": comment_text, "is_valid": valid_text}
                                     
                                     # Capture Date
                                     if date_col and pd.notnull(row[date_col]):
@@ -419,7 +423,8 @@ with tab2:
                                         entry["rating"] = str(row[rate_col])
                                         
                                     all_comments.append(entry)
-                                    valid_in_file += 1
+                                    if valid_text:
+                                        valid_in_file += 1
                                     
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
                             
@@ -607,19 +612,24 @@ if st.button("Analizini Yap", use_container_width=True):
         for i, entry in enumerate(comments_to_analyze):
             comment = entry["text"]
             date = entry.get("date")
+            is_valid = entry.get("is_valid", True)
+            
             status_text.text(f"Analiz ediliyor: {i+1} / {len(comments_to_analyze)}")
             update_time(i, len(comments_to_analyze), start_time)
 
-            res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
-            scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
-            verdict = max(scores, key=scores.get)
-
-            # Update quota warning placeholder
-            q = st.session_state.get('_quota_hits', 0)
-            if q == 1:
-                quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
-            elif q > 1:
-                quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+            if is_valid and comment:
+                res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
+                scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
+                verdict = max(scores, key=scores.get)
+                # Update quota warning placeholder
+                q = st.session_state.get('_quota_hits', 0)
+                if q == 1:
+                    quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
+                elif q > 1:
+                    quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+            else:
+                verdict = "—"
+                res = {'olumlu': 0, 'olumsuz': 0, 'istek_gorus': 0}
 
             # Update Ticker
             ticker_date = ""
@@ -648,9 +658,11 @@ if st.button("Analizini Yap", use_container_width=True):
             if remaining == 0:
                 ticker_placeholder.empty() # Clear ticker on finish
             progress_bar.progress((i + 1) / len(comments_to_analyze))
-            if remaining > 0:
+            if remaining > 0 and is_valid:
                 time.sleep(DELAY_SECS)
                 update_time(i + 1, len(comments_to_analyze), start_time)
+            elif remaining > 0:
+                 update_time(i + 1, len(comments_to_analyze), start_time)
 
         
         st.session_state.bulk_results = bulk_results
@@ -725,6 +737,9 @@ if "bulk_results" in st.session_state:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### 📊 Analiz Özeti")
     
+    analysis_df = df[df["Baskın Duygu"] != "—"].copy()
+    counts = analysis_df["Baskın Duygu"].value_counts()
+    
     # Custom Metric Cards
     m_olumlu = counts.get("Olumlu", 0)
     m_olumsuz = counts.get("Olumsuz", 0)
@@ -776,25 +791,27 @@ if "bulk_results" in st.session_state:
             
         st.write("Aşağıdaki sekmelerden tüm yorumları tek tek inceleyebilir, grafik üzerinde tarihsel değişimleri takip edebilirsiniz.")
 
-    # NEW: Star Rating Trend Chart
+    # NEW: Star Rating Trend Chart (EKSİKSİZ)
     if "Puan" in df.columns and df["Puan"].notnull().any():
         st.markdown("---")
-        st.write("#### ⭐ Puan Trendi (Haftalık Ortalama)")
+        st.write("#### ⭐ Puan Trendi (Günlük / Haftalık)")
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
             df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce')
             df_puan = df_puan.dropna(subset=["Puan_val"])
             if not df_puan.empty:
                 df_puan["Tarih"] = pd.to_datetime(df_puan["Tarih"])
-                df_puan['Hafta'] = df_puan['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
-                star_trend = df_puan.groupby('Hafta')['Puan_val'].mean().reset_index()
+                # Grouping by day for a more granular line chart
+                puan_trend = df_puan.groupby(df_puan["Tarih"].dt.date)["Puan_val"].mean().reset_index()
+                puan_trend.columns = ["Tarih", "Ort_Puan"]
                 
-                fig_stars = px.bar(star_trend, x="Hafta", y="Puan_val", 
-                                  range_y=[0, 5],
-                                  labels={"Hafta": "Hafta", "Puan_val": "Ort. Puan"},
+                fig_stars = px.line(puan_trend, x="Tarih", y="Ort_Puan", 
+                                  range_y=[1, 5],
+                                  labels={"Tarih": "Zaman", "Ort_Puan": "Ort. Yıldız"},
+                                  markers=True,
                                   color_discrete_sequence=['#FBBF24'])
-                fig_stars.update_layout(height=250, margin={"t": 30, "b": 20, "l": 10, "r": 10},
-                                       xaxis_title="Zaman", yaxis_title="Ortalama Yıldız")
+                fig_stars.update_layout(height=300, margin={"t": 30, "b": 20, "l": 10, "r": 10},
+                                       xaxis_title="Tarih", yaxis_title="Ortalama Yıldız (1-5)")
                 st.plotly_chart(fig_stars, use_container_width=True)
         except: pass
 
@@ -880,17 +897,17 @@ if "bulk_results" in st.session_state:
     t_pos = counts.get('Olumlu', 0)
     t_neg = counts.get('Olumsuz', 0)
     t_neu = counts.get('İstek/Görüş', 0)
-    t_all = len(df)
+    t_all = len(analysis_df)
 
     tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
-        f"🌐 Tümü ({t_all})", 
+        f"🌐 Analizler ({t_all})", 
         f"🟢 Olumlu ({t_pos})", 
         f"🔴 Olumsuz ({t_neg})", 
         f"🔵 İstek/Görüş ({t_neu})"
     ])
 
     with tab_all:
-        f_df = render_trend_chart(df, "all", "(Genel)")
+        f_df = render_trend_chart(analysis_df, "all", "(Genel)")
         display_comments(f_df, highlight=False)
     
     with tab_pos:
