@@ -660,7 +660,13 @@ if st.button("Analizini Yap", use_container_width=True):
             })
             remaining = len(comments_to_analyze) - (i + 1)
             if remaining == 0:
-                ticker_placeholder.empty() # Clear ticker on finish
+                ticker_placeholder.markdown(f"""
+                <div style="border: 2px solid #10B981; padding: 20px; border-radius: 12px; background: #ECFDF5; margin: 10px 0; text-align: center;">
+                    <div style="font-size: 2em; margin-bottom: 10px;">✅</div>
+                    <div style="font-weight: 700; color: #065F46; font-size: 1.2em;">ANALİZ TAMAMLANDI</div>
+                    <div style="font-size: 0.9em; color: #047857; margin-top: 5px;">Toplam {len(comments_to_analyze)} satır başarıyla işlendi.</div>
+                </div>
+                """, unsafe_allow_html=True)
             progress_bar.progress((i + 1) / len(comments_to_analyze))
             if remaining > 0 and is_valid:
                 time.sleep(DELAY_SECS)
