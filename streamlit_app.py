@@ -204,13 +204,18 @@ st.markdown("""
         border: 1px solid #F87171 !important;
         border-radius: 6px !important;
         margin-left: 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 32px !important; /* Fixed height for better alignment */
     }
     [data-testid="stFileUploaderDeleteBtn"]::after {
         content: "Dosyayı Çıkar";
         font-size: 11px !important;
-        margin-left: 5px !important;
+        margin-left: 6px !important;
         color: #B91C1C !important;
         font-weight: 600 !important;
+        line-height: 1 !important;
     }
     [data-testid="stFileUploaderDeleteBtn"] svg {
         color: #B91C1C !important;
