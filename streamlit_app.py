@@ -87,7 +87,7 @@ st.markdown("""
 
     /* Buttons */
     .stButton>button {
-        background-color: #FB923C !important; /* Solid Pastel Orange */
+        background-color: #FFB067 !important; /* Lighter Pastel Orange */
         border: none !important;
         color: white !important;
         font-weight: 600 !important;
@@ -97,7 +97,7 @@ st.markdown("""
         font-size: 1rem !important;
     }
     .stButton>button:hover {
-        background-color: #F97316 !important;
+        background-color: #FB923C !important;
         transform: scale(1.02);
     }
 
@@ -107,6 +107,12 @@ st.markdown("""
         border: 2px solid #E2E8F0 !important;
         border-radius: 10px !important;
         color: #1E293B !important;
+    }
+    
+    /* Force checkbox to be light */
+    .stCheckbox [data-testid="stCheckbox"] > div:first-child {
+        background-color: white !important;
+        border: 2px solid #E2E8F0 !important;
     }
     
     .stCheckbox label, .stRadio label {
