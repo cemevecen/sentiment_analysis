@@ -777,26 +777,6 @@ if "bulk_results" in st.session_state:
         st.download_button(label="📥 Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl")
     except: pass
 
-elif not is_bulk and "single_result" in st.session_state:
-    result = st.session_state.single_result
-    st.divider()
-    st.success("Analiz Tamamlandı")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Olumlu", f"{result['olumlu']:.4f}")
-    c2.metric("İstek/Görüş", f"{result['istek_gorus']:.4f}")
-    c3.metric("Olumsuz", f"{result['olumsuz']:.4f}")
-    
-    scores = {"Olumlu": result['olumlu'], "Olumsuz": result['olumsuz'], "İstek/Görüş": result['istek_gorus']}
-    verdict = max(scores, key=scores.get)
-    st.subheader(f"Sonuç: {verdict}")
-    
-    if verdict == "Olumlu":
-        st.info(f"Bu metin genel olarak **Olumlu** bir duygu taşıyor (%{result['olumlu']:.2%}). 😊")
-    elif verdict == "Olumsuz":
-        st.info(f"Bu metin genel olarak **Olumsuz** bir duygu taşıyor (%{result['olumsuz']:.2%}). 😔")
-    else:
-        st.info(f"Bu metin **İstek/Görüş** kategorisine giriyor (%{result['istek_gorus']:.2%}). 😐")
-
 # Footer
 st.divider()
 st.caption("Geliştiren: Cem Evecen")
