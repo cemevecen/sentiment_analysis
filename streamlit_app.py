@@ -43,10 +43,15 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-    /* Global Overrides */
-    html, body, [class*="st-"], .stApp, *, .stButton>button, .stTextInput input, .stTextArea textarea {
+    /* Global Overrides - Fixed Icons */
+    html, body, .stApp, p, label, span, h1, h2, h3, h4, h5, h6 {
         font-family: 'Poppins', sans-serif !important;
-        color: #1E293B !important; /* Dark Slate for readability */
+        color: #1E293B !important;
+    }
+    
+    /* Ensure Streamlit Icons stay icons and don't turn into text like _arrow_right */
+    [data-testid="stIcon"], .st-emotion-cache-1vt4y6f, .st-key-internal-selectbox, [class^="stIcon-"] {
+        font-family: inherit !important; /* Let Streamlit handle icon fonts */
     }
     
     .stApp {
