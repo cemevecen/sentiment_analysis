@@ -54,16 +54,21 @@ def is_valid_comment(text):
     # 2. Null values
     if sl in ['nan', 'null', 'none']: return False
     
-    # 3. Metadata Keywords / Headers
+    # 3. Metadata Keywords / Headers / UI Buttons
     meta_keywords = [
         "developer response", "geliştirici cevabı", "developer answer", 
         "customer review", "müşteri yorumu", "app store connect",
-        "review details", "yorum detayları", "version:", "versiyon:"
+        "review details", "yorum detayları", "version:", "versiyon:",
+        "report a concern", "rapor et", "reply", "cevapla", "edit response", "cevabı düzenle"
     ]
     if any(k in sl for k in meta_keywords):
         return False
+
+    # 4. Version Stamps (e.g. "Version 1.2.3 - Turkey")
+    if re.search(r"version\s+\d+(\.\d+)*", sl):
+        return False
         
-    # 4. Date Patterns (e.g. "Mar 2, 2026", "21 Feb 2026", "21.05.2025")
+    # 5. Date Patterns (e.g. "Mar 2, 2026", "21 Feb 2026", "21.05.2025")
     # Only block if the line is relatively short (metadata lines)
     if len(s) < 40:
         date_regex = r"(\d{1,4}[-./]\d{1,2}[-./]\d{1,4})|((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4})"
@@ -430,10 +435,26 @@ with tab1:
     )
     if text_input.strip():
         raw_lines = text_input.split('\n')
+        processed_comments = []
+        
+        # Date regex for "Jan 23, 2026 - Cagatay Yalcin"
+        store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
+        
         for line in raw_lines:
-            clean_l = line.strip()
-            if is_valid_comment(clean_l):
-                comments_to_analyze.append({"text": clean_l})
+            l = line.strip()
+            if not l: continue
+            
+            # Detect Store Metadata (Date - User)
+            if re.search(store_meta_regex, l, re.IGNORECASE):
+                # If we have a previous line in progress, it's likely a TITLE. Remove it.
+                if processed_comments and len(processed_comments[-1]["text"]) < 80:
+                    processed_comments.pop()
+                continue # Skip the date line too
+                
+            if is_valid_comment(l):
+                processed_comments.append({"text": l})
+                
+        comments_to_analyze = processed_comments
         
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
