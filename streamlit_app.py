@@ -812,7 +812,7 @@ if "bulk_results" in st.session_state:
         with g_col1:
             st.write("#### 📊 Puan Dağılımı Trendi")
         with g_col2:
-            freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="puan_freq_sel")
+            freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel")
 
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
