@@ -210,29 +210,26 @@ else:
 # ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
 if is_bulk and comments_to_analyze:
     st.markdown("---")
+    n = len(comments_to_analyze)
+
+    def fmt_time(secs):
+        m, s = divmod(secs, 60)
+        return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
+
     mode_idx = st.radio(
         "Analiz hızı:",
         options=[0, 1],
         format_func=lambda x: ["Hızlı", "Yavaş"][x],
         captions=[
-            "Genel değerlendirmeler, daha kısa sürer",
-            "Çok daha doğru sonuçlar, uzun sürer"
+            f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
+            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
         ],
         horizontal=True,
         key="analysis_mode"
     )
-    n = len(comments_to_analyze)
-
-    def fmt_time(secs):
-        m, s = divmod(secs, 60)
-        return f"~{m}dk {s}sn" if m > 0 else f"~{s}sn"
-
-    st.caption(
-        f"📊 {n} yorum · "
-        f"**Hızlı:** {fmt_time(n * 2)}  |  "
-        f"**Yavaş:** {fmt_time(n * 4)}"
-    )
     st.markdown("")
+
+
 
 
 
