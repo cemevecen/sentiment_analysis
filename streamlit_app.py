@@ -213,6 +213,12 @@ st.markdown("""
         font-weight: 600 !important;
     }
     
+    /* Ensure File Names are readable (not white) */
+    [data-testid="stFileUploaderFileName"] {
+        color: #1E293B !important;
+        font-weight: 500 !important;
+    }
+    
     /* Custom divider */
     .fancy-divider {
         height: 3px;
