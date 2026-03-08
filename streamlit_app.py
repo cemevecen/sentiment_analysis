@@ -133,24 +133,26 @@ if is_bulk:
                                 text_str = str(text).strip()
                                 text_lower = text_str.lower()
                                 
-                                # 1. Too short
                                 if len(text_str) < 4: return False
-                                
-                                # 2. Metadata/Nulls
                                 if text_lower in ['nan', 'null', 'none', 'tr', 'en']: return False
                                 
-                                # 3. Developer/Owner Reply Patterns (Turkish Specific)
+                                # 3. Developer/Owner Reply Patterns (Aggressive)
+                                # These keywords are almost always in store owner/dev replies
                                 reply_keywords = [
                                     "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
-                                    "iyi günler dileriz", "iyi seyirler", "iyi oyunlar", "rica etsek",
-                                    "geri bildiriminiz", "incelemelerimiz sonucunda", "değerlendirmenizi bekler",
-                                    "saygılarımızla", "ekibimiz", "talebini"
+                                    "iyi günler dileriz", "rica etsek", "geri bildirimleriniz", 
+                                    "değerlendirmenizi bekler", "saygılarımızla", "ekibimiz", 
+                                    "talebini", "incelemelerimiz sonucunda", "güncellememizi",
+                                    "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında"
                                 ]
-                                # If the text is long enough but common "owner reply" phrases are found, skip it
+                                
+                                # If any keyword matches, it's very likely a developer reply
                                 if any(rk in text_lower for rk in reply_keywords):
-                                    # Still might be a user comment, so we check if it's too systematic
-                                    if text_lower.startswith(("merhaba", "teşekkür ederiz")) and len(text_str) < 200:
-                                        return False
+                                    return False
+                                
+                                # Filter out sentences that look like titles or formal address
+                                if "bey," in text_lower or "hanım," in text_lower:
+                                    return False
                                 
                                 # 4. ISO Timestamps or numeric IDs
                                 if re.match(r'^\d{4}-\d{2}-\d{2}.*', text_str): return False
