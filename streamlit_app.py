@@ -383,7 +383,7 @@ with tab2:
                             with stat_col1:
                                 st.metric("Toplam Kelime", f"{total_words:,}")
                             with stat_col2:
-                                st.metric("Ort. Yorum Boyu", f"{int(avg_len)} krk")
+                                st.metric("Ort. Yorum Boyu", f"{int(avg_len)} Karakter")
                             with stat_col3:
                                 meta_status = []
                                 if date_col: meta_status.append("📅 Tarih")
