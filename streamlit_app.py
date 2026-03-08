@@ -70,50 +70,71 @@ if is_bulk:
                 df_upload = None
                 try:
                     if uploaded_file.name.endswith('.csv'):
-                        # Try different encodings for CSV files
                         for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
                             try:
                                 uploaded_file.seek(0)
-                                # sep=None with engine='python' automatically detects delimiter (, or ;)
+                                # Automatic delimiter detection with fallback to common ones
                                 df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
+                                if len(df_upload.columns) <= 1: # Delimiter detection failed
+                                    uploaded_file.seek(0)
+                                    df_upload = pd.read_csv(uploaded_file, encoding=encoding, sep=';')
                                 break
-                            except Exception:
-                                continue
-                        
-                        if df_upload is None:
-                            st.error(f"❌ {uploaded_file.name} okunamadı: Kodlama hatası (Lütfen UTF-8 olarak kaydedin).")
+                            except Exception: continue
                     else:
                         df_upload = pd.read_excel(uploaded_file)
                     
                     if df_upload is not None:
                         st.write(f"📂 **Dosya İşleniyor:** {uploaded_file.name}")
                         
-                        # --- Smart Column Detection ---
-                        keywords = ["review", "yorum", "text", "metin", "content", "mesaj", "body"]
-                        default_index = 0
-                        for i, col in enumerate(df_upload.columns):
-                            if any(key in col.lower() for key in keywords):
-                                default_index = i
-                                break
+                        # --- Enhanced Smart Column Detection ---
+                        # 1. Target keywords
+                        target_keys = ["review text", "yorum metni", "yorum", "review", "text", "metin", "content", "body"]
+                        # 2. Avoidance keywords
+                        avoid_keys = ["language", "dil", "id", "name", "isim", "code", "vers", "date", "tarih", "star", "rating", "device", "millis", "epoch", "app"]
                         
+                        scores = []
+                        for col in df_upload.columns:
+                            col_lower = col.lower()
+                            score = 0
+                            # Keyword matching
+                            if any(tk in col_lower for tk in target_keys): score += 10
+                            if any(ak in col_lower for ak in avoid_keys): score -= 15
+                            
+                            # Content estimation (Check first 5 rows)
+                            sample = df_upload[col].head(5).astype(str).tolist()
+                            avg_len = sum(len(s) for s in sample) / len(sample) if sample else 0
+                            if avg_len > 15: score += 10 # Likely a real sentence/comment
+                            elif avg_len < 5: score -= 10 # Likely short codes or names
+                            
+                            scores.append((score, col))
+                        
+                        # Get the column with the highest score
+                        scores.sort(key=lambda x: x[0], reverse=True)
+                        best_col = scores[0][1] if scores else df_upload.columns[0]
+                        default_index = list(df_upload.columns).index(best_col)
+
                         col_name = st.selectbox(
-                            f"Hangi sütun analiz edilecek? ({uploaded_file.name})", 
+                            f"Analiz edilecek sütun ({uploaded_file.name}):", 
                             df_upload.columns, 
                             index=default_index,
                             key=f"col_{uploaded_file.name}"
                         )
                         
                         if col_name:
-                            file_comments = df_upload[col_name].dropna().astype(str).tolist()
-                            all_comments.extend(file_comments)
-                            with st.expander(f"👀 {uploaded_file.name} Önizleme"):
-                                st.write(df_upload[col_name].head(3).tolist())
+                            # Filter out very short strings and non-string values
+                            valid_comments = [
+                                str(c).strip() for c in df_upload[col_name].dropna() 
+                                if len(str(c).strip()) > 3 and str(c).lower() != 'nan'
+                            ]
+                            all_comments.extend(valid_comments)
+                            with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
+                                st.write(valid_comments[:5])
                 except Exception as e:
                     st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
             
             if all_comments:
                 comments_to_analyze = all_comments
-                st.success(f"📋 Toplam **{len(comments_to_analyze)}** yorum analiz için hazır!")
+                st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
 else:
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
     if text_input:
