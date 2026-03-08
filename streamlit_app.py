@@ -210,21 +210,27 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Try latest model first, fall back to previous stable
+        try:
+            model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
+        except Exception:
+            model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
 Sen bir uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
 
 Kategoriler:
-- olumlu: Kullanıcı memnun, teşekkür ediyor, övgü yapıyor.
-- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, hayal kırıklığı var. Çözülmemiş teknik sorunlar, performans problemleri.
-- istek_gorus: Kullanıcı bir özellik istiyor veya tarafsız bir öneri sunuyor, ne memnun ne şikayetçi.
+- olumlu: Kullanıcı memnun, teşekkür ediyor, övüyor. Örn: "harika uygulama", "5 yıldız", "teşekkürler"
+- olumsuz: Kullanıcı şikayetçi, sorun var. Örn: "açılmıyor", "donuyor", "kapanıyor", "zor giriyor", "silinmiş", "yaramaz", "bozuk"
+- istek_gorus: Tarafsız öneri veya soru. Örn: "şu özellik gelse", "reklamdan kurtulabilir miyiz?"
 
 Önemli kurallar:
-1. Yorumun SON cümlesi veya son edit bölümü en belirleyicidir.
+1. Yorumun SON cümlesi / son edit bölümü en belirleyicidir.
 2. "Teşekkürler ama problem devam ediyor" → olumsuz
 3. "Sorun vardı ama çözdüler, harika" → olumlu
 4. "Şu özellik gelse iyi olur" → istek_gorus
+5. Kısa ama net şikayetler (örn: "girilmiyor", "yaramaz", "kapanıyor") → olumsuz
+6. Kısa ama net övgüler (örn: "iyi gidiyor", "güzel", "süper") → olumlu
 
 SADECE JSON döndür:
 {{"olumlu": puan, "olumsuz": puan, "istek_gorus": puan}}
@@ -243,21 +249,39 @@ Yorum: "{text}"
             total = p + n + neu
             if total > 0:
                 return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
-    except Exception:
+    except Exception as e:
+        st.warning(f"⚠️ Gemini API hatası: {e}")
         return None
     return None
 
 
 def heuristic_analysis(text):
-    """Minimal fallback — only used when Gemini API is unavailable."""
+    """Fallback — used when Gemini API is unavailable."""
     t = text.lower()
-    pos = sum(1 for w in ["teşekkür", "harika", "başarılı", "mükemmel", "güzel", "iyi", "memnun"] if w in t)
-    neg = sum(1 for w in ["kötü", "berbat", "bozuk", "açılmıyor", "donuyor", "kasıyor", "yavaş", "rezalet", "giremiyorum"] if w in t)
-    neu = sum(1 for w in ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense"] if w in t)
-    if neg > pos: return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic"}
-    if pos > neg: return {"olumlu": 0.90, "olumsuz": 0.05, "istek_gorus": 0.05, "method": "Heuristic"}
-    if neu > 0:   return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
-    return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic"}
+    pos_words = [
+        "teşekkür", "harika", "başarılı", "mükemmel", "güzel", "iyi", "memnun",
+        "sev", "süper", "5 yıldız", "sağolun", "devam etsin", "devam eder"
+    ]
+    neg_words = [
+        "kötü", "berbat", "bozuk", "bozuldu", "yaramaz", "rezalet", "rezil",
+        "açılmıyor", "açılmı", "zor açıl", "girilmiyor", "giremiyorum",
+        "donuyor", "dondu", "kasıyor", "kasıldı", "kapanıyor", "kapandı",
+        "çöküyor", "çöktü", "durduruldu", "hatası", "hata veriyor",
+        "yavaş", "silinmiş", "gitmiş", "kayboldu", "çalışmıyor",
+        "sorun", "problem", "mahvoldu", "batık", "mağdur"
+    ]
+    neu_words = ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "mı?", "mi?", "nasıl"]
+
+    pos = sum(1 for w in pos_words if w in t)
+    neg = sum(1 for w in neg_words if w in t)
+    neu = sum(1 for w in neu_words if w in t)
+
+    if neg > pos:   return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic"}
+    if pos > neg:   return {"olumlu": 0.90, "olumsuz": 0.05, "istek_gorus": 0.05, "method": "Heuristic"}
+    if neu > 0:     return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
+    # True default: balanced, slight lean to neutral
+    return {"olumlu": 0.30, "olumsuz": 0.30, "istek_gorus": 0.40, "method": "Heuristic"}
+
 
 
 # Analysis Trigger
