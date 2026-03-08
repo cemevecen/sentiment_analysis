@@ -189,13 +189,15 @@ if is_bulk and "bulk_results" in st.session_state:
             key="bulk_filter",
             horizontal=True
         )
-        st.write(f"✅ **Pozitif:** {counts.get('Pozitif', 0)} | 😐 **Nötr:** {counts.get('Nötr', 0)} | ❌ **Negatif:** {counts.get('Negatif', 0)}")
+        st.write(f"**Pozitif:** {counts.get('Pozitif', 0)} | **Nötr:** {counts.get('Nötr', 0)} | **Negatif:** {counts.get('Negatif', 0)}")
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        fig = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.4,
+        # Adding a 'pull' effect to make it feel more dynamic and standout (popping out)
+        fig = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
                      color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
-        fig.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=180, showlegend=False)
+        fig.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent+label')
+        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=220, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
     # Comments List
