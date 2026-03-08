@@ -222,13 +222,18 @@ if is_bulk and comments_to_analyze:
         key="analysis_mode"
     )
     n = len(comments_to_analyze)
-    secs_per = 4 if mode_idx == 1 else 2
-    total_secs = n * secs_per
-    total_min = total_secs // 60
-    total_sec = total_secs % 60
-    time_str = f"~{total_min}dk {total_sec}sn" if total_min > 0 else f"~{total_sec}sn"
-    st.caption(f"📊 {n} yorum için tahmini süre: **{time_str}**")
+
+    def fmt_time(secs):
+        m, s = divmod(secs, 60)
+        return f"~{m}dk {s}sn" if m > 0 else f"~{s}sn"
+
+    st.caption(
+        f"📊 {n} yorum · "
+        f"**Hızlı:** {fmt_time(n * 2)}  |  "
+        f"**Yavaş:** {fmt_time(n * 4)}"
+    )
     st.markdown("")
+
 
 
 def get_gemini_sentiment(text, model_name='gemini-3.1-flash-lite-preview'):
