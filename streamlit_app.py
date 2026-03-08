@@ -206,36 +206,81 @@ else:
     if text_input:
         comments_to_analyze = [{"text": text_input}]
 
+def preprocess_review(text):
+    """
+    Extracts the decisive (final) segment of a review.
+    If there are Edit: sections, the LAST one is decisive.
+    Returns (full_text, decisive_segment).
+    """
+    # Match "Edit:", "2.Edit:", "3.Edit:", "EDIT:" etc.
+    edit_pattern = re.split(r'\d*\.?\s*[Ee]dit\s*:', text)
+    if len(edit_pattern) > 1:
+        # Last edit segment is decisive
+        decisive = edit_pattern[-1].strip()
+    else:
+        # No edits: last 2 sentences are most important
+        sentences = re.split(r'[.!?]', text.strip())
+        decisive = '. '.join([s for s in sentences[-2:] if s.strip()])
+    return text, decisive
+
+
+def has_terminal_negative(segment):
+    """Check if the decisive segment clearly indicates an unresolved problem."""
+    s = segment.lower()
+    terminal_neg = [
+        "devam ediyor", "halen devam", "hâlâ devam", "düzelmedi", "hâlâ açılmıyor",
+        "hala açılmıyor", "açılmıyor", "giremiyorum", "girilmiyor", "donuyor",
+        "kasıyor", "çökmüş", "bozuldu", "çalışmıyor", "kayboldu", "silinmiş",
+        "rezalet", "berbat", "hiç iyi değil", "kötü", "mağdur", "hata veriyor"
+    ]
+    return any(kw in s for kw in terminal_neg)
+
+
+def has_terminal_positive(segment):
+    """Check if the decisive segment clearly indicates satisfaction."""
+    s = segment.lower()
+    terminal_pos = [
+        "teşekkür", "harika", "mükemmel", "süper", "memnun", "başarılı",
+        "güzel", "düzeldi", "giderildi", "çözüldü", "sağolun", "seviyorum"
+    ]
+    return any(kw in s for kw in terminal_pos)
+
+
+def has_request_only(segment):
+    """Check if the decisive segment is purely a request/suggestion."""
+    s = segment.lower()
+    request_markers = ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "eklenirse"]
+    neg_present = has_terminal_negative(s)
+    pos_present = has_terminal_positive(s)
+    has_request = any(kw in s for kw in request_markers)
+    return has_request and not neg_present and not pos_present
+
+
 def get_gemini_sentiment(text):
+    _, decisive = preprocess_review(text)
+
+    # Fast-path: deterministic overrides based on decisive segment
+    if has_terminal_negative(decisive):
+        return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05}
+    if has_request_only(decisive):
+        return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80}
+
     if not HAS_GEMINI:
         return None
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        You are an expert Turkish/multilingual app review sentiment analyzer.
+        You are a Turkish app review classifier. Classify the review into ONE of:
+        - OLUMLU: Positive / satisfied / grateful
+        - OLUMSUZ: Negative / complaint / unresolved problem  
+        - ISTEK_GORUS: Neutral suggestion or feature request
 
-        Read the FULL review from start to finish. If it has multiple "Edit:" sections, the LAST edit overrides all previous statements and determines the final sentiment.
+        The FINAL PART of the review is the most important:
+        [FINAL PART]: "{decisive}"
 
-        Categories:
-        - OLUMSUZ: The final/overall tone is negative. Unresolved bugs, access failures, data loss, frustration. If the user says "problem still continues" at the end, it is OLUMSUZ even if they thanked the developer earlier.
-        - OLUMLU: The final/overall tone is positive. The user is satisfied, grateful, praises the app. The problem must be genuinely RESOLVED for a thank-you to count as positive.
-        - ISTEK/GORUS: Neutral feature request or constructive suggestion with no strong emotional tone and no unresolved complaint.
+        [FULL REVIEW]: "{text}"
 
-        CRITICAL RULE — FINAL EDIT WINS:
-        - Review says "thanks for fixing it. Edit2: Problem still continues." → OLUMSUZ (last edit is negative)
-        - Review says "had a problem but team fixed it, all good now." → OLUMLU (problem fully resolved, user is happy)
-        - Review says "app crashes. Edit: resolved now, great app!" → OLUMLU (last edit is positive)
-
-        MORE EXAMPLES:
-        - "Pop-up reklam saçmalık. Açamadım. Güncelleme yaptınız teşekkürler. 2.Edit: Problem halen devam." → OLUMSUZ (final statement is 'problem continues')
-        - "Çok başarılı bir uygulama, teşekkürler." → OLUMLU
-        - "Neden yavaş açılıyor bir türlü?" → OLUMSUZ (performance complaint)
-        - "Keşke döviz grafiği de olsa" → ISTEK/GORUS
-
-        Return ONLY a JSON: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
-        Sum must equal 1.0.
-
-        Review: "{text}"
+        Return ONLY JSON: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}} — sum must be 1.0.
         """
         response = model.generate_content(prompt)
         content = response.text
@@ -253,44 +298,40 @@ def get_gemini_sentiment(text):
         return None
     return None
 
+
 def heuristic_analysis(text):
+    _, decisive = preprocess_review(text)
+    decisive_lower = decisive.lower()
     text_lower = text.lower()
 
-    # Strong positive signals
-    pos_words = [
-        "teşekkür", "harika", "başarılı", "mükemmel", "süper", "güzel", "iyi",
-        "memnun", "sev", "beğen", "hızlı", "kolay", "kaliteli", "çözdü", "giderildi"
-    ]
-    # Strong negative signals — words indicating ACTIVE, UNRESOLVED problems
-    neg_words = [
-        "açılmıyor", "giremiyorum", "girilmiyor", "donuyor", "kasıyor", "dondu",
-        "berbat", "rezalet", "bozuk", "bozuldu", "çalışmıyor", "silinmiş",
-        "kayboldu", "rezil", "mağdur", "kötü", "yavaş", "hata veriyor", "devam ediyor", "hâlâ", "hala"
-    ]
-    # Request / suggestion markers
-    neutral_intent = ["keşke", "gelse", "olurdu", "gelebilir", "olsa", "eklense", "mı?", "mi?"]
+    # Deterministic overrides from decisive segment
+    if has_terminal_negative(decisive):
+        return {"olumlu": 0.05, "olumsuz": 0.85, "istek_gorus": 0.10, "method": "Heuristic"}
+    if has_terminal_positive(decisive) and not has_terminal_negative(decisive):
+        return {"olumlu": 0.85, "olumsuz": 0.05, "istek_gorus": 0.10, "method": "Heuristic"}
+    if has_request_only(decisive):
+        return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
+
+    # Fallback: full text scoring
+    pos_words = ["teşekkür", "harika", "başarılı", "mükemmel", "süper", "güzel", "iyi", "memnun", "sev", "beğen"]
+    neg_words = ["kötü", "berbat", "bozuk", "bozuldu", "açılmıyor", "donuyor", "kasıyor", "yavaş", "rezalet", "çöp"]
+    neutral_intent = ["keşke", "gelse", "olurdu", "gelebilir", "olsa", "eklense"]
 
     pos_score = sum(1 for w in pos_words if w in text_lower)
     neg_score = sum(1 for w in neg_words if w in text_lower)
     neu_score = sum(1 for w in neutral_intent if w in text_lower)
 
-    # Balanced weighting: compare NET scores, not just presence of any negative word
-    if neg_score > pos_score and neg_score > neu_score:
+    if neg_score > pos_score:
         p, n, neu = 0.05, 0.85, 0.1
-    elif pos_score > neg_score and pos_score > neu_score:
+    elif pos_score > neg_score:
         p, n, neu = 0.85, 0.05, 0.1
-    elif neu_score > 0 and neg_score == 0:
+    elif neu_score > 0:
         p, n, neu = 0.15, 0.15, 0.7
-    elif pos_score > 0 and neg_score > 0:
-        # Mixed review: let the positive score have slight edge (resolved situation)
-        if pos_score >= neg_score:
-            p, n, neu = 0.65, 0.25, 0.1
-        else:
-            p, n, neu = 0.1, 0.8, 0.1
     else:
         p, n, neu = 0.2, 0.2, 0.6
 
     return {"olumlu": p, "olumsuz": n, "istek_gorus": neu, "method": "Heuristic"}
+
 
 # Analysis Trigger
 if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
