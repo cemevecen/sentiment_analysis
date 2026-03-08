@@ -373,16 +373,8 @@ with tab2:
                             scores.append((score, col))
                         
                         scores.sort(key=lambda x: x[0], reverse=True)
-                        best_col = scores[0][1] if scores else df_upload.columns[0]
-
-                        # Replace Dropdown (Selectbox) with Radio Buttons
-                        col_name = st.radio(
-                            "Analiz edilecek sutun secin:",
-                            options=df_upload.columns,
-                            index=list(df_upload.columns).index(best_col),
-                            key=f"col_{uploaded_file.name}",
-                            horizontal=True
-                        )
+                        col_name = scores[0][1] if scores else df_upload.columns[0]
+                        st.caption(f"✨ **Otomatik Secilen Sutun:** `{col_name}`")
                         
                         if col_name:
                             # NEW FEATURE: Dosya Istatistikleri
