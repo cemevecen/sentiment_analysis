@@ -360,7 +360,6 @@ with tab2:
                     # Replace Expander with Container
                     st.markdown(f"#### 📄 {uploaded_file.name}")
                     with st.container(border=True):
-                        st.info(f"Dosya okundu: {len(df_upload)} satir")
                         
                         # Date & Rating Detection
                         # Priority: 1. Review Last Update, 2. General date keys (excluding 'submit')
@@ -391,34 +390,36 @@ with tab2:
                         for col in df_upload.columns:
                             col_l = col.lower()
                             score = 0
-                            
                             # Textual keywords
                             if any(k in col_l for k in ["review", "yorum", "text", "metin", "content", "mesaj"]): score += 20
-                            
-                            # Metadata keywords (Avoid for sentiment)
+                            # Metadata keywords
                             if any(k in col_l for k in ["id", "rating", "star", "puan", "date", "tarih"]): score -= 25
-                            
                             # Content Analysis
                             sample = df_upload[col].dropna().head(10).astype(str).tolist()
                             if sample:
                                 avg_len = sum(len(s) for s in sample) / len(sample)
-                                if avg_len > 30: score += 15 # High narrative factor
-                                if avg_len < 10: score -= 20 # Too short/numeric likely
-                                
-                                # Check for Turkish stop words/common words to confirm natural language
+                                if avg_len > 30: score += 15
+                                if avg_len < 10: score -= 20
                                 common_tr = [" bir ", " bu ", " çok ", " ve ", " ama ", " için "]
                                 text_blobs = " ".join(sample).lower()
                                 if any(w in text_blobs for w in common_tr): score += 15
-                            
                             scores.append((score, col))
                         
                         scores.sort(key=lambda x: x[0], reverse=True)
                         col_name = scores[0][1] if scores else df_upload.columns[0]
+
+                        # Unified Status Row (File info + Auto column)
                         st.markdown(f"""
-                        <div style="font-size: 0.95rem; font-weight: 600; color: #475569; margin-bottom: 10px;">
-                            ✨ Otomatik Seçilen Sütun: <span class="column-badge">{col_name}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background-color: #F0F9FF; padding: 10px 15px; border-radius: 10px; border: 1px solid #E0F2FE; margin-bottom: 15px;">
+                            <div style="color: #0369a1; font-weight: 600; font-size: 0.9rem;">
+                                ℹ️ Dosya okundu: {len(df_upload)} satır
+                            </div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: #475569;">
+                                ✨ Otomatik Seçilen Sütun: <span class="column-badge">{col_name}</span>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
+
                         
                         if col_name:
                             # NEW FEATURE: Dosya Istatistikleri
