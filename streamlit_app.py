@@ -43,19 +43,37 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-    /* Global Overrides - Fixed Icons */
-    html, body, .stApp, p, label, span, h1, h2, h3, h4, h5, h6 {
+    /* Global Overrides - Safe for Icons */
+    html, body, .stApp {
+        background-color: #F8FAFC !important;
+    }
+    
+    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
         font-family: 'Poppins', sans-serif !important;
         color: #1E293B !important;
     }
-    
-    /* Ensure Streamlit Icons stay icons and don't turn into text like _arrow_right */
-    [data-testid="stIcon"], .st-emotion-cache-1vt4y6f, .st-key-internal-selectbox, [class^="stIcon-"] {
-        font-family: inherit !important; /* Let Streamlit handle icon fonts */
+
+    /* Fix Selectbox (removing dark mode leftovers) */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
     }
     
-    .stApp {
-        background-color: #F8FAFC !important; /* Solid Light Pastel Background */
+    .stSelectbox div[data-baseweb="select"] > div {
+        background-color: transparent !important;
+        color: #1E293B !important;
+        border-color: #FFE4D6 !important;
+    }
+    
+    /* Ensure no dark boxes in Expanders */
+    [data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #FFE4D6 !important;
+        border-radius: 12px !important;
+    }
+    
+    [data-testid="stExpander"] summary {
+        font-family: 'Poppins', sans-serif !important;
+        color: #1E293B !important;
     }
     
     /* Header Card */
@@ -269,8 +287,8 @@ with tab2:
                     df_upload = pd.read_excel(uploaded_file)
                 
                 if df_upload is not None:
-                    with st.expander(f"⚙️ {uploaded_file.name} Yapılandırması", expanded=True):
-                        st.info(f"📁 Dosya okundu: {len(df_upload)} satır")
+                    with st.expander(f"Dosya Yapilandirmasi: {uploaded_file.name}", expanded=True):
+                        st.info(f"Dosya okundu: {len(df_upload)} satir")
                         
                         # Smart Column Detection
                         target_keys = ["review", "yorum", "text", "metin", "content", "body"]
@@ -300,34 +318,20 @@ with tab2:
                                 break
 
                         col_name = st.selectbox(
-                            f"Analiz edilecek sütun:",
+                            "Analiz edilecek sutun:",
                             options=df_upload.columns,
                             index=list(df_upload.columns).index(best_col),
                             key=f"col_{uploaded_file.name}"
                         )
                         
                         if col_name:
-                            # Pre-filter for valid comments in this specific file
+                            # Pre-filter logic
                             def is_valid_comment(text):
                                 s = str(text).strip()
                                 if len(s) < 4: return False
                                 if s.lower() in ['nan', 'null', 'none']: return False
-                                
-                                # 3. Developer/Owner Reply Patterns
-                                reply_patterns = [
-                                    "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
-                                    "iyi günler dileriz", "rica etsek", "geri bildirimleriniz", 
-                                    "değerlendirmenizi bekler", "saygılarımızla", "ekibimiz", 
-                                    "talebini", "incelemelerimiz sonucunda", "güncellememizi",
-                                    "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında",
-                                    "yaşamış olduğunuz", "aksaklık için üzgünüz", "memnun oluruz",
-                                    "bizimle iletişime", "iletmenizi rica ederiz"
-                                ]
-                                
+                                reply_patterns = ["merhaba", "tesekkur ederiz", "bilginize sunar", "iyi gunler dileriz"]
                                 if any(rp in s.lower() for rp in reply_patterns): return False
-                                if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', s.lower()): return False
-                                if re.match(r'^\d{4}-\d{2}-\d{2}.*', s): return False
-                                if s.replace('.', '').replace('-', '').isdigit(): return False
                                 return True
 
                             valid_in_file = 0
@@ -340,16 +344,12 @@ with tab2:
                                             parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
                                             if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
                                                 parsed_date = parsed_date.tz_localize(None)
-                                            
-                                            today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
-                                            start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
-                                            if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
-                                                entry["date"] = parsed_date
+                                            entry["date"] = parsed_date
                                     all_comments.append(entry)
                                     valid_in_file += 1
                                     
-                            st.caption(f"✅ Bu dosyadan **{valid_in_file}** geçerli yorum eklendi.")
-                            with st.expander("👀 Önizleme"):
+                            st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
+                            with st.expander("Onizleme"):
                                 st.write([str(row[col_name])[:100] + '...' for _, row in df_upload.head(3).iterrows()])
                             
             except Exception as e:
