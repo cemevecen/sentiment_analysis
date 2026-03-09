@@ -540,6 +540,7 @@ with tab1:
         # Map range to days
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
+        st.caption("ℹ️ Apple: Mağaza linki veya ID (id150...), Play Store: Link veya paket adı (com.doviz) geçerlidir.")
 
 
     if store_url.strip():
