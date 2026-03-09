@@ -1069,9 +1069,6 @@ def heuristic_analysis(text):
 
 
 
-# Analysis Trigger
-ticker_placeholder = st.empty()
-
 # Analysis Logic Wrapper
 def run_bulk_analysis(data_to_process, is_append=False):
     bulk_results = st.session_state.get("bulk_results", []) if is_append else []
@@ -1079,6 +1076,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
     time_display = st.empty()
     progress_bar = st.progress(0)
     status_text = st.empty()
+    ticker_placeholder = st.empty() 
     quota_info = st.empty()
     st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
     st.session_state['_quota_hits'] = 0
