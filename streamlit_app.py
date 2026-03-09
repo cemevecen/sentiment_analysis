@@ -938,11 +938,9 @@ Yorum: "{text}"
             if "404" in err_str and current_model != models_to_try[-1]:
                 continue
             elif "429" in err_str or "quota" in err_str.lower():
-                st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
-                return None
+                return {"_error": "quota"}
             else:
-                st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
-                return None
+                return {"_error": f"⚠️ Gemini API hatası: {err_str[:120]}"}
     return None
 
 
@@ -1046,69 +1044,88 @@ if st.button("Analizini Yap", use_container_width=True):
             )
 
 
-        for i, entry in enumerate(comments_to_analyze):
+        import concurrent.futures
+
+        def fetch_sentiment_worker(args):
+            idx, entry = args
             comment = entry["text"]
-            date = entry.get("date")
             is_valid = entry.get("is_valid", True)
+            if not is_valid or not comment:
+                return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
             
-            status_text.text(f"Analiz ediliyor: {i+1} / {len(comments_to_analyze)}")
-            update_time(i, len(comments_to_analyze), start_time)
+            res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
+            err = None
+            if res_api is None or "_error" in res_api:
+                err = res_api["_error"] if res_api else "unknown"
+                res_api = heuristic_analysis(comment)
+            
+            scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
+            verdict = max(scores, key=scores.get)
+            return idx, entry, res_api, verdict, err
 
-            if is_valid and comment:
-                res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
-                scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
-                verdict = max(scores, key=scores.get)
-                # Update quota warning placeholder
-                q = st.session_state.get('_quota_hits', 0)
-                if q == 1:
-                    quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
-                elif q > 1:
-                    quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
-            else:
-                verdict = "—"
-                res = {'olumlu': 0, 'olumsuz': 0, 'istek_gorus': 0}
+        completed_count = 0
+        workers = 10 if mode_idx == 0 else 6
 
-            # Update Ticker
-            ticker_date = ""
-            if date:
-                try: ticker_date = f"📅 {date.strftime('%d-%m-%Y')}"
-                except: pass
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            tasks = [executor.submit(fetch_sentiment_worker, (i, e)) for i, e in enumerate(comments_to_analyze)]
+            
+            for future in concurrent.futures.as_completed(tasks):
+                i, entry, res, verdict, err = future.result()
+                completed_count += 1
+                
+                status_text.text(f"Analiz ediliyor: {completed_count} / {total_items}")
+                update_time(completed_count - 1, total_items, start_time)
+                
+                if err == "quota":
+                    q = st.session_state.get('_quota_hits', 0) + 1
+                    st.session_state['_quota_hits'] = q
+                    if q == 1:
+                        quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
+                    elif q > 1:
+                        quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+                elif err:
+                    st.warning(err)
+                
+                comment = entry["text"]
+                date = entry.get("date")
+                ticker_date = ""
+                if date:
+                    try: ticker_date = f"📅 {date.strftime('%d-%m-%Y')}"
+                    except: pass
 
-            ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
-            ticker_placeholder.markdown(f"""
-            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
-                    <span>⚡ ŞU AN ANALİZ EDİLİYOR (#{i+1})</span>
-                    <span>{ticker_date}</span>
-                </div>
-                <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
-                <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
-                    {verdict.upper()}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            bulk_results.append({
-                "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
-                "Tarih": date,
-                "Puan": entry.get('rating')
-            })
-            remaining = len(comments_to_analyze) - (i + 1)
-            if remaining == 0:
+                ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
                 ticker_placeholder.markdown(f"""
-                <div style="border: 2px solid #10B981; padding: 20px; border-radius: 12px; background: #ECFDF5; margin: 10px 0; text-align: center;">
-                    <div style="font-size: 2em; margin-bottom: 10px;">✅</div>
-                    <div style="font-weight: 700; color: #065F46; font-size: 1.2em;">ANALİZ TAMAMLANDI</div>
-                    <div style="font-size: 0.9em; color: #047857; margin-top: 5px;">Toplam {len(comments_to_analyze)} satır başarıyla işlendi.</div>
+                <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
+                        <span>⚡ ŞU AN EKLENEN (#{i+1})</span>
+                        <span>{ticker_date}</span>
+                    </div>
+                    <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
+                    <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
+                        {verdict.upper()}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
-            progress_bar.progress((i + 1) / len(comments_to_analyze))
-            if remaining > 0 and is_valid:
-                time.sleep(DELAY_SECS)
-                update_time(i + 1, len(comments_to_analyze), start_time)
-            elif remaining > 0:
-                 update_time(i + 1, len(comments_to_analyze), start_time)
+
+                bulk_results.append({
+                    "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
+                    "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
+                    "Tarih": date,
+                    "Puan": entry.get('rating')
+                })
+                
+                progress_bar.progress(completed_count / total_items)
+
+        # Sonuçları orjinal sıraya geri diz
+        bulk_results = sorted(bulk_results, key=lambda x: x["No"])
+
+        ticker_placeholder.markdown(f"""
+        <div style="border: 2px solid #10B981; padding: 20px; border-radius: 12px; background: #ECFDF5; margin: 10px 0; text-align: center;">
+            <div style="font-size: 2em; margin-bottom: 10px;">✅</div>
+            <div style="font-weight: 700; color: #065F46; font-size: 1.2em;">ANALİZ TAMAMLANDI</div>
+            <div style="font-size: 0.9em; color: #047857; margin-top: 5px;">Toplam {total_items} satır başarıyla işlendi.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         
         st.session_state.bulk_results = bulk_results
