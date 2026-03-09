@@ -1267,13 +1267,11 @@ if "bulk_results" in st.session_state:
     with col_summary:
         st.write("#### Yapay Zeka Görüşü")
         if counts.idxmax() == "Olumlu":
-            st.success(f"Topluluk genel olarak **Olumlu** bir tavır sergiliyor. ({m_olumlu} yorum)")
+            st.success(f"Topluluk genel olarak **Olumlu** bir tavır sergiliyor. ({m_olumlu} yorum) Kullanıcılar sağlanan hizmetten genel anlamda memnun ve sistem performansı beklentileri çok büyük ölçüde karşılıyor.")
         elif counts.idxmax() == "Olumsuz":
-            st.error(f"Dikkat çeken **Olumsuz** bir eğilim var. ({m_olumsuz} yorum)")
+            st.error(f"Dikkat çeken **Olumsuz** bir eğilim var. ({m_olumsuz} yorum) Kullanıcıların yaşadığı operasyonel sorunlar ve teknik yetersizlikler, uygulamaya yönelik genel memnuniyet oranını ciddi anlamda düşürüyor.")
         else:
-            st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum)")
-            
-        st.write("Aşağıdaki sekmelerden tüm yorumları tek tek inceleyebilir, grafik üzerinde tarihsel değişimleri takip edebilirsiniz.")
+            st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum) Mevcut özelliklerin iyileştirilmesi ve kullanıcı deneyimini artıracak yeni eklentiler konusunda belirgin bir beklenti var.")
 
     # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
     if "Puan" in df.columns and df["Puan"].notnull().any():
