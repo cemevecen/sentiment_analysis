@@ -1166,15 +1166,19 @@ if "bulk_results" in st.session_state:
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        # Artistic 3D-like Donut with exploded slices
+        
+        # Renkleri kategoriye göre sabit harita ile ata (sıraya bağlı değil)
+        color_map = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
+        pie_colors = [color_map.get(d, "#94a3b8") for d in pie_data["Duygu"]]
+        
         fig_pie = go.Figure(data=[go.Pie(
             labels=pie_data["Duygu"], 
             values=pie_data["Sayı"],
             hole=0.5,
-            pull=[0.05, 0.05, 0.05], # Artistic separation
+            pull=[0.05, 0.05, 0.05],
             marker=dict(
-                colors=['#10b981', '#f43f5e', '#3b82f6'], # Green, Red, Blue
-                line=dict(color='#F0F9FF', width=3)
+                colors=pie_colors,
+                line=dict(color='#FFFFFF', width=3)
             ),
             textinfo='percent+label',
             textfont=dict(color='#000000', size=12),
