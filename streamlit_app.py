@@ -972,8 +972,8 @@ Yorum: "{text}"
                     return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
         except Exception as e:
             err_str = str(e)
-            if "404" in err_str and current_model != FALLBACK_MODEL:
-                # Model bulunamadı → fallback'e geç, sessizce devam et
+            if "404" in err_str and current_model != models_to_try[-1]:
+                # Model bulunamadı → bir sonraki modele geç, sessizce devam et
                 continue
             elif "429" in err_str or "quota" in err_str.lower():
                 st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
