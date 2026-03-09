@@ -1383,12 +1383,38 @@ if "bulk_results" in st.session_state:
 
     with col_summary:
         st.write("#### Yapay Zeka Görüşü")
-        if counts.idxmax() == "Olumlu":
-            st.success(f"Topluluk genel olarak **Olumlu** bir tavır sergiliyor. ({m_olumlu} yorum) Genel olarak kullanıcı kitlesi, uygulamanın sunduğu temel hizmetlerden, arayüz tasarımından ve kullanım kolaylığından yüksek düzeyde memnuniyet duyuyor diyebiliriz. Özellikle düzenli kullanıcılar uygulamanın günlük hayattaki işlevselliğini olumlu bularak tavsiye etme eğiliminde. Sistem performansı, hız ve güvenilirlik beklentileri büyük ölçüde karşılanıyor. Son güncellemelerle birlikte gelen yenilikler pozitif karşılanmış gibi görünüyor. Kullanıcıların markaya olan güveni bu aşamada sağlam temeller üzerinde duruyor. Müşteri hizmetlerinin ve destek birimlerinin sorunlara hızlı reaksiyon göstermesi de bu olumlu havayı destekleyen ana etkenlerden biri olabilir. Yine de aralardaki küçük oranlı şikayetleri dikkatle ele alıp, bu %100'e yakın memnuniyet oranını koruyacak stratejik adımların devam ettirilmesi oldukça önemli.")
-        elif counts.idxmax() == "Olumsuz":
-            st.error(f"Dikkat çeken **Olumsuz** bir eğilim var. ({m_olumsuz} yorum) Analiz edilen veri setinde kullanıcıların çok ciddi hayal kırıklıkları ve sistemsel şikayetleri olduğu açıkça görülmektedir. Özellikle kilitlenme, yavaşlık veya beklenen özelliklerin çalışmaması gibi kronikleşmiş teknik problemler kullanıcı deneyimini ciddi oranda baltalıyor. İade sorunları, müşteri hizmetlerinin ulaşılamaz olması veya vaat edilenle karşılaşılan hizmetin uyuşmaması gibi temel şikayetler marka imajına an itibariyle zarar veriyor. Kullanıcılar uygulamanın temel fonksiyonlarını bile kullanırken pürüzlerle karşılaştıkları için platformu terk etme veya rakiplere yönelme potansiyeline sahipler. Acil ve agresif bir hata ayıklama (bug-fixing) sürecine gidilmeli, müşteri destek hattının kapasitesi artırılmalı ve kullanıcılardan gelen yapısal eleştiriler bir an önce yazılım geliştirme döngüsüne entegre edilmelidir.")
+        # Calculate percentages for the gradient
+        total_all = m_olumlu + m_olumsuz + m_istek
+        if total_all > 0:
+            p_pos = (m_olumlu / total_all) * 100
+            p_neu = (m_istek / total_all) * 100
+            p_neg = (m_olumsuz / total_all) * 100
+            
+            # Create a smooth but weighted gradient
+            # Green -> Blue -> Red
+            grad_bg = f"linear-gradient(90deg, #dcfce7 0%, #dcfce7 {p_pos}%, #dbeafe {p_pos}%, #dbeafe {p_pos+p_neu}%, #fee2e2 {p_pos+p_neu}%, #fee2e2 100%)"
+            border_c = "#10b981" if p_pos > p_neg and p_pos > p_neu else ("#f43f5e" if p_neg > p_pos and p_neg > p_neu else "#3b82f6")
         else:
-            st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum) Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir.")
+            grad_bg = "#F8FAFC"
+            border_c = "#E2E8F0"
+
+        # Determine Summary Text based on dominant sentiment
+        if counts.idxmax() == "Olumlu":
+            summary_title = f"Topluluk genel olarak Olumlu bir tavır sergiliyor. ({m_olumlu} yorum)"
+            summary_body = "Genel olarak kullanıcı kitlesi, uygulamanın sunduğu temel hizmetlerden, arayüz tasarımından ve kullanım kolaylığından yüksek düzeyde memnuniyet duyuyor diyebiliriz. Özellikle düzenli kullanıcılar uygulamanın günlük hayattaki işlevselliğini olumlu bularak tavsiye etme eğiliminde. Sistem performansı, hız ve güvenilirlik beklentileri büyük ölçüde karşılanıyor. Son güncellemelerle birlikte gelen yenilikler pozitif karşılanmış gibi görünüyor. Kullanıcıların markaya olan güveni bu aşamada sağlam temeller üzerinde duruyor. Müşteri hizmetlerinin ve destek birimlerinin sorunlara hızlı reaksiyon göstermesi de bu olumlu havayı destekleyen ana etkenlerden biri olabilir. Yine de aralardaki küçük oranlı şikayetleri dikkatle ele alıp, bu %100'e yakın memnuniyet oranını koruyacak stratejik adımların devam ettirilmesi oldukça önemli."
+        elif counts.idxmax() == "Olumsuz":
+            summary_title = f"Dikkat çeken Olumsuz bir eğilim var. ({m_olumsuz} yorum)"
+            summary_body = "Analiz edilen veri setinde kullanıcıların çok ciddi hayal kırıklıkları ve sistemsel şikayetleri olduğu açıkça görülmektedir. Özellikle kilitlenme, yavaşlık veya beklenen özelliklerin çalışmaması gibi kronikleşmiş teknik problemler kullanıcı deneyimini ciddi oranda baltalıyor. İade sorunları, müşteri hizmetlerinin ulaşılamaz olması veya vaat edilenle karşılaşılan hizmetin uyuşmaması gibi temel şikayetler marka imajına an itibariyle zarar veriyor. Kullanıcılar uygulamanın temel fonksiyonlarını bile kullanırken pürüzlerle karşılaştıkları için platformu terk etme veya rakiplere yönelme potansiyeline sahipler. Acil ve agresif bir hata ayıklama (bug-fixing) sürecine gidilmeli, müşteri destek hattının kapasitesi artırılmalı ve kullanıcılardan gelen yapısal eleştiriler bir an önce yazılım geliştirme döngüsüne entegre edilmelidir."
+        else:
+            summary_title = f"Kullanıcılar yoğun şekilde İstek ve Görüş paylaşıyor. ({m_istek} yorum)"
+            summary_body = "Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir."
+
+        st.markdown(f"""
+        <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">{summary_title}</div>
+            <div style="font-size: 0.95rem; opacity: 0.9;">{summary_body}</div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("""
         <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
