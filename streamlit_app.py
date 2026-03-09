@@ -490,47 +490,82 @@ st.markdown(f"""
 # --- Input Section ---
 comments_to_analyze = []
 
-tab1, tab2, tab3 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)", "🔗 Mağaza Linki"])
+tab1, tab2, tab3 = st.tabs(["🔗 Mağaza Linki", "📁 Dosya Yükle (CSV/Excel)", "✍️ Metin Girişi"])
 
 with tab1:
-    text_input = st.text_area(
-        "Yorumları alt alta girin:",
-        height=200,
-        placeholder="Örn: Harika uygulama!\nKötü performans..."
-    )
-    if text_input.strip():
-        raw_lines = text_input.split('\n')
-        processed_comments = []
-        
-        # Date regex for "Jan 23, 2026 - User"
-        store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
-        
-        skip_dev_block = False
-        
-        for line in raw_lines:
-            l = line.strip()
-            if not l: continue
-            
-            # Detect Store Metadata (Date - User) -> This starts a NEW user review block
-            if re.search(store_meta_regex, l, re.IGNORECASE):
-                skip_dev_block = False # Reset on new review
-                # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
-                if processed_comments and len(processed_comments[-1]["text"]) < 85:
-                    processed_comments.pop()
-                continue
-                
-            # Detect Developer Response Header -> Starts a block to IGNORE
-            if any(k in l.lower() for k in ["developer response", "geliştirici cevabı"]):
-                skip_dev_block = True
-                continue
-            
-            if skip_dev_block:
-                continue
+    st.markdown('<div style="background-color: #F0F9FF; padding: 15px; border-radius: 12px; border: 1px solid #E0F2FE;">', unsafe_allow_html=True)
+    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak son bir aydaki yorumları otomatik olarak çekebilirsiniz.")
+    store_url = st.text_input("Uygulama linkini buraya yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-            if is_valid_comment(l):
-                processed_comments.append({"text": l})
+    if store_url.strip():
+        u = store_url.strip()
+        platform = None
+        app_id = None
+        
+        if "play.google.com" in u:
+            platform = "google"
+            match = re.search(r"id=([^&/]+)", u)
+            if match: app_id = match.group(1)
+        elif "apple.com" in u:
+            platform = "apple"
+            # App Store logic: Flexible ID search
+            match = re.search(r"id=?(\d+)", u)
+            if match: app_id = match.group(1)
+            
+            # Extract country code (tr, us, etc.) - More flexible
+            country_match = re.search(r"apple\.com/([^/]{2,3})/app/", u)
+            country = country_match.group(1) if country_match else "tr"
+
+        if not platform or not app_id:
+            st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
+        else:
+            with st.spinner("🚀 Yorumlar mağazadan çekiliyor..."):
+                fetched_comments = []
+                one_month_ago = datetime.now() - timedelta(days=30)
                 
-        comments_to_analyze = processed_comments
+                try:
+                    if platform == "google":
+                        # Google Play Scraping
+                        result, _ = play_reviews(
+                            app_id,
+                            lang='tr',
+                            country='tr',
+                            sort=Sort.NEWEST,
+                            count=500
+                        )
+                        for r in result:
+                            r_at = r.get('at')
+                            if r_at and r_at >= one_month_ago:
+                                content = str(r.get('content', ''))
+                                if is_valid_comment(content):
+                                    fetched_comments.append({
+                                        "text": content,
+                                        "date": r_at,
+                                        "rating": str(r.get('score', ''))
+                                    })
+                                    
+                    elif platform == "apple":
+                        # App Store RSS Scraping
+                        results = get_app_store_reviews(app_id, country)
+                        if not results:
+                            alt_country = 'tr' if country != 'tr' else 'us'
+                            results = get_app_store_reviews(app_id, alt_country)
+                        
+                        for r in results:
+                            r_date = r.get('date')
+                            if r_date and r_date >= one_month_ago:
+                                text = r.get('text', '')
+                                if is_valid_comment(text):
+                                    fetched_comments.append(r)
+
+                    if fetched_comments:
+                        comments_to_analyze = fetched_comments
+                        st.success(f"✅ **{len(comments_to_analyze)}** adet son 1 aylık yorum başarıyla çekildi!")
+                    else:
+                        st.info("ℹ️ Bu kriterlere uygun son 1 ayda yorum bulunamadı.")
+                except Exception as e:
+                    st.error(f"⚠️ Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
@@ -677,84 +712,45 @@ with tab2:
             st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
-    st.markdown('<div style="background-color: #F0F9FF; padding: 15px; border-radius: 12px; border: 1px solid #E0F2FE;">', unsafe_allow_html=True)
-    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak son bir aydaki yorumları otomatik olarak çekebilirsiniz.")
-    store_url = st.text_input("Uygulama linkini buraya yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if store_url.strip():
-        u = store_url.strip()
-        platform = None
-        app_id = None
+    text_input = st.text_area(
+        "Yorumları alt alta girin:",
+        height=200,
+        placeholder="Örn: Harika uygulama!\nKötü performans...",
+        key="manual_text_input"
+    )
+    if text_input.strip():
+        raw_lines = text_input.split('\n')
+        processed_comments = []
         
-        if "play.google.com" in u:
-            platform = "google"
-            match = re.search(r"id=([^&/]+)", u)
-            if match: app_id = match.group(1)
-        elif "apple.com" in u:
-            platform = "apple"
-            # App Store logic: Flexible ID search
-            match = re.search(r"id=?(\d+)", u)
-            if match: app_id = match.group(1)
+        # Date regex for "Jan 23, 2026 - User"
+        store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
+        
+        skip_dev_block = False
+        
+        for line in raw_lines:
+            l = line.strip()
+            if not l: continue
             
-            # Extract country code (tr, us, etc.) - More flexible
-            # Matches /us/app/ or /app/
-            country_match = re.search(r"apple\.com/([^/]{2,3})/app/", u)
-            country = country_match.group(1) if country_match else "tr"
-
-        if not platform or not app_id:
-            st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
-        else:
-            with st.spinner("🚀 Yorumlar mağazadan çekiliyor..."):
-                fetched_comments = []
-                one_month_ago = datetime.now() - timedelta(days=30)
+            # Detect Store Metadata (Date - User) -> This starts a NEW user review block
+            if re.search(store_meta_regex, l, re.IGNORECASE):
+                skip_dev_block = False # Reset on new review
+                # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
+                if processed_comments and len(processed_comments[-1]["text"]) < 85:
+                    processed_comments.pop()
+                continue
                 
-                try:
-                    if platform == "google":
-                        # Google Play Scraping
-                        result, _ = play_reviews(
-                            app_id,
-                            lang='tr',
-                            country='tr',
-                            sort=Sort.NEWEST,
-                            count=500
-                        )
-                        for r in result:
-                            # Date filter
-                            r_at = r.get('at')
-                            if r_at and r_at >= one_month_ago:
-                                content = str(r.get('content', ''))
-                                if is_valid_comment(content):
-                                    fetched_comments.append({
-                                        "text": content,
-                                        "date": r_at,
-                                        "rating": str(r.get('score', ''))
-                                    })
-                                    
-                    elif platform == "apple":
-                        # App Store RSS Scraping
-                        results = get_app_store_reviews(app_id, country)
-                        
-                        # Falleback Logic: If no results, try 'tr' and 'us' specifically
-                        if not results:
-                            alt_country = 'tr' if country != 'tr' else 'us'
-                            results = get_app_store_reviews(app_id, alt_country)
-                        
-                        for r in results:
-                            r_date = r.get('date')
-                            if r_date and r_date >= one_month_ago:
-                                text = r.get('text', '')
-                                if is_valid_comment(text):
-                                    fetched_comments.append(r)
+            # Detect Developer Response Header -> Starts a block to IGNORE
+            if any(k in l.lower() for k in ["developer response", "geliştirici cevabı"]):
+                skip_dev_block = True
+                continue
+            
+            if skip_dev_block:
+                continue
 
-                    if fetched_comments:
-                        comments_to_analyze = fetched_comments
-                        st.success(f"✅ **{len(comments_to_analyze)}** adet son 1 aylık yorum başarıyla çekildi!")
-                    else:
-                        st.info("ℹ️ Bu kriterlere uygun son 1 ayda yorum bulunamadı.")
-                        
-                except Exception as e:
-                    st.error(f"⚠️ Yorumlar çekilirken bir hata oluştu: {e}")
+            if is_valid_comment(l):
+                processed_comments.append({"text": l})
+                
+        comments_to_analyze = processed_comments
 
 
 # ── Analiz Yapılandırması ──────────────────────
