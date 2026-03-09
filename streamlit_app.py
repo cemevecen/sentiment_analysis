@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 import os
 import json
 import re
@@ -34,11 +35,12 @@ def setup_api():
         except:
             api_key = None
     if api_key and str(api_key).strip():
-        genai.configure(api_key=str(api_key).strip())
-        return True
-    return False
+        client = genai.Client(api_key=str(api_key).strip())
+        return client
+    return None
 
-HAS_GEMINI = setup_api()
+GEMINI_CLIENT = setup_api()
+HAS_GEMINI = GEMINI_CLIENT is not None
 
 # --- UTILS: Content Cleanup Filter ---
 def is_valid_comment(text):
@@ -823,14 +825,11 @@ def get_gemini_sentiment(text, model_name='gemini-2.0-flash-lite'):
         return None
     
     # Fallback zinciri: yeni API key'lerde eski modeller çalışmayabilir
-    # Sırayla dene: seçilen model → gemini-2.0-flash-lite → gemini-1.5-flash
-    fallback_chain = ['gemini-2.0-flash-lite', 'gemini-1.5-flash']
+    fallback_chain = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash']
     models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
     for current_model in models_to_try:
         try:
-            generation_config = genai.types.GenerationConfig(temperature=0)
-            model = genai.GenerativeModel(current_model, generation_config=generation_config)
             prompt = f"""Sen çok dilli (Türkçe, İngilizce, Arapça vb.) bir uygulama mağaza yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu hangi dilde olursa olsun analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
@@ -846,7 +845,7 @@ KARAR KURALLARI (önem sırasına göre):
 4. Karışık ama net şikayet sonuçlanıyorsa → olumsuz.
 5. Karışık ama net memnuniyet sonuçlanıyorsa → olumlu.
 
-SOMUT ÖRNEKLER - TÜRKÇE - OLUMSUZ:
+SOMUT ÖRNEKLER - TÜRKÇE - OLUMLU:
 "harika uygulama teşekkürler" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 "çok güzel, mükemmel" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 "beş yıldız hak ediyor" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
@@ -863,22 +862,17 @@ SOMUT ÖRNEKLER - TÜRKÇE - OLUMSUZ:
 "helal olsun, yine çöktü" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
 "para iade etmiyorlar, dolandırıcılık" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
 "çok yavaş, kasıyor" → {{"olumlu":0.03,"olumsuz":0.94,"istek_gorus":0.03}}
-"her güncelleme sonrası daha kötü oluyor" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
 "reklam çok fazla, rahatsız edici" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
 
 SOMUT ÖRNEKLER - TÜRKÇE - İSTEK/GÖRÜŞ:
 "şu özelliği ekleseniz çok iyi olur" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
 "ne zaman karanlık mod gelecek?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
-"Türkçe dil desteği ekleyebilir misiniz?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
 
 SOMUT ÖRNEKLER - İNGİLİZCE - OLUMLU:
 "Great app, love it!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 "Good" → {{"olumlu":0.85,"olumsuz":0.05,"istek_gorus":0.10}}
 "Amazing experience, highly recommend!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"Best app ever, 5 stars!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"Easy to use and very helpful" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
 "Works perfectly, no issues" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
-"Fast, reliable and user-friendly" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
 "Excellent customer service, got my refund quickly" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
 
 SOMUT ÖRNEKLER - İNGİLİZCE - OLUMSUZ:
@@ -886,80 +880,49 @@ SOMUT ÖRNEKLER - İNGİLİZCE - OLUMSUZ:
 "Not recommended" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
 "Doesn't work at all" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "App crashes every time I open it" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Won't load on my phone" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "Can't login, stuck on loading screen" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Useless, waste of time" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Full of bugs, terrible UX" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Too slow and laggy" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
-"Too many annoying ads" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
 "I never received my refund after contacting support many times!" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "Prices shown are different from what you actually pay" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "Received wrong item and no one is helping" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"App used to be good but latest update ruined it" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
-"Lost all my data after the update" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "Scam! Don't trust them" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"Misleading descriptions, what I received was totally different" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Customer service is non-existent" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"App freezes after 2 minutes" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 
 SOMUT ÖRNEKLER - İNGİLİZCE - İSTEK/GÖRÜŞ:
 "When will the US be able to use this app?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
 "Please add dark mode" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"Would be better if you could filter by price" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"Needs improvement but has potential" → {{"olumlu":0.20,"olumsuz":0.20,"istek_gorus":0.60}}
 
 SOMUT ÖRNEKLER - ARAPÇA - OLUMLU:
 "ممتاز" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
 "احبه 💕🥰" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 "رائع جداً وسهل الاستخدام" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
 "أفضل تطبيق، أنصح به الجميع" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"تجربة رائعة، الخدمة ممتازة" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
-"يعمل بدون مشاكل، شكراً" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
-"سريع وفعال، مفيد جداً" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
 
 SOMUT ÖRNEKLER - ARAPÇA - OLUMSUZ:
-"سيء جدا جدا" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"أسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"سيء جدا جدا جدا جدا أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"اسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
 "لا يعمل التطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "يتعطل باستمرار" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"بطيء جداً ومزعج" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
 "لا أستطيع الدخول إلى حسابي" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "لم أستلم أموال الاسترجاع رغم تواصلي مرات عديدة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"تضييع للوقت والمال، لا أنصح به" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"إعلانات كثيرة ومزعجة" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
-"جودة رديئة جداً" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"الموقع ممتاز لكن مشكلتهم عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
-"يتم شحن ألوان مختلفة وأغراض غير أصلية بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"سعر المنتج يختلف بعد الإضافة للسلة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"خدمة العملاء سيئة جداً ولا يوجد رد" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"التطبيق يحتاج إلى تحديث عاجل، به مشاكل كثيرة" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
+"الموقع ممتاز لكن عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
+"سعر المنتج قبل اضافته للسله يختلف عن بعد الاضافة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"يتم شحن الوان مختلفه واغراض غير اصليه بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
 
 SOMUT ÖRNEKLER - ARAPÇA - İSTEK/GÖRÜŞ:
 "أتمنى أن يضيفوا خاصية البحث بالصور" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
 "متى سيكون التطبيق متاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
 "مو سامح لي اختار دولة" → {{"olumlu":0.05,"olumsuz":0.40,"istek_gorus":0.55}}
 
-SOMUT ÖRNEKLER - ARAPÇA - GERÇEK YORUMLARDAN (Diyalekt):
-"سيء جدا جدا جدا جدا أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"لا ملابس زي الخلق ولا خدمة كويسة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"حاد يوهل للتطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"تطبيق هنود" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"اسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"سعر المنتج قبل اضافته للسله يختلف عن بعد الاضافة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"يتم شحن الوان مختلفه واغراض غير اصليه بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"اشتريت قدر ضغط معطل ولم ارجعه حتى لا يتعبوني" → {{"olumlu":0.02,"olumsuz":0.93,"istek_gorus":0.05}}
-"تحديثات مستمره ويدويه سيئه التطبيق للاسوء" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"لا استطيع الدخول للمنتج مباشره عن طريق اللنك" → {{"olumlu":0.03,"olumsuz":0.94,"istek_gorus":0.03}}
-"الموقع ممتاز ولديهم منتجات كثيرة لكن عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
-"يعطونك رقم حوالة ولا تصلك الاموال" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
 
 Yorum: "{text}"
 """
-            response = model.generate_content(prompt)
+            response = GEMINI_CLIENT.models.generate_content(
+                model=current_model,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(temperature=0)
+            )
             content = response.text
             match = re.search(r'\{.*?\}', content, re.DOTALL)
             if match:
@@ -973,7 +936,6 @@ Yorum: "{text}"
         except Exception as e:
             err_str = str(e)
             if "404" in err_str and current_model != models_to_try[-1]:
-                # Model bulunamadı → bir sonraki modele geç, sessizce devam et
                 continue
             elif "429" in err_str or "quota" in err_str.lower():
                 st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
@@ -982,7 +944,6 @@ Yorum: "{text}"
                 st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
                 return None
     return None
-
 
 
 
