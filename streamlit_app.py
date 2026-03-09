@@ -1308,11 +1308,12 @@ if "bulk_results" in st.session_state:
 .metric-card {
     background: #F0F9FF !important;
     border: 2px solid #FFE4D6 !important;
-    border-radius: 12px;
-    padding: 1.2rem 1.5rem;
+    border-radius: 100px !important;
+    padding: 1.5rem 1rem !important;
     text-align: center;
     flex: 1;
     min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
 }
 .metric-value { font-size: 2.5em; font-weight: bold; line-height: 1.2; }
 .metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
