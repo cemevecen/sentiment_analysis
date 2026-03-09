@@ -1432,7 +1432,13 @@ if "bulk_results" in st.session_state:
         if remaining_pool:
             st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
             with st.container(border=True):
-                st.write(f"**Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.**")
+                st.markdown(f"""
+                <div style="background-color: #F0F9FF; margin: -1rem; padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem;">
+                    <div style="color: #0369a1; font-weight: 600; text-align: center;">
+                        Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 take_next = min(len(remaining_pool), 500)
                 if st.button(f"Sonraki {take_next} yorumu da analiz et ve sonuçlara ekle", use_container_width=True):
                     next_batch = remaining_pool[:take_next]
