@@ -494,8 +494,22 @@ tab1, tab2, tab3 = st.tabs(["🔗 Mağaza Linki", "📁 Dosya Yükle (CSV/Excel)
 
 with tab1:
     st.markdown('<div style="background-color: #F0F9FF; padding: 15px; border-radius: 12px; border: 1px solid #E0F2FE;">', unsafe_allow_html=True)
-    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak son bir aydaki yorumları otomatik olarak çekebilirsiniz.")
-    store_url = st.text_input("Uygulama linkini buraya yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
+    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak seçtiğiniz tarih aralığındaki yorumları otomatik olarak çekebilirsiniz.")
+    
+    col_u, col_r = st.columns([2, 1])
+    with col_u:
+        store_url = st.text_input("Uygulama linkini yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
+    with col_r:
+        time_range = st.selectbox(
+            "Tarih Aralığı Seçin:",
+            options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"],
+            index=0
+        )
+    
+    # Map range to days
+    range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
+    days_limit = range_map[time_range]
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
     if store_url.strip():
@@ -520,23 +534,24 @@ with tab1:
         if not platform or not app_id:
             st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
         else:
-            with st.spinner("🚀 Yorumlar mağazadan çekiliyor..."):
+            with st.spinner(f"🚀 {time_range} yorumları mağazadan çekiliyor..."):
                 fetched_comments = []
-                one_month_ago = datetime.now() - timedelta(days=30)
+                threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
                     if platform == "google":
-                        # Google Play Scraping
+                        # Google Play Scraping - Scale count
+                        fetch_count = 500 if days_limit <= 30 else 1000
                         result, _ = play_reviews(
                             app_id,
                             lang='tr',
                             country='tr',
                             sort=Sort.NEWEST,
-                            count=500
+                            count=fetch_count
                         )
                         for r in result:
                             r_at = r.get('at')
-                            if r_at and r_at >= one_month_ago:
+                            if r_at and r_at >= threshold_date:
                                 content = str(r.get('content', ''))
                                 if is_valid_comment(content):
                                     fetched_comments.append({
@@ -554,16 +569,16 @@ with tab1:
                         
                         for r in results:
                             r_date = r.get('date')
-                            if r_date and r_date >= one_month_ago:
+                            if r_date and r_date >= threshold_date:
                                 text = r.get('text', '')
                                 if is_valid_comment(text):
                                     fetched_comments.append(r)
 
                     if fetched_comments:
                         comments_to_analyze = fetched_comments
-                        st.success(f"✅ **{len(comments_to_analyze)}** adet son 1 aylık yorum başarıyla çekildi!")
+                        st.success(f"✅ **{len(comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
-                        st.info("ℹ️ Bu kriterlere uygun son 1 ayda yorum bulunamadı.")
+                        st.info(f"ℹ️ {time_range} kriterine uygun yorum bulunamadı.")
                 except Exception as e:
                     st.error(f"⚠️ Yorumlar çekilirken bir hata oluştu: {e}")
         
