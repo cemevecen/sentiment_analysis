@@ -9,6 +9,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import io
+from datetime import datetime, timedelta
+from google_play_scraper import Sort, reviews as play_reviews
+from app_store_scraper import AppStore
 from dotenv import load_dotenv
 
 # Load environment variables (for local testing)
@@ -446,7 +449,7 @@ st.markdown(f"""
 # --- Input Section ---
 comments_to_analyze = []
 
-tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
+tab1, tab2, tab3 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)", "🔗 Mağaza Linki"])
 
 with tab1:
     text_input = st.text_area(
@@ -631,6 +634,84 @@ with tab2:
         if all_comments:
             comments_to_analyze = all_comments
             st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
+
+with tab3:
+    st.markdown('<div style="background-color: #F0F9FF; padding: 15px; border-radius: 12px; border: 1px solid #E0F2FE;">', unsafe_allow_html=True)
+    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak son bir aydaki yorumları otomatik olarak çekebilirsiniz.")
+    store_url = st.text_input("Uygulama linkini buraya yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if store_url:
+        platform = None
+        app_id = None
+        
+        if "play.google.com" in store_url:
+            platform = "google"
+            match = re.search(r"id=([^&]+)", store_url)
+            if match: app_id = match.group(1)
+        elif "apps.apple.com" in store_url:
+            platform = "apple"
+            # App Store logic: ID usually ends with idXXXXXXXXX
+            match = re.search(r"/id(\d+)", store_url)
+            if match: app_id = match.group(1)
+            
+            # Extract app name from URL (needed by the library)
+            app_name_match = re.search(r"/app/([^/]+)/id", store_url)
+            app_name = app_name_match.group(1) if app_name_match else "app"
+
+        if not platform or not app_id:
+            st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
+        else:
+            with st.spinner("🚀 Yorumlar mağazadan çekiliyor..."):
+                fetched_comments = []
+                one_month_ago = datetime.now() - timedelta(days=30)
+                
+                try:
+                    if platform == "google":
+                        # Google Play Scraping
+                        result, _ = play_reviews(
+                            app_id,
+                            lang='tr',
+                            country='tr',
+                            sort=Sort.NEWEST,
+                            count=500
+                        )
+                        for r in result:
+                            # Date filter
+                            r_at = r.get('at')
+                            if r_at and r_at >= one_month_ago:
+                                content = str(r.get('content', ''))
+                                if is_valid_comment(content):
+                                    fetched_comments.append({
+                                        "text": content,
+                                        "date": r_at,
+                                        "rating": str(r.get('score', ''))
+                                    })
+                                    
+                    elif platform == "apple":
+                        # App Store Scraping
+                        as_app = AppStore(country='tr', app_name=app_name, app_id=app_id)
+                        as_app.review(how_many=500)
+                        
+                        for r in as_app.reviews:
+                            r_date = r.get('date')
+                            if r_date and r_date >= one_month_ago:
+                                content = str(r.get('review', ''))
+                                if is_valid_comment(content):
+                                    fetched_comments.append({
+                                        "text": content,
+                                        "date": r_date,
+                                        "rating": str(r.get('rating', ''))
+                                    })
+
+                    if fetched_comments:
+                        comments_to_analyze = fetched_comments
+                        st.success(f"✅ **{len(comments_to_analyze)}** adet son 1 aylık yorum başarıyla çekildi!")
+                    else:
+                        st.info("ℹ️ Bu kriterlere uygun son 1 ayda yorum bulunamadı.")
+                        
+                except Exception as e:
+                    st.error(f"⚠️ Yorumlar çekilirken bir hata oluştu: {e}")
 
 
 # ── Analiz Yapılandırması ──────────────────────
