@@ -128,11 +128,15 @@ def is_valid_comment(text):
     return True
 
 @st.cache_data(show_spinner=False, ttl=600)
-def get_app_store_reviews(app_id, country='tr'):
+def get_app_store_reviews(app_id, country='tr', _progress_callback=None):
     """Fetch reviews using App Store RSS Feed (Pagination)"""
     reviews = []
     try:
-        for page in range(1, 11): # Up to 10 pages * 50 = 500 reviews
+        total_pages = 10
+        for page in range(1, total_pages + 1): # Up to 10 pages * 50 = 500 reviews
+            if _progress_callback:
+                _progress_callback(page / total_pages)
+                
             url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
             response = requests.get(url, timeout=10)
             if response.status_code != 200:
@@ -168,7 +172,7 @@ def get_app_store_reviews(app_id, country='tr'):
         return reviews
 
 @st.cache_data(show_spinner=False, ttl=600)
-def fetch_google_play_reviews(app_id, days_limit):
+def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
     """Cached Google Play fetcher"""
     from google_play_scraper import Sort, reviews as play_reviews
     threshold_date = datetime.now() - timedelta(days=days_limit)
@@ -182,7 +186,10 @@ def fetch_google_play_reviews(app_id, days_limit):
         continuation_token = None
         max_requests = (fetch_limit // 199) + 1
         
-        for _ in range(max_requests):
+        for i in range(max_requests):
+            if _progress_callback:
+                _progress_callback(i / max_requests)
+                
             result, continuation_token = play_reviews(
                 app_id,
                 lang='tr',
@@ -618,18 +625,21 @@ with tab1:
                 with loading_placeholder.container():
                     st.markdown(f"#### {time_range} yorumları mağazadan çekiliyor...")
                     if lottie_loading:
-                        st_lottie(lottie_loading, height=150, key="fetch_loader")
-                    else:
-                        st.info("İşlem devam ediyor, lütfen bekleyin...")
+                        st_lottie(lottie_loading, height=130, key="fetch_loader")
+                    p_bar = st.progress(0, text="Hazırlanıyor...")
                 
+                def update_fetch_progress(p):
+                    p_bar.progress(p, text=f"Veriler indiriliyor: %{int(p*100)}")
+
                 fetched_comments = []
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
                     if platform == "google":
-                        fetched_comments = fetch_google_play_reviews(app_id, days_limit)
+                        fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
                     elif platform == "apple":
-                        results = get_app_store_reviews(app_id, country)
+                        def apple_cb(p): update_fetch_progress(p)
+                        results = get_app_store_reviews(app_id, country, _progress_callback=apple_cb)
                         if not results:
                             alt_country = 'tr' if country != 'tr' else 'us'
                             results = get_app_store_reviews(app_id, alt_country)
