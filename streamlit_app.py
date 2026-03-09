@@ -31,12 +31,12 @@ API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
 
 if not API_KEY:
     try:
-        # Check both common secret names in Streamlit Cloud
         API_KEY = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY")
     except Exception:
         API_KEY = None
 
-if API_KEY:
+if API_KEY and str(API_KEY).strip():
+    API_KEY = str(API_KEY).strip()
     genai.configure(api_key=API_KEY)
     HAS_GEMINI = True
 else:
