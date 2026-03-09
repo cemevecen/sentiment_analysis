@@ -936,6 +936,22 @@ SOMUT ÖRNEKLER - ARAPÇA - OLUMSUZ:
 SOMUT ÖRNEKLER - ARAPÇA - İSTEK/GÖRÜŞ:
 "أتمنى أن يضيفوا خاصية البحث بالصور" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
 "متى سيكون التطبيق متاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
+"مو سامح لي اختار دولة" → {{"olumlu":0.05,"olumsuz":0.40,"istek_gorus":0.55}}
+
+SOMUT ÖRNEKLER - ARAPÇA - GERÇEK YORUMLARDAN (Diyalekt):
+"سيء جدا جدا جدا جدا أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"لا ملابس زي الخلق ولا خدمة كويسة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"حاد يوهل للتطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"تطبيق هنود" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"اسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"سعر المنتج قبل اضافته للسله يختلف عن بعد الاضافة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"يتم شحن الوان مختلفه واغراض غير اصليه بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"اشتريت قدر ضغط معطل ولم ارجعه حتى لا يتعبوني" → {{"olumlu":0.02,"olumsuz":0.93,"istek_gorus":0.05}}
+"تحديثات مستمره ويدويه سيئه التطبيق للاسوء" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"لا استطيع الدخول للمنتج مباشره عن طريق اللنك" → {{"olumlu":0.03,"olumsuz":0.94,"istek_gorus":0.03}}
+"الموقع ممتاز ولديهم منتجات كثيرة لكن عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
+"يعطونك رقم حوالة ولا تصلك الاموال" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
