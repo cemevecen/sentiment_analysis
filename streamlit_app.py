@@ -114,6 +114,7 @@ def is_valid_comment(text):
 
     return True
 
+@st.cache_data(show_spinner=False, ttl=600)
 def get_app_store_reviews(app_id, country='tr'):
     """Fetch reviews using App Store RSS Feed (More reliable than outdated libraries)"""
     url = f"https://itunes.apple.com/{country}/rss/customerreviews/id={app_id}/sortBy=mostRecent/json"
@@ -151,7 +152,36 @@ def get_app_store_reviews(app_id, country='tr'):
             })
         return reviews
     except Exception as e:
-        st.error(f"RSS Fetch Error: {e}")
+        return []
+
+@st.cache_data(show_spinner=False, ttl=600)
+def fetch_google_play_reviews(app_id, days_limit):
+    """Cached Google Play fetcher"""
+    from google_play_scraper import Sort, reviews as play_reviews
+    threshold_date = datetime.now() - timedelta(days=days_limit)
+    fetch_count = 500 if days_limit <= 30 else 1000
+    
+    try:
+        result, _ = play_reviews(
+            app_id,
+            lang='tr',
+            country='tr',
+                sort=Sort.NEWEST,
+                count=fetch_count
+            )
+        fetched = []
+        for r in result:
+            r_at = r.get('at')
+            if r_at and r_at >= threshold_date:
+                content = str(r.get('content', ''))
+                if is_valid_comment(content):
+                    fetched.append({
+                        "text": content,
+                        "date": r_at,
+                        "rating": str(r.get('score', ''))
+                    })
+        return fetched
+    except:
         return []
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
@@ -488,51 +518,65 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- Input Section ---
-comments_to_analyze = []
+if 'comments_to_analyze' not in st.session_state:
+    st.session_state.comments_to_analyze = []
+
+comments_to_analyze = [] # Reset local ref for tab logic
 
 tab1, tab2, tab3 = st.tabs(["🔗 Mağaza Linki", "📁 Dosya Yükle (CSV/Excel)", "✍️ Metin Girişi"])
 
 with tab1:
-    st.markdown('<div style="background-color: #F0F9FF; padding: 15px; border-radius: 12px; border: 1px solid #E0F2FE;">', unsafe_allow_html=True)
-    st.write("📌 Bir uygulamanın **Play Store** veya **App Store** linkini yapıştırarak seçtiğiniz tarih aralığındaki yorumları otomatik olarak çekebilirsiniz.")
-    
-    col_u, col_r = st.columns([2, 1])
-    with col_u:
-        store_url = st.text_input("Uygulama linkini yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
-    with col_r:
-        time_range = st.selectbox(
-            "Tarih Aralığı Seçin:",
-            options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"],
-            index=0
-        )
-    
-    # Map range to days
-    range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
-    days_limit = range_map[time_range]
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        col_u, col_r = st.columns([2, 1])
+        with col_u:
+            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745")
+        with col_r:
+            time_range = st.selectbox(
+                "Tarih Aralığı Seçin:",
+                options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"],
+                index=0
+            )
+        
+        # Map range to days
+        range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
+        days_limit = range_map[time_range]
+
 
     if store_url.strip():
         u = store_url.strip()
         platform = None
         app_id = None
+        country = "tr" 
         
+        # Logic Improvement: Flexible link and ID detection
         if "play.google.com" in u:
             platform = "google"
             match = re.search(r"id=([^&/]+)", u)
             if match: app_id = match.group(1)
         elif "apple.com" in u:
             platform = "apple"
-            # App Store logic: Flexible ID search
-            match = re.search(r"id=?(\d+)", u)
+            # Search for id followed by digits
+            match = re.search(r"id(\d+)", u)
             if match: app_id = match.group(1)
-            
-            # Extract country code (tr, us, etc.) - More flexible
-            country_match = re.search(r"apple\.com/([^/]{2,3})/app/", u)
-            country = country_match.group(1) if country_match else "tr"
+            # Try to catch country code like apple.com/tr/app/...
+            country_match = re.search(r"apple\.com/([a-z]{2,3})/", u)
+            if country_match: country = country_match.group(1)
+        else:
+            # Direct ID or prefixed ID
+            clean_u = u.lower()
+            if clean_u.startswith("id") and clean_u[2:].isdigit():
+                platform = "apple"
+                app_id = clean_u[2:]
+            elif clean_u.isdigit():
+                platform = "apple"
+                app_id = clean_u
+            elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
+                platform = "google"
+                app_id = u
 
         if not platform or not app_id:
-            st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
+            if store_url.strip():
+                st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
         else:
             with st.spinner(f"🚀 {time_range} yorumları mağazadan çekiliyor..."):
                 fetched_comments = []
@@ -540,28 +584,8 @@ with tab1:
                 
                 try:
                     if platform == "google":
-                        # Google Play Scraping - Scale count
-                        fetch_count = 500 if days_limit <= 30 else 1000
-                        result, _ = play_reviews(
-                            app_id,
-                            lang='tr',
-                            country='tr',
-                            sort=Sort.NEWEST,
-                            count=fetch_count
-                        )
-                        for r in result:
-                            r_at = r.get('at')
-                            if r_at and r_at >= threshold_date:
-                                content = str(r.get('content', ''))
-                                if is_valid_comment(content):
-                                    fetched_comments.append({
-                                        "text": content,
-                                        "date": r_at,
-                                        "rating": str(r.get('score', ''))
-                                    })
-                                    
+                        fetched_comments = fetch_google_play_reviews(app_id, days_limit)
                     elif platform == "apple":
-                        # App Store RSS Scraping
                         results = get_app_store_reviews(app_id, country)
                         if not results:
                             alt_country = 'tr' if country != 'tr' else 'us'
@@ -575,8 +599,8 @@ with tab1:
                                     fetched_comments.append(r)
 
                     if fetched_comments:
-                        comments_to_analyze = fetched_comments
-                        st.success(f"✅ **{len(comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
+                        st.session_state.comments_to_analyze = fetched_comments
+                        st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
                         st.info(f"ℹ️ {time_range} kriterine uygun yorum bulunamadı.")
                 except Exception as e:
@@ -723,8 +747,8 @@ with tab2:
                 st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
         
         if all_comments:
-            comments_to_analyze = all_comments
-            st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
+            st.session_state.comments_to_analyze = all_comments
+            st.success(f"📋 Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
     text_input = st.text_area(
@@ -765,7 +789,11 @@ with tab3:
             if is_valid_comment(l):
                 processed_comments.append({"text": l})
                 
-        comments_to_analyze = processed_comments
+        if processed_comments:
+            st.session_state.comments_to_analyze = processed_comments
+
+# Update the main reference (Important for analysis button)
+comments_to_analyze = st.session_state.comments_to_analyze
 
 
 # ── Analiz Yapılandırması ──────────────────────
@@ -795,7 +823,7 @@ if comments_to_analyze:
 
 
 
-def get_gemini_sentiment(text, model_name='gemini-3.1-flash-lite-preview'):
+def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
     if not HAS_GEMINI:
         return None
     try:
@@ -893,11 +921,11 @@ if st.button("Analizini Yap", use_container_width=True):
         # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
         mode_idx = st.session_state.get("analysis_mode", 0)
         if mode_idx == 0:  # Hızlı
-            ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
+            ANALYSIS_MODEL = 'gemini-2.0-flash'
             DELAY_SECS = 2
             RPM_LIMIT = 30
         else:  # Yavaş
-            ANALYSIS_MODEL = 'gemini-3.1-flash-lite-preview'
+            ANALYSIS_MODEL = 'gemini-2.0-pro-exp-02-05'
             DELAY_SECS = 4
             RPM_LIMIT = 15
 
