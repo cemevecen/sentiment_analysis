@@ -244,7 +244,7 @@ st.markdown("""
     
     p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stButton, .stTextInput, .stTextArea {
         font-family: 'Poppins', sans-serif !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
     }
     
     /* Strict 5px spacing for headers and common text blocks */
@@ -263,7 +263,7 @@ st.markdown("""
     /* Fix Selectbox & Inputs to Light Blue with DARK TEXT */
     .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
         background-color: #F0F9FF !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
     }
     
     /* Selectbox Popover (Dropdown) fixes */
@@ -271,13 +271,13 @@ st.markdown("""
         background-color: #F0F9FF !important;
     }
     [data-baseweb="popover"] * {
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         background-color: #F0F9FF !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: #F0F9FF !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         border-color: #FFE4D6 !important;
     }
     
@@ -298,14 +298,14 @@ st.markdown("""
     [data-testid="stExpander"] summary p, 
     [data-testid="stExpander"] summary span:not([data-testid="stIcon"]) {
         font-family: 'Poppins', sans-serif !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         background-color: transparent !important;
     }
 
     /* Target Streamlit's internal header containers for expanders */
     .st-emotion-cache-p5mtransition, .st-emotion-cache-1vt4y6f {
         background-color: #F0F9FF !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
     }
     
     /* Header Card - Light Blue */
@@ -376,7 +376,7 @@ st.markdown("""
     /* Info/Alert boxes - Light Blue */
     .stAlert {
         background-color: #F0F9FF !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         border: 2px solid #FFD1B3 !important;
         border-radius: 12px !important;
         margin-bottom: 5px !important;
@@ -471,7 +471,7 @@ st.markdown("""
     
     /* Ensure File Names are readable (not white) */
     [data-testid="stFileUploaderFileName"] {
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         font-weight: 500 !important;
     }
     
@@ -562,7 +562,7 @@ st.markdown("""
     }
     button[data-testid="stTab"] {
         background-color: #FFFFFF !important;
-        color: #FFFFFF !important;
+        color: #1E293B !important;
         border-radius: 50px !important;
         padding: 8px 20px !important;
         border: 1px solid #E2E8F0 !important;
@@ -1256,7 +1256,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
                     <span>ŞU AN EKLENEN (#{start_offset + i + 1})</span>
                     <span>{ticker_date}</span>
                 </div>
-                <div style="font-weight: 600; color: #FFFFFF;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
+                <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
                 <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
                     {verdict.upper()}
                 </div>
@@ -1295,7 +1295,7 @@ if "bulk_results" in st.session_state:
 .normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; }
 
 .neon-pos *, .neon-neg *, .neon-neu *, .normal-card * {
-    color: #FFFFFF !important;
+    color: #1E293B !important;
 }
 
 .metric-container {
@@ -1324,11 +1324,11 @@ if "bulk_results" in st.session_state:
     border-radius: 15px;
     padding: 15px;
     margin-bottom: 15px;
-    color: #FFFFFF !important;
+    color: #1E293B !important;
 }
 
 .glass-card * {
-    color: #FFFFFF !important;
+    color: #1E293B !important;
 }
 
 .sentiment-indicator {
@@ -1440,7 +1440,7 @@ if "bulk_results" in st.session_state:
             summary_body = "Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir."
 
         st.markdown(f"""
-        <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #FFFFFF; line-height: 1.6;">
+        <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
             <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">{summary_title}</div>
             <div style="font-size: 0.95rem; opacity: 0.9;">{summary_body}</div>
         </div>
@@ -1639,7 +1639,7 @@ if "bulk_results" in st.session_state:
                     <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment_indicator}{extra_info}</span>
                     <span style="font-size: 0.8em; color: #94a3b8;">{date_tag}</span>
                 </div>
-                <div style="color: #FFFFFF; line-height: 1.5;">{row['Yorum']}</div>
+                <div style="color: #1E293B; line-height: 1.5;">{row['Yorum']}</div>
             </div>
             """, unsafe_allow_html=True)
 
