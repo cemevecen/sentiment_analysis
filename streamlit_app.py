@@ -158,7 +158,10 @@ def fetch_google_play_reviews(app_id, days_limit):
     """Cached Google Play fetcher"""
     from google_play_scraper import Sort, reviews as play_reviews
     threshold_date = datetime.now() - timedelta(days=days_limit)
-    fetch_count = 1000 if days_limit <= 30 else 5000
+    if days_limit <= 30: fetch_count = 2000
+    elif days_limit <= 90: fetch_count = 10000
+    elif days_limit <= 180: fetch_count = 25000
+    else: fetch_count = 50000
     
     try:
         result, _ = play_reviews(
