@@ -158,30 +158,51 @@ def fetch_google_play_reviews(app_id, days_limit):
     """Cached Google Play fetcher"""
     from google_play_scraper import Sort, reviews as play_reviews
     threshold_date = datetime.now() - timedelta(days=days_limit)
-    if days_limit <= 30: fetch_count = 2000
-    elif days_limit <= 90: fetch_count = 10000
-    elif days_limit <= 180: fetch_count = 25000
-    else: fetch_count = 50000
+    if days_limit <= 30: fetch_limit = 2000
+    elif days_limit <= 90: fetch_limit = 10000
+    elif days_limit <= 180: fetch_limit = 25000
+    else: fetch_limit = 50000
     
     try:
-        result, _ = play_reviews(
-            app_id,
-            lang='tr',
-            country='tr',
-                sort=Sort.NEWEST,
-                count=fetch_count
-            )
         fetched = []
-        for r in result:
-            r_at = r.get('at')
-            if r_at and r_at >= threshold_date:
-                content = str(r.get('content', ''))
-                if is_valid_comment(content):
-                    fetched.append({
-                        "text": content,
-                        "date": r_at,
-                        "rating": str(r.get('score', ''))
-                    })
+        continuation_token = None
+        max_requests = (fetch_limit // 199) + 1
+        
+        for _ in range(max_requests):
+            result, continuation_token = play_reviews(
+                app_id,
+                lang='tr',
+                country='tr',
+                sort=Sort.NEWEST,
+                count=199,
+                continuation_token=continuation_token
+            )
+            if not result: break
+            
+            # Kapsama ve validasyon
+            batch_dates = []
+            for r in result:
+                r_at = r.get('at')
+                if r_at and r_at >= threshold_date:
+                    content = str(r.get('content', ''))
+                    if is_valid_comment(content):
+                        fetched.append({
+                            "text": content,
+                            "date": r_at,
+                            "rating": str(r.get('score', ''))
+                        })
+                if r_at: batch_dates.append(r_at)
+            
+            # Eğer bu partinin en eski yorumu istediğimiz tarihten eskiyse veya token bittiyse kes
+            if batch_dates and min(batch_dates) < threshold_date:
+                break
+                
+            if not continuation_token:
+                break
+            
+            if len(fetched) >= fetch_limit:
+                break
+                
         return fetched
     except:
         return []
