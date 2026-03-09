@@ -12,4 +12,3 @@ plotly
 # tensorflow  # Opsiyonel: Eğer yerel model (DistilBERT) kullanılacaksa açın
 # transformers # Opsiyonel: Eğer yerel model (DistilBERT) kullanılacaksa açın
 google-play-scraper
-app-store-scraper
