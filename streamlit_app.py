@@ -160,22 +160,22 @@ def is_valid_comment(text: Any) -> bool:
     return True
 
 def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_limit: int = 30) -> List[Dict[str, Any]]:
-    """Fetch reviews from multiple stores (RSS) to bypass 500 limit"""
+    """Optimized App Store fetcher (TR and US) for speed and depth"""
     reviews_map: Dict[str, Dict[str, Any]] = {}
     now = datetime.now()
     threshold_dt = now - timedelta(days=_days_limit)
     
-    # Major countries where Turkish users reside
-    countries = ['tr', 'us', 'de', 'az', 'gb', 'fr', 'at', 'nl']
-    total_steps = len(countries) * 10 # 10 pages per country
+    # tr and us are usually enough for Turkish reviews
+    countries = ['tr', 'us']
+    total_steps = len(countries) * 10
     current_step = 0
     
     try:
         for country in countries:
             for page in range(1, 11):
                 current_step += 1
-                url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
                 try:
+                    url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
                     response = requests.get(url, timeout=5)
                     if response.status_code != 200: break
                     data = response.json()
@@ -185,7 +185,7 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
                 if not entries: break
                 if isinstance(entries, dict): entries = [entries]
                 
-                page_exhausted = False
+                page_all_old = True
                 for entry in entries:
                     content = entry.get('content', {}).get('label', '')
                     if not content or len(content.strip()) < 2: continue
@@ -193,91 +193,87 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
                     updated = entry.get('updated', {}).get('label', '')
                     try:
                         r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-                        r_date = r_at = r_date.replace(tzinfo=None) # Make naive
+                        r_date = r_date.replace(tzinfo=None)
                     except: continue
                     
                     if r_date >= threshold_dt:
-                        # Use content as key for basic deduplication across stores
+                        page_all_old = False
                         r_id = entry.get('id', {}).get('label', content)
                         rating = str(entry.get('im:rating', {}).get('label', '0'))
                         reviews_map[r_id] = {"text": content, "date": r_date, "rating": rating}
-                    else:
-                        page_exhausted = True
                 
                 if _progress_callback:
                     _progress_callback(min(current_step / total_steps, 0.99))
                 
-                if page_exhausted: break
+                # If entire page is old, don't go to more pages for this country
+                if page_all_old: break
                 
         if _progress_callback: _progress_callback(1.0)
         return list(reviews_map.values())
-    except Exception as e:
+    except:
         return list(reviews_map.values())
 
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
-    """Strategic brute-force fetcher scanning multiple countries and sorts for depth"""
+    """Optimized TR-only deep fetcher with multiple sort strategies for speed and depth"""
     from google_play_scraper import Sort, reviews as play_reviews
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
     
     all_fetched_map = {} 
     
-    # Countries with significant Turkish active users
-    scan_countries = ['tr', 'us', 'de', 'az', 'gb', 'fr', 'at', 'nl']
+    # Using multiple strategies in TR store is 8x faster than multi-country scan
     sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
     scores = [1, 2, 3, 4, 5]
     
-    total_phases = len(scan_countries) * len(sort_strategies) * len(scores)
+    total_phases = len(sort_strategies) * len(scores)
     current_phase = 0
     
     try:
-        for country in scan_countries:
-            for sort_type in sort_strategies:
-                for score in scores:
-                    current_phase += 1
-                    continuation_token = None
-                    
-                    # Fetching batches up to 5k reviews per slice
-                    for i in range(25):
+        for sort_type in sort_strategies:
+            for score in scores:
+                current_phase += 1
+                continuation_token = None
+                
+                # 30 batches (approx 6k reviews) per channel
+                for i in range(30):
+                    try:
                         result, continuation_token = play_reviews(
                             app_id,
-                            lang='tr', 
-                            country=country,
+                            lang='tr', country='tr',
                             sort=sort_type,
                             count=200,
                             filter_score_with=score,
                             continuation_token=continuation_token
                         )
-                        if not result: break
-                        
-                        found_limit_edge = False
-                        for r in result:
-                            r_at_raw = r.get('at')
-                            if r_at_raw:
-                                r_at = cast(datetime, r_at_raw)
-                                if r_at.tzinfo is not None:
-                                    r_at = r_at.replace(tzinfo=None)
-                                
-                                if r_at >= threshold_date:
-                                    content = str(r.get('content', ''))
-                                    if content and len(content.strip()) >= 2:
-                                        r_id = r.get('reviewId', content)
-                                        all_fetched_map[r_id] = {
-                                            "text": content, 
-                                            "date": r_at, 
-                                            "rating": str(score),
-                                            "country": country
-                                        }
-                                else:
-                                    # For NEWEST, we hit the date barrier, can move to next slice
-                                    if sort_type == Sort.NEWEST:
-                                        found_limit_edge = True
+                    except: break
+                    if not result: break
+                    
+                    found_out_of_range = False
+                    for r in result:
+                        r_at_raw = r.get('at')
+                        if r_at_raw:
+                            r_at = cast(datetime, r_at_raw)
+                            if r_at.tzinfo is not None:
+                                r_at = r_at.replace(tzinfo=None)
+                            
+                            if r_at >= threshold_date:
+                                content = str(r.get('content', ''))
+                                if content and len(content.strip()) >= 2:
+                                    r_id = r.get('reviewId', content)
+                                    all_fetched_map[r_id] = {
+                                        "text": content, 
+                                        "date": r_at, 
+                                        "rating": str(score)
+                                    }
+                            else:
+                                if sort_type == Sort.NEWEST:
+                                    found_out_of_range = True
                                         
-                        if _progress_callback:
-                            _progress_callback(min(current_phase / total_phases, 0.99))
+                    if _progress_callback:
+                        _progress_callback(min(current_phase / total_phases, 0.99))
 
-                        if found_limit_edge: break
-                        if not continuation_token: break
+                    if found_out_of_range: break
+                    if not continuation_token: break
                 
         if _progress_callback: 
             _progress_callback(1.0)
