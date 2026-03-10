@@ -503,7 +503,10 @@ st.markdown("""
         transform: scale(1.02);
     }
     
-    /* Primary Analyze Button Styling - Width fixed to exactly 707.2px */
+    /* Primary Analyze Button Styling - Perfectly aligned to header and inputs */
+    [data-testid="stButton"] {
+        width: 100% !important;
+    }
     .stButton > button[kind="primary"] {
         background-color: #F4A261 !important; /* Pastel Orange */
         color: #FFFFFF !important;
@@ -511,8 +514,8 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         height: 50px !important;
         font-weight: 600 !important;
-        width: 707.2px !important;
-        max-width: 707.2px !important;
+        width: 100% !important;
+        margin: 0 !important;
     }
     .stButton > button[kind="primary"] * {
         color: #FFFFFF !important;
