@@ -1508,6 +1508,9 @@ if "bulk_results" in st.session_state:
             border_c = "#3b82f6" # Blue
             summary_title = f"Kullanıcılar yoğun şekilde İstek ve Görüş paylaşıyor. ({m_istek} yorum)"
             summary_body = "Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir."
+        
+        # Save to session state for the report card
+        st.session_state.ai_summary = summary_body
 
         st.markdown(f"""
         <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
