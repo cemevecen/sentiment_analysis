@@ -1885,7 +1885,7 @@ if "bulk_results" in st.session_state:
             ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}"),
             ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}"),
             ("Slack", f"slack://share?text={encoded_text}"),
-            ("Google Chat", "https://chat.google.com/"),
+            ("Google Chat", summary_text),
             ("Kopyala", summary_text)
         ]
 
@@ -1928,11 +1928,12 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
         for i, (name, link) in enumerate(share_data):
             idx = i % 5
             with s_cols[idx]:
-                if name == "Kopyala":
+                if name in ["Kopyala", "Google Chat"]:
                     if st.button(name, key=f"copy_{i}", use_container_width=True):
-                        # Use a hidden text area for easier copying if needed, or just toast
-                        st.success("Analiz özeti kopyalanmaya hazır!")
+                        st.success(f"{name} için metin kopyalanmaya hazır! İstediğiniz yere yapıştırabilirsiniz.")
                         st.text_area("Kopyalanacak Metin", link, height=100)
+                        if name == "Google Chat":
+                            st.info("Kopyaladıktan sonra [Google Chat](https://chat.google.com)'e gidip mesaja yapıştırabilirsiniz.")
                 else:
                     st.link_button(name, link, use_container_width=True)
                     
