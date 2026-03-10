@@ -1703,11 +1703,37 @@ if "bulk_results" in st.session_state:
             
         return filtered_df
 
-    def display_comments(filtered_df, highlight=True):
+    def display_comments(filtered_df, tab_id, highlight=True):
         if filtered_df.empty:
             st.info("Bu kategoride henüz yorum bulunmuyor.")
             return
-        for _, row in filtered_df.iterrows():
+            
+        show_all_key = f"show_all_{tab_id}"
+        page_key = f"page_{tab_id}"
+        
+        if show_all_key not in st.session_state:
+            st.session_state[show_all_key] = False
+        if page_key not in st.session_state:
+            st.session_state[page_key] = 1
+            
+        show_all = st.session_state[show_all_key]
+        total_items = len(filtered_df)
+        
+        if not show_all:
+            render_df = filtered_df.head(3)
+        else:
+            if total_items > 250:
+                current_page = st.session_state[page_key]
+                total_pages = (total_items - 1) // 250 + 1
+                if current_page > total_pages: current_page = total_pages
+                if current_page < 1: current_page = 1
+                
+                start_idx = (current_page - 1) * 250
+                render_df = filtered_df.iloc[start_idx : start_idx + 250]
+            else:
+                render_df = filtered_df
+
+        for _, row in render_df.iterrows():
             sentiment = row["Baskın Duygu"]
             cls = "normal-card"
             if highlight:
@@ -1740,6 +1766,36 @@ if "bulk_results" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
 
+        if total_items > 3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if not show_all:
+                if st.button("Tüm Yorumları Göster", key=f"btn_show_{tab_id}", use_container_width=True):
+                    st.session_state[show_all_key] = True
+                    st.rerun()
+            else:
+                if total_items > 250:
+                    total_pages = (total_items - 1) // 250 + 1
+                    current_page = st.session_state[page_key]
+                    
+                    nav_cols = st.columns([1, 2, 1])
+                    with nav_cols[0]:
+                        if st.button("⬅️ Önceki Sayfa", key=f"prev_{tab_id}", use_container_width=True, disabled=(current_page == 1)):
+                            st.session_state[page_key] -= 1
+                            st.rerun()
+                    with nav_cols[1]:
+                        st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: bold; color: #64748B;'>Sayfa {current_page} / {total_pages}</div>", unsafe_allow_html=True)
+                    with nav_cols[2]:
+                        if st.button("Sonraki Sayfa ➡️", key=f"next_{tab_id}", use_container_width=True, disabled=(current_page == total_pages)):
+                            st.session_state[page_key] += 1
+                            st.rerun()
+                            
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                if st.button("Daha Az Göster", key=f"btn_hide_{tab_id}", use_container_width=True):
+                    st.session_state[show_all_key] = False
+                    st.session_state[page_key] = 1
+                    st.rerun()
+
     # --- Tabs and Unified Display ---
     st.write("### Yorum Listesi")
     
@@ -1757,22 +1813,22 @@ if "bulk_results" in st.session_state:
 
     with tab_all:
         f_df = render_trend_chart(analysis_df, "all", "(Genel)")
-        display_comments(f_df, highlight=False)
+        display_comments(f_df, "all", highlight=False)
     
     with tab_pos:
         pos_df = df[df["Baskın Duygu"] == "Olumlu"]
         f_df = render_trend_chart(pos_df, "pos", "(Olumlu)")
-        display_comments(f_df)
+        display_comments(f_df, "pos")
         
     with tab_neg:
         neg_df = df[df["Baskın Duygu"] == "Olumsuz"]
         f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)")
-        display_comments(f_df)
+        display_comments(f_df, "neg")
         
     with tab_neu:
         neu_df = df[df["Baskın Duygu"] == "İstek/Görüş"]
         f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)")
-        display_comments(neu_df)
+        display_comments(f_df, "neu")
 
     # Excel Download
     try:
