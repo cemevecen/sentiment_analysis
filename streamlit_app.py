@@ -2098,7 +2098,7 @@ if "bulk_results" in st.session_state:
                 .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
                 .u-wa {{ color: #25D366 !important; }} 
                 .u-li {{ color: #0077B5 !important; }} 
-                .u-x {{ color: #1DA1F2 !important; }}
+                .u-x {{ color: #000000 !important; }}
                 .u-tg {{ color: #24A1DE !important; }} 
                 .u-mail {{ color: #1DA1F2 !important; }}
                 
