@@ -451,20 +451,27 @@ st.markdown("""
         font-weight: 500 !important;
     }
     
-    /* Buttons - Restored */
-    .stButton>button {
-        background-color: #FFB067 !important;
-        border: none !important;
-        color: white !important;
+    /* Global Button Styling - forcing White/Black as requested */
+    .stButton>button, .stLinkButton>a {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        color: #000000 !important;
         font-weight: 600 !important;
         border-radius: 12px !important;
         padding: 10px 24px !important;
-        transition: transform 0.2s ease !important;
+        transition: all 0.2s ease !important;
         font-size: 1rem !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
     }
-    .stButton>button:hover {
-        background-color: #FB923C !important;
+    .stButton>button:hover, .stLinkButton>a:hover {
+        background-color: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
         transform: scale(1.02);
+        color: #000000 !important;
     }
 
     /* Excel Download Button - Specific Styling */
@@ -483,9 +490,9 @@ st.markdown("""
     
     /* File Uploader Button - Restored & Refined */
     [data-testid="stFileUploader"] button[kind="secondary"] {
-        background-color: #FFB067 !important;
-        color: white !important;
-        border: none !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #E2E8F0 !important;
         font-size: 0px !important;
         border-radius: 8px !important;
     }
@@ -1802,7 +1809,7 @@ if "bulk_results" in st.session_state:
         # Optional PDF/Print Trigger
         st.markdown("""
             <div style='text-align: center; margin-top: 20px;'>
-                <button onclick='window.print()' style='background: #6366F1; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: Poppins; font-weight: 600;'>
+                <button onclick='window.print()' style='background: #FFFFFF; color: #000000; border: 1px solid #E2E8F0; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: Poppins; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
                     🖨️ Raporu PDF Olarak Kaydet / Yazdır
                 </button>
             </div>
