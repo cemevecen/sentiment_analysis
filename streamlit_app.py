@@ -2006,120 +2006,24 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- GLOBAL UTILITY SCRIPTS (Parent Frame) ---
+        # --- UNIFIED PREMIUM SHARE & DOWNLOAD SYSTEM (Parent Frame) ---
         import textwrap
         import json
-        global_scripts = textwrap.dedent(f"""
+        summary_escaped = json.dumps(summary_text)
+        
+        # Load external dependencies once in parent
+        st.markdown(textwrap.dedent(f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        """), unsafe_allow_html=True)
+
+        unified_tray_html = textwrap.dedent(f"""
             <div id="trayNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
                 <span id="trayMsg">Kopyalandı!</span>
             </div>
-            <script>
-                window.pushNotif = function(msg) {{
-                    const n = document.getElementById('trayNotif');
-                    const m = document.getElementById('trayMsg');
-                    if(!n || !m) return;
-                    m.innerText = msg;
-                    n.style.opacity = '1';
-                    n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                    setTimeout(() => {{ 
-                        n.style.opacity = '0';
-                        n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                    }}, 3500);
-                }};
 
-                window.doCopyText = function(txt, plat) {{
-                    navigator.clipboard.writeText(txt).then(() => {{
-                        if(plat === 'Google Chat') {{
-                            window.open('https://chat.google.com', '_blank');
-                            window.pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                        }} else {{
-                            window.pushNotif(plat + " Metni Kopyalandı! ✅");
-                        }}
-                    }}).catch(() => {{
-                        const el = document.createElement('textarea');
-                        el.value = txt; document.body.appendChild(el); el.select();
-                        document.execCommand('copy'); document.body.removeChild(el);
-                        if(plat === 'Google Chat') {{
-                            window.open('https://chat.google.com', '_blank');
-                            window.pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                        }} else {{
-                            window.pushNotif(plat + " Metni Kopyalandı! ✅");
-                        }}
-                    }});
-                }};
-
-                window.doCopyCard = function() {{
-                    const target = document.getElementById('nlp-report-card');
-                    if(!target) return;
-                    const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
-                    if(!h2c) {{ window.pushNotif("Sistem Hazırlanıyor... ⏳"); return; }}
-                    window.pushNotif("Görsel Hazırlanıyor... ⏳");
-                    h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                        canvas.toBlob(blob => {{
-                            try {{
-                                const data = [new ClipboardItem({{ [blob.type]: blob }})];
-                                navigator.clipboard.write(data).then(() => {{
-                                    window.pushNotif("Görsel Kopyalandı! ✅");
-                                }}).catch(() => {{ throw new Error(); }});
-                            }} catch(e) {{
-                                const url = canvas.toDataURL();
-                                const link = document.createElement('a');
-                                link.download = 'nlp-report-card.png';
-                                link.href = url; link.click();
-                                window.pushNotif("İndirme Başlatıldı ⬇️");
-                            }}
-                        }}, 'image/png');
-                    }});
-                }};
-
-                window.doSocialImageShare = function(platUrl, platName) {{
-                    const target = document.getElementById('nlp-report-card');
-                    if(!target) return;
-                    const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
-                    if(!h2c) {{ window.pushNotif("Sistem Hazırlanıyor... ⏳"); window.open(platUrl, '_blank'); return; }}
-                    window.pushNotif("Kart Kopyalanıyor & " + platName + " Açılıyor... ⏳");
-                    h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                        canvas.toBlob(blob => {{
-                            try {{
-                                const data = [new ClipboardItem({{ [blob.type]: blob }})];
-                                navigator.clipboard.write(data).then(() => {{
-                                    window.open(platUrl, '_blank');
-                                    window.pushNotif("Görsel Panoda! ✅ " + platName + "'da Yapıştırabilirsiniz (Ctrl+V)");
-                                }}).catch(() => {{ throw new Error(); }});
-                            }} catch(e) {{
-                                window.open(platUrl, '_blank');
-                                window.pushNotif(platName + " Açıldı. Lütfen Görseli Manuel Kopyalayın.");
-                            }}
-                        }}, 'image/png');
-                    }});
-                }};
-
-                // --- ROBUST MESSAGE LISTENER ---
-                window.addEventListener('message', function(event) {{
-                    const data = event.data;
-                    if (!data || !data.type) return;
-                    
-                    if (data.type === 'copyText') {{
-                        window.doCopyText(data.text, data.platform);
-                    }} else if (data.type === 'copyCard') {{
-                        window.doCopyCard();
-                    }} else if (data.type === 'socialShare') {{
-                        window.doSocialImageShare(data.url, data.platform);
-                    }}
-                }});
-            </script>
-        """).strip()
-        st.markdown(global_scripts, unsafe_allow_html=True)
-
-        # --- PREMIUM SHARE TRAY (Iframe Component) ---
-        import streamlit.components.v1 as components
-        summary_escaped = json.dumps(summary_text)
-        
-        tray_html = textwrap.dedent(f"""
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <style>
-                body {{ margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-family: sans-serif; background: transparent; }}
-                .share-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }}
+                .share-tray-container {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
                 .share-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
@@ -2130,80 +2034,123 @@ if "bulk_results" in st.session_state:
                 .btn-tg {{ color: #0088CC; }} .btn-fb {{ color: #1877F2; }} .btn-mail {{ color: #D44638; }}
                 .btn-rd {{ color: #FF4500; }} .btn-sl {{ color: #4A154B; }} .btn-gc {{ color: #00897B; }}
                 .btn-pic {{ color: #8B5CF6; }}
+                
+                .dl-main-btn {{
+                    width: 100%; max-width: 600px; margin: 0 auto; min-height: 50px; background: #6366F1; color: #FFFFFF; 
+                    border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transition: all 0.2s;
+                    display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
+                }}
+                .dl-main-btn:hover {{ background: #4F46E5; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); }}
             </style>
 
-            <div class="share-tray">
+            <div class="share-tray-container">
                 <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn btn-wa"><i class="fa-brands fa-whatsapp"></i></a>
                 <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li"><i class="fa-brands fa-linkedin-in"></i></a>
                 <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x"><i class="fa-brands fa-x-twitter"></i></a>
                 <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg"><i class="fa-brands fa-telegram"></i></a>
-                <div id="btn-fb" class="share-btn btn-fb"><i class="fa-brands fa-facebook-f"></i></div>
+                <div id="u-btn-fb" class="share-btn btn-fb"><i class="fa-brands fa-facebook-f"></i></div>
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail"><i class="fa-solid fa-envelope"></i></a>
                 <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd"><i class="fa-brands fa-reddit-alien"></i></a>
                 <a href="slack://share?text={encoded_text}" class="share-btn btn-sl"><i class="fa-brands fa-slack"></i></a>
-                <div id="btn-gc" class="share-btn btn-gc"><i class="fa-solid fa-comment-dots"></i></div>
-                <div id="btn-pic" class="share-btn btn-pic"><i class="fa-solid fa-camera"></i></div>
+                <div id="u-btn-gc" class="share-btn btn-gc"><i class="fa-solid fa-comment-dots"></i></div>
+                <div id="u-btn-pic" class="share-btn btn-pic"><i class="fa-solid fa-camera"></i></div>
+            </div>
+            
+            <div style="max-width: 600px; margin: 15px auto;">
+                <button id="u-btn-dl" class="dl-main-btn">
+                    <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
+                </button>
             </div>
 
             <script>
-                const summaryTxt = {summary_escaped};
-                const fbUrl = "https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote=" + encodeURIComponent(summaryTxt);
-                
-                function sendCmd(type, extra = {{}}) {{
-                    window.parent.postMessage({{ type: type, ...extra }}, '*');
-                }}
+                (function() {{
+                    const summaryTxt = {summary_escaped};
+                    const fbShareUrl = "https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote=" + encodeURIComponent(summaryTxt);
+                    const filename = "{f"{app_name} ai sentiment report.png".replace(" ", "_")}";
 
-                document.getElementById('btn-gc').addEventListener('click', () => {{
-                    sendCmd('copyText', {{ text: summaryTxt, platform: 'Google Chat' }});
-                }});
-                document.getElementById('btn-fb').addEventListener('click', () => {{
-                    sendCmd('socialShare', {{ url: fbUrl, platform: 'Facebook' }});
-                }});
-                document.getElementById('btn-pic').addEventListener('click', () => {{
-                    sendCmd('copyCard');
-                }});
+                    const pushNotif = (msg) => {{
+                        const n = document.getElementById('trayNotif');
+                        const m = document.getElementById('trayMsg');
+                        if(!n || !m) return;
+                        m.innerText = msg;
+                        n.style.opacity = '1';
+                        n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                        setTimeout(() => {{ 
+                            n.style.opacity = '0';
+                            n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                        }}, 3500);
+                    }};
+
+                    const copyTextAction = (txt, plat) => {{
+                        navigator.clipboard.writeText(txt).then(() => {{
+                            if(plat === 'Google Chat') {{
+                                window.open('https://chat.google.com', '_blank');
+                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                            }} else {{
+                                pushNotif(plat + " Metni Kopyalandı! ✅");
+                            }}
+                        }}).catch(() => {{
+                            const el = document.createElement('textarea');
+                            el.value = txt; document.body.appendChild(el); el.select();
+                            document.execCommand('copy'); document.body.removeChild(el);
+                            if(plat === 'Google Chat') {{
+                                window.open('https://chat.google.com', '_blank');
+                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                            }}
+                        }});
+                    }};
+
+                    const canvasAction = (mode, platUrl = '', platName = '') => {{
+                        const target = document.getElementById('nlp-report-card');
+                        if(!target) return;
+                        
+                        if(typeof html2canvas === 'undefined') {{
+                            pushNotif("Sistem Hazırlanıyor... ⏳");
+                            if(platUrl) window.open(platUrl, '_blank');
+                            return;
+                        }}
+
+                        pushNotif(mode === 'dl' ? "Görsel Hazırlanıyor... ⏳" : "Kart Kopyalanıyor... ⏳");
+
+                        html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+                            if(mode === 'dl') {{
+                                const link = document.createElement('a');
+                                link.download = filename;
+                                link.href = canvas.toDataURL('image/png');
+                                link.click();
+                                pushNotif("İndirme Başlatıldı! ⬇️");
+                            }} else {{
+                                canvas.toBlob(blob => {{
+                                    try {{
+                                        const data = [new ClipboardItem({{ [blob.type]: blob }})];
+                                        navigator.clipboard.write(data).then(() => {{
+                                            if(platUrl) window.open(platUrl, '_blank');
+                                            pushNotif(platUrl ? "Görsel Panoda! ✅ " + platName + "'da Yapıştırın" : "Görsel Kopyalandı! ✅");
+                                        }}).catch(() => {{ throw new Error(); }});
+                                    } catch(e) {{
+                                        if(platUrl) window.open(platUrl, '_blank');
+                                        pushNotif("Görsel Kopyalanamadı, Manuel Deneyin.");
+                                    }}
+                                }}, 'image/png');
+                            }}
+                        }});
+                    }};
+
+                    // Attach Listeners
+                    const bind = (id, fn) => {{
+                        const el = document.getElementById(id);
+                        if(el) el.addEventListener('click', fn);
+                    }};
+
+                    bind('u-btn-gc', () => copyTextAction(summaryTxt, 'Google Chat'));
+                    bind('u-btn-fb', () => canvasAction('copy', fbShareUrl, 'Facebook'));
+                    bind('u-btn-pic', () => canvasAction('copy'));
+                    bind('u-btn-dl', () => canvasAction('dl'));
+                }})();
             </script>
         """).strip()
-        components.html(tray_html, height=70)
-        st.markdown("<br>", unsafe_allow_html=True)
-        import streamlit.components.v1 as components
-        components.html(f"""
-        <style>body {{ margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }}</style>
-        <button onclick="downloadPNG()" style='width: 100%; height: 50px; background: #6366F1; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;'>
-            📷 Kartı PNG Görseli Olarak İndir
-        </button>
-        <script>
-            var pDoc = window.parent.document;
-            if (!pDoc.getElementById('html2canvas-js')) {{
-                var s = pDoc.createElement('script');
-                s.id = 'html2canvas-js';
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                pDoc.head.appendChild(s);
-            }}
-
-            function downloadPNG() {{
-                var target = pDoc.getElementById('nlp-report-card');
-                if (target && window.parent.html2canvas) {{
-                    var btn = document.querySelector('button');
-                    var oldText = btn.innerText;
-                    btn.innerText = "⏳ Hazırlanıyor...";
-                    
-                    window.parent.html2canvas(target, {{scale: 2, backgroundColor: '#FFFFFF', useCORS: true}}).then(canvas => {{
-                        var link = pDoc.createElement('a');
-                        link.download = '{f"{app_name} ai sentiment report.png".replace(" ", "_")}';
-                        link.href = canvas.toDataURL("image/png");
-                        link.click();
-                        btn.innerText = oldText;
-                    }}).catch(err => {{
-                        alert("Görsel oluşturulurken hata oluştu.");
-                        btn.innerText = oldText;
-                    }});
-                }} else {{
-                    alert('Sistem hazırlanıyor... Lütfen 1-2 saniye bekleyip tekrar deneyin.');
-                }}
-            }}
-        </script>
-        """, height=53)
+        st.markdown(unified_tray_html, unsafe_allow_html=True)
         
         # Actions Row: Excel and PDF triggers side-by-side
         st.markdown("<br>", unsafe_allow_html=True)
