@@ -2020,71 +2020,61 @@ if "bulk_results" in st.session_state:
         st.info("💡 Yukarıdaki kartı ekran görüntüsü alarak veya aşağıdaki butonlarla paylaşabilirsiniz.")
         
         # --- PREMIUM SHARE TRAY ---
-        st.markdown("""
+        summary_text_js = summary_text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        
+        st.markdown(f"""
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
         <style>
-            .share-tray {
+            .share-tray {{
                 display: flex;
                 flex-wrap: wrap;
-                gap: 12px;
+                gap: 15px;
                 justify-content: center;
-                margin: 20px 0;
-            }
-            .share-icon {
-                width: 50px;
-                height: 50px;
+                margin: 25px 0;
+                padding: 10px;
+            }}
+            .share-icon {{
+                width: 52px;
+                height: 52px;
                 background: white;
                 border: 1px solid #E2E8F0;
-                border-radius: 12px;
+                border-radius: 14px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 1.4rem;
+                font-size: 1.5rem;
                 cursor: pointer;
-                transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                text-decoration: none;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                text-decoration: none !important;
                 box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            }
-            .share-icon:hover {
-                transform: translateY(-5px) scale(1.05);
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+                position: relative;
+            }}
+            .share-icon:hover {{
+                transform: translateY(-6px) scale(1.08);
+                box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15);
                 border-color: #CBD5E1;
-            }
-            .icon-wa { color: #25D366; } .icon-wa:hover { background: #25D366; color: white; }
-            .icon-li { color: #0077B5; } .icon-li:hover { background: #0077B5; color: white; }
-            .icon-x { color: #000000; } .icon-x:hover { background: #000000; color: white; }
-            .icon-tg { color: #0088CC; } .icon-tg:hover { background: #0088CC; color: white; }
-            .icon-fb { color: #1877F2; } .icon-fb:hover { background: #1877F2; color: white; }
-            .icon-mail { color: #D44638; } .icon-mail:hover { background: #D44638; color: white; }
-            .icon-rd { color: #FF4500; } .icon-rd:hover { background: #FF4500; color: white; }
-            .icon-sl { color: #4A154B; } .icon-sl:hover { background: #4A154B; color: white; }
-            .icon-gc { color: #00897B; } .icon-gc:hover { background: #00897B; color: white; }
+                z-index: 10;
+            }}
+            .icon-wa {{ color: #25D366; }} .icon-wa:hover {{ background: #25D366; color: white; }}
+            .icon-li {{ color: #0077B5; }} .icon-li:hover {{ background: #0077B5; color: white; }}
+            .icon-x {{ color: #000000; }} .icon-x:hover {{ background: #000000; color: white; }}
+            .icon-tg {{ color: #0088CC; }} .icon-tg:hover {{ background: #0088CC; color: white; }}
+            .icon-fb {{ color: #1877F2; }} .icon-fb:hover {{ background: #1877F2; color: white; }}
+            .icon-mail {{ color: #D44638; }} .icon-mail:hover {{ background: #D44638; color: white; }}
+            .icon-rd {{ color: #FF4500; }} .icon-rd:hover {{ background: #FF4500; color: white; }}
+            .icon-sl {{ color: #4A154B; }} .icon-sl:hover {{ background: #4A154B; color: white; }}
+            .icon-gc {{ color: #00897B; }} .icon-gc:hover {{ background: #00897B; color: white; }}
             
-            .copy-notif {
-                position: fixed; top: 20px; right: 20px; background: #10B981; color: white; 
-                padding: 12px 24px; border-radius: 8px; font-weight: 600; 
-                opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 9999;
-            }
+            .copy-notif {{
+                position: fixed; top: 30px; right: 30px; background: #10B981; color: white; 
+                padding: 15px 30px; border-radius: 10px; font-weight: 700; 
+                opacity: 0; pointer-events: none; transition: all 0.4s ease; z-index: 10000;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            }}
         </style>
+        
         <div id="copyNotif" class="copy-notif">Kopyalandı! ✅</div>
-        <script>
-            function copyToClip(text, isChat = false) {
-                const el = document.createElement('textarea');
-                el.value = text;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                
-                const notif = document.getElementById('copyNotif');
-                notif.innerText = isChat ? "Google Chat için Metin Kopyalandı! ✅" : "Metin Kopyalandı! ✅";
-                notif.style.opacity = '1';
-                setTimeout(() => { notif.style.opacity = '0'; }, 3000);
-            }
-        </script>
-        """, unsafe_allow_html=True)
-
-        icons_html = f"""
+        
         <div class="share-tray">
             <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-icon icon-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
             <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-icon icon-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
@@ -2094,10 +2084,28 @@ if "bulk_results" in st.session_state:
             <a href="mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}" class="share-icon icon-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
             <a href="https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}" target="_blank" class="share-icon icon-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
             <a href="slack://share?text={encoded_text}" class="share-icon icon-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
-            <div onclick="copyToClip(`{summary_text}`, true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
+            <div onclick="window.parent.copyToClipTray('{summary_text_js}', true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
         </div>
-        """
-        st.markdown(icons_html, unsafe_allow_html=True)
+
+        <script>
+            // Define on window.parent to bypass potential iframe scope issues
+            window.parent.copyToClipTray = function(text, isChat) {{
+                const el = document.createElement('textarea');
+                el.value = text;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                
+                const notif = document.getElementById('copyNotif');
+                if(notif) {{
+                    notif.innerText = isChat ? "Google Chat için Metin Kopyalandı! ✅" : "Metin Kopyalandı! ✅";
+                    notif.style.opacity = '1';
+                    setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
+                }}
+            }};
+        </script>
+        """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         import streamlit.components.v1 as components
         components.html(f"""
