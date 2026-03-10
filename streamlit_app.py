@@ -1487,7 +1487,7 @@ if "bulk_results" in st.session_state:
         analyzed_count = len(df)
         remaining_pool = all_pool[analyzed_count:]
         
-        if remaining_pool:
+        if len(remaining_pool) >= 500:
             st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
             with st.container(border=True):
                 st.markdown(f"""
