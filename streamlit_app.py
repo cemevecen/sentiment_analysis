@@ -2010,7 +2010,7 @@ if "bulk_results" in st.session_state:
         import textwrap
         import json
         global_scripts = textwrap.dedent(f"""
-            <div id="trayNotif" style="position: fixed; top: 40px; right: 40px; background: #10B981; color: white; padding: 18px 32px; border-radius: 15px; font-weight: 700; opacity: 0; transform: translateY(-20px) scale(0.9); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); z-index: 999999; box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.5); display: flex; align-items: center; gap: 12px; pointer-events: none; font-family: 'Poppins', sans-serif;">
+            <div id="trayNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
                 <span id="trayMsg">Kopyalandı!</span>
             </div>
             <script>
@@ -2020,11 +2020,11 @@ if "bulk_results" in st.session_state:
                     if(!n || !m) return;
                     m.innerText = msg;
                     n.style.opacity = '1';
-                    n.style.transform = 'translateY(0) scale(1)';
+                    n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
                     setTimeout(() => {{ 
                         n.style.opacity = '0';
-                        n.style.transform = 'translateY(-20px) scale(0.9)';
-                    }}, 4000);
+                        n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                    }}, 3500);
                 }};
 
                 window.doCopyText = function(txt, plat) {{
