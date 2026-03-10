@@ -2144,23 +2144,28 @@ if "bulk_results" in st.session_state:
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
             </div>
             
-            <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
-                <button id="btn-png-download" class="dl-main-btn">
-                    <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
-                </button>
             </div>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_cols = st.columns(2)
+        btn_cols = st.columns(3)
         with btn_cols[0]:
-            st.download_button("Sonuçları Excel Olarak İndir", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+            st.markdown("""
+                <button id="btn-png-download" style="width: 100%; height: 50px; background: #5a67d8; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                    📷 PNG
+                </button>
+            """, unsafe_allow_html=True)
         with btn_cols[1]:
+            st.download_button("📊 EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+        with btn_cols[2]:
             components.html(f"""
-                <style>body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}</style>
-                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif;'>
-                    Raporu PDF Olarak İndir / Yazdır
+                <style>
+                    body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}
+                    button:hover {{ filter: brightness(0.9); transform: translateY(-1px); }}
+                </style>
+                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;'>
+                    🖨️ PDF
                 </button>
             """, height=53)
                     
