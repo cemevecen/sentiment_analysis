@@ -1941,176 +1941,176 @@ if "bulk_results" in st.session_state:
         encoded_text = urllib.parse.quote(summary_text)
 
         # --- DIGITAL REPORT CARD (SVG 3D) ---
-        st.markdown(f"""
-        <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
-            <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
-                <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
-                <div style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
-                    <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
-                </div>
-                <div style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
-                    <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
-                </div>
-                <div style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
-                    <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
-                </div>
-                <div style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
-                    <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
-                </div>
-            </div>
-
-            <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
-                <div style="width: 140px; height: 140px; position: relative;">
-                    <!-- Depth simulate (More reliable for capture) -->
-                    <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
-                    <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
-                        <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
-                        <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
-                        <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
-                    </svg>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
-                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
-                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
-                </div>
-            </div>
-
-            <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
-                </div>
-                <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
-                    {st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')}
-                </div>
-            </div>
-            <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
-                📊 AI SENTIMENT INTELLIGENCE
-            </div>
+        card_html = f"""
+<div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
+    <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
+        <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
+        <div style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+            <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
         </div>
-        """, unsafe_allow_html=True)
+        <div style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+            <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
+        </div>
+        <div style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+            <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
+        </div>
+        <div style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+            <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
+        </div>
+    </div>
 
+    <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
+        <div style="width: 140px; height: 140px; position: relative;">
+            <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
+            <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
+                <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
+                <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
+                <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
+            </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
+        </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
+        </div>
+        <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
+            {st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')}
+        </div>
+    </div>
+    <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
+        📊 AI SENTIMENT INTELLIGENCE
+    </div>
+</div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
         # --- PREMIUM SHARE TRAY & NOTIFICATION ---
         summary_text_js = summary_text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         
-        st.markdown(f"""
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-        <style>
-            .share-tray {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; }}
-            .share-btn {{
-                width: 54px; height: 54px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px;
-                display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-                text-decoration: none !important; position: relative;
+        share_html = f"""
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<style>
+    .share-tray {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; }}
+    .share-btn {{
+        width: 54px; height: 54px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px;
+        display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        text-decoration: none !important; position: relative;
+    }}
+    .share-btn:hover {{ transform: translateY(-8px) scale(1.1); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #CBD5E1; z-index: 100; }}
+    .btn-wa {{ color: #25D366; }} .btn-wa:hover {{ background: #25D366; color: white; }}
+    .btn-li {{ color: #0077B5; }} .btn-li:hover {{ background: #0077B5; color: white; }}
+    .btn-x {{ color: #000000; }} .btn-x:hover {{ background: #000000; color: white; }}
+    .btn-tg {{ color: #0088CC; }} .btn-tg:hover {{ background: #0088CC; color: white; }}
+    .btn-fb {{ color: #1877F2; }} .btn-fb:hover {{ background: #1877F2; color: white; }}
+    .btn-mail {{ color: #D44638; }} .btn-mail:hover {{ background: #D44638; color: white; }}
+    .btn-rd {{ color: #FF4500; }} .btn-rd:hover {{ background: #FF4500; color: white; }}
+    .btn-sl {{ color: #4A154B; }} .btn-sl:hover {{ background: #4A154B; color: white; }}
+    .btn-gc {{ color: #00897B; }} .btn-gc:hover {{ background: #00897B; color: white; }}
+    .btn-pic {{ color: #8B5CF6; }} .btn-pic:hover {{ background: #8B5CF6; color: white; }}
+
+    .notif-tray {{
+        position: fixed; top: 40px; right: 40px; background: #10B981; color: white; 
+        padding: 18px 32px; border-radius: 15px; font-weight: 700; opacity: 0; 
+        transform: translateY(-20px) scale(0.9); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        z-index: 999999; box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.5);
+        display: flex; align-items: center; gap: 12px; pointer-events: none;
+    }}
+    .notif-active {{ opacity: 1; transform: translateY(0) scale(1); }}
+</style>
+
+<div id="trayNotif" class="notif-tray">
+    <i class="fa-solid fa-circle-check" style="font-size: 1.4rem;"></i>
+    <span id="trayMsg" style="font-family: 'Poppins', sans-serif;">Kopyalandı!</span>
+</div>
+
+<div class="share-tray">
+    <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+    <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
+    <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-btn btn-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+    <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
+    <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
+    <a href="slack://share?text={encoded_text}" class="share-btn btn-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
+    <div onclick="doCopyText('{summary_text_js}', 'Google Chat')" class="share-btn btn-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
+    <div onclick="doCopyCard()" class="share-btn btn-pic" title="Görseli Kopyala"><i class="fa-solid fa-camera"></i></div>
+</div>
+
+<script>
+    function pushNotif(msg) {{
+        const n = document.getElementById('trayNotif');
+        const m = document.getElementById('trayMsg');
+        if(!n || !m) return;
+        m.innerText = msg;
+        n.classList.add('notif-active');
+        setTimeout(() => {{ n.classList.remove('notif-active'); }}, 4000);
+    }}
+
+    window.doCopyText = function(txt, plat) {{
+        navigator.clipboard.writeText(txt).then(() => {{
+            if(plat === 'Google Chat') {{
+                window.open('https://chat.google.com', '_blank');
+                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+            }} else {{
+                pushNotif(plat + " Metni Kopyalandı! ✅");
             }}
-            .share-btn:hover {{ transform: translateY(-8px) scale(1.1); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #CBD5E1; z-index: 100; }}
-            .btn-wa {{ color: #25D366; }} .btn-wa:hover {{ background: #25D366; color: white; }}
-            .btn-li {{ color: #0077B5; }} .btn-li:hover {{ background: #0077B5; color: white; }}
-            .btn-x {{ color: #000000; }} .btn-x:hover {{ background: #000000; color: white; }}
-            .btn-tg {{ color: #0088CC; }} .btn-tg:hover {{ background: #0088CC; color: white; }}
-            .btn-fb {{ color: #1877F2; }} .btn-fb:hover {{ background: #1877F2; color: white; }}
-            .btn-mail {{ color: #G44638; }} .btn-mail:hover {{ background: #D44638; color: white; }}
-            .btn-rd {{ color: #FF4500; }} .btn-rd:hover {{ background: #FF4500; color: white; }}
-            .btn-sl {{ color: #4A154B; }} .btn-sl:hover {{ background: #4A154B; color: white; }}
-            .btn-gc {{ color: #00897B; }} .btn-gc:hover {{ background: #00897B; color: white; }}
-            .btn-pic {{ color: #8B5CF6; }} .btn-pic:hover {{ background: #8B5CF6; color: white; }}
-
-            .notif-tray {{
-                position: fixed; top: 40px; right: 40px; background: #10B981; color: white; 
-                padding: 18px 32px; border-radius: 15px; font-weight: 700; opacity: 0; 
-                transform: translateY(-20px) scale(0.9); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-                z-index: 999999; box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.5);
-                display: flex; align-items: center; gap: 12px; pointer-events: none;
+        }}).catch(() => {{
+            const el = document.createElement('textarea');
+            el.value = txt; document.body.appendChild(el); el.select();
+            document.execCommand('copy'); document.body.removeChild(el);
+            if(plat === 'Google Chat') {{
+                window.open('https://chat.google.com', '_blank');
+                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+            }} else {{
+                pushNotif(plat + " Metni Kopyalandı! ✅");
             }}
-            .notif-active {{ opacity: 1; transform: translateY(0) scale(1); }}
-        </style>
+        }});
+    }};
 
-        <div id="trayNotif" class="notif-tray">
-            <i class="fa-solid fa-circle-check" style="font-size: 1.4rem;"></i>
-            <span id="trayMsg" style="font-family: 'Poppins', sans-serif;">Kopyalandı!</span>
-        </div>
-
-        <div class="share-tray">
-            <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-            <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-btn btn-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
-            <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
-            <a href="slack://share?text={encoded_text}" class="share-btn btn-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
-            <div onclick="doCopyText('{summary_text_js}', 'Google Chat')" class="share-btn btn-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
-            <div onclick="doCopyCard()" class="share-btn btn-pic" title="Görseli Kopyala"><i class="fa-solid fa-camera"></i></div>
-        </div>
-
-        <script>
-            function pushNotif(msg) {{
-                const n = document.getElementById('trayNotif');
-                const m = document.getElementById('trayMsg');
-                if(!n || !m) return;
-                m.innerText = msg;
-                n.classList.add('notif-active');
-                setTimeout(() => {{ n.classList.remove('notif-active'); }}, 4000);
-            }}
-
-            window.doCopyText = function(txt, plat) {{
-                navigator.clipboard.writeText(txt).then(() => {{
-                    if(plat === 'Google Chat') {{
-                        window.open('https://chat.google.com', '_blank');
-                        pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                    }} else {{
-                        pushNotif(plat + " Metni Kopyalandı! ✅");
-                    }}
-                }}).catch(() => {{
-                    const el = document.createElement('textarea');
-                    el.value = txt; document.body.appendChild(el); el.select();
-                    document.execCommand('copy'); document.body.removeChild(el);
-                    if(plat === 'Google Chat') {{
-                        window.open('https://chat.google.com', '_blank');
-                        pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                    }} else {{
-                        pushNotif(plat + " Metni Kopyalandı! ✅");
-                    }}
-                }});
-            }};
-
-            window.doCopyCard = function() {{
-                const target = document.getElementById('nlp-report-card');
-                if(!target) return;
-                
-                const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
-                if(!h2c) {{ pushNotif("Sistem Hazırlanıyor... ⏳"); return; }}
-                
-                pushNotif("Görsel Hazırlanıyor... ⏳");
-                h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                    canvas.toBlob(blob => {{
-                        try {{
-                            const data = [new ClipboardItem({{ [blob.type]: blob }})];
-                            navigator.clipboard.write(data).then(() => {{
-                                pushNotif("Görsel Kopyalandı! ✅");
-                            }}).catch(() => {{ throw new Error(); }});
-                        }} catch(e) {{
-                            const url = canvas.toDataURL();
-                            const link = document.createElement('a');
-                            link.download = 'nlp-report-card.png';
-                            link.href = url;
-                            link.click();
-                            pushNotif("İndirme Başlatıldı ⬇️");
-                        }}
-                    }}, 'image/png');
-                }});
-            }};
-        </script>
-        """, unsafe_allow_html=True)
+    window.doCopyCard = function() {{
+        const target = document.getElementById('nlp-report-card');
+        if(!target) return;
+        
+        const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
+        if(!h2c) {{ pushNotif("Sistem Hazırlanıyor... ⏳"); return; }}
+        
+        pushNotif("Görsel Hazırlanıyor... ⏳");
+        h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+            canvas.toBlob(blob => {{
+                try {{
+                    const data = [new ClipboardItem({{ [blob.type]: blob }})];
+                    navigator.clipboard.write(data).then(() => {{
+                        pushNotif("Görsel Kopyalandı! ✅");
+                    }}).catch(() => {{ throw new Error(); }});
+                }} catch(e) {{
+                    const url = canvas.toDataURL();
+                    const link = document.createElement('a');
+                    link.download = 'nlp-report-card.png';
+                    link.href = url;
+                    link.click();
+                    pushNotif("İndirme Başlatıldı ⬇️");
+                }}
+            }}, 'image/png');
+        }});
+    }};
+</script>
+        """
+        st.markdown(share_html, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         import streamlit.components.v1 as components
         components.html(f"""
