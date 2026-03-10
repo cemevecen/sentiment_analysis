@@ -2046,23 +2046,36 @@ if "bulk_results" in st.session_state:
                     }}
                 }};
                 
-                // Add message listener for cross-frame communication
-                window.addEventListener('message', function(event) {{
-                    if (event.data.type === 'TRIGGER_NATIVE_PNG') {{
-                        const target = window.parent.document.getElementById('nlp-report-card');
-                        if(!target) return;
-                        
-                        window.notifyBridge("Görsel Hazırlanıyor... ⏳");
-                        
-                        window.html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                            const link = document.createElement('a');
-                            link.download = "{image_name}";
-                            link.href = canvas.toDataURL('image/png');
-                            link.click();
-                            window.notifyBridge("İndirme Başlatıldı! ⬇️");
-                        }}).catch(e => console.error(e));
+                // Dynamically attach event listener to bypass Streamlit onclick sanitization
+                function attachPngDownload() {{
+                    const btn = window.parent.document.getElementById('btn-png-download');
+                    if (btn) {{
+                        // Prevent attaching multiple times if component re-renders
+                        if (!btn.hasAttribute('data-bound')) {{
+                            btn.setAttribute('data-bound', 'true');
+                            btn.addEventListener('click', function() {{
+                                const target = window.parent.document.getElementById('nlp-report-card');
+                                if(!target) return;
+                                
+                                window.notifyBridge("Görsel Hazırlanıyor... ⏳");
+                                
+                                window.html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+                                    const link = document.createElement('a');
+                                    link.download = "{image_name}";
+                                    link.href = canvas.toDataURL('image/png');
+                                    link.click();
+                                    window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                                }}).catch(e => console.error(e));
+                            }});
+                        }}
+                    }} else {{
+                        // Keep trying until the button is rendered in the parent DOM
+                        setTimeout(attachPngDownload, 500);
                     }}
-                }});
+                }}
+                
+                // Start lookup
+                attachPngDownload();
             </script>
         """, height=0)
 
@@ -2118,7 +2131,7 @@ if "bulk_results" in st.session_state:
             </div>
             
             <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
-                <button class="dl-main-btn" onclick="window.parent.postMessage({{type: 'TRIGGER_NATIVE_PNG'}}, '*');">
+                <button id="btn-png-download" class="dl-main-btn">
                     <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
                 </button>
             </div>
