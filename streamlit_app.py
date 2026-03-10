@@ -1934,86 +1934,14 @@ if "bulk_results" in st.session_state:
             f"Olumsuz Deneyim: %{neg_p}\n"
         )
         if st.session_state.get('ai_summary'):
-            summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
+             summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
         summary_text += "━━━━━━━━━━━━━━━━━━━━━\n"
         summary_text += f"Analizini yap: https://sentimentanalysis-aimode.streamlit.app/\n"
         summary_text += "#ivicin"
         
         encoded_text = urllib.parse.quote(summary_text)
 
-        # --- DIGITAL REPORT CARD (SVG 3D) ---
-        def clean_html(h):
-            return "\n".join([line.strip() for line in h.split('\n') if line.strip()])
-        
-        # Sanitize summary for card display (remove formatting that might break HTML)
-        display_summary = st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')
-        display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
-        
-        # Punctuation & Newline Formatting Fix
-        import re
-        # Remove spaces before punctuation (e.g., "durumda ." -> "durumda.")
-        display_summary = re.sub(r'\s+([.,;:!?])', r'\1', display_summary)
-        # Collapse multiple spaces into one single space
-        display_summary = re.sub(r' {2,}', ' ', display_summary)
-        # Convert true newlines/paragraphs into HTML line breaks
-        display_summary = display_summary.replace('\n', '<br>')
-
-        card_html = clean_html(f"""
-            <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
-                <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
-                    <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
-                    <div style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
-                        <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
-                    </div>
-                    <div style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
-                        <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
-                    </div>
-                    <div style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
-                        <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
-                    </div>
-                    <div style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
-                        <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
-                    </div>
-                </div>
-
-                <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
-                    <div style="width: 140px; height: 140px; position: relative;">
-                        <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
-                        <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
-                            <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
-                            <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
-                            <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
-                        </svg>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
-                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
-                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
-                    </div>
-                </div>
-
-                <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
-                    </div>
-                    <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
-                        {display_summary}
-                    </div>
-                </div>
-                <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
-                    📊 AI SENTIMENT INTELLIGENCE
-                </div>
-            </div>
-        """)
-        st.markdown(card_html, unsafe_allow_html=True)
-        st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
+        # --- DIGITAL REPORT CARD HAS BEEN REMOVED (Screenshots native Streamlit now) ---
 
         # --- ROBUST BIG CARDS UNIFIED TRAY ---
         import base64
@@ -2063,12 +1991,21 @@ if "bulk_results" in st.session_state:
                         if (!btn.hasAttribute('data-bound')) {{
                             btn.setAttribute('data-bound', 'true');
                             btn.addEventListener('click', function() {{
-                                const target = window.parent.document.getElementById('nlp-report-card');
+                                // Target exactly what the user sees in Streamlit natively: the main column
+                                // By taking 'stMainBlockContainer', we screenshot the current scroll view/full app interface
+                                const target = window.parent.document.querySelector('.stMainBlockContainer');
                                 if(!target) return;
                                 
                                 window.notifyBridge("Görsel Hazırlanıyor... ⏳");
                                 
-                                window.html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+                                window.html2canvas(target, {{ 
+                                    scale: 2, 
+                                    useCORS: true, 
+                                    backgroundColor: '#FFFFFF', 
+                                    logging: false,
+                                    windowWidth: target.scrollWidth,
+                                    windowHeight: target.scrollHeight
+                                }}).then(canvas => {{
                                     const link = document.createElement('a');
                                     link.download = "{image_name}";
                                     link.href = canvas.toDataURL('image/png');
