@@ -301,11 +301,11 @@ st.markdown("""
         color: #1E293B !important;
     }
     
-    /* Expand the main container width to 1000px for a "bigger" look */
+    /* Expand the main container width to exactly 707.2px as requested */
     [data-testid="stAppViewBlockContainer"] {
-        max-width: 1000px !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        max-width: 707.2px !important;
+        padding-left: 0px !important;
+        padding-right: 0px !important;
     }
 
     /* Strict 5px spacing for headers and common text blocks */
