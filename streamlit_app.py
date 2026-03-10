@@ -12,7 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 import requests
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, cast
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
 # Removed app-store-scraper due to dependency conflicts with streamlit
@@ -775,18 +775,23 @@ with tab1:
                         st.session_state.all_fetched_pool = fetched_comments
                         st.session_state.last_fetch_key = fetch_key # Update manual cache key
                         
-                        MAX_REVIEWS = 500
-                        if len(fetched_comments) > MAX_REVIEWS:
+                        if len(fetched_comments) > 500:
                             total_found = len(fetched_comments)
-                            # Initial take: first 500
-                            limited_comments = fetched_comments[:MAX_REVIEWS]
+                            # Use count-based take for maximum linter compatibility
+                            limited_comments = []
+                            for idx in range(500):
+                                limited_comments.append(fetched_comments[idx])
+                            
                             st.session_state.comments_to_analyze = limited_comments
                             
-                            valid_dates = [r.get('date') for r in limited_comments if r.get('date') is not None]
+                            valid_dates = [r.get('date') for r in limited_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
                             if valid_dates:
-                                min_dt = min(valid_dates).strftime('%d-%m-%Y')
-                                max_dt = max(valid_dates).strftime('%d-%m-%Y')
-                                st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **{MAX_REVIEWS}** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
+                                # Cast to datetime to satisfy strict linter rules
+                                min_val = cast(datetime, min(valid_dates))
+                                max_val = cast(datetime, max(valid_dates))
+                                min_dt = min_val.strftime('%d-%m-%Y')
+                                max_dt = max_val.strftime('%d-%m-%Y')
+                                st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **500** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
                         else:
                             st.session_state.comments_to_analyze = fetched_comments
                         
@@ -940,10 +945,11 @@ with tab2:
                 st.error(f"{uploaded_file.name} okuma hatası: {e}")
         
         if all_comments:
-            MAX_REVIEWS = 500
-            if len(all_comments) > MAX_REVIEWS:
-                sliced_comments = all_comments[0:MAX_REVIEWS]
-                st.warning(f"Dosyadaki ilk {MAX_REVIEWS} yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
+            if len(all_comments) > 500:
+                sliced_comments = []
+                for idx in range(500):
+                    sliced_comments.append(all_comments[idx])
+                st.warning(f"Dosyadaki ilk 500 yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
                 st.session_state.comments_to_analyze = sliced_comments
             else:
                 st.session_state.comments_to_analyze = all_comments
@@ -996,10 +1002,11 @@ with tab3:
                 processed_comments.append({"text": l})
                 
         if processed_comments:
-            MAX_REVIEWS = 500
-            if len(processed_comments) > MAX_REVIEWS:
-                st.warning(f"En fazla {MAX_REVIEWS} adet yorum girilebilir. Fazlası kırpıldı.")
-                processed_final = processed_comments[0:MAX_REVIEWS]
+            if len(processed_comments) > 500:
+                st.warning("En fazla 500 adet yorum girilebilir. Fazlası kırpıldı.")
+                processed_final = []
+                for idx in range(500):
+                    processed_final.append(processed_comments[idx])
                 st.session_state.comments_to_analyze = processed_final
             else:
                 st.session_state.comments_to_analyze = processed_comments
