@@ -243,14 +243,19 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                 
                 batch_dates = []
                 for r in result:
-                    r_at = cast(datetime, r.get('at'))
-                    if r_at and r_at >= threshold_date:
-                        content = str(r.get('content', ''))
-                        # For scraper, we skip metadata/length-60-month-check which are for copy-pastes
-                        if content and len(content.strip()) >= 2:
-                            r_id = r.get('reviewId', content) # fallback to content as key
-                            all_fetched_map[r_id] = {"text": content, "date": r_at, "rating": str(score)}
-                    if r_at: batch_dates.append(r_at)
+                    r_at_raw = r.get('at')
+                    if r_at_raw:
+                        # Ensure date is naive for safe comparison
+                        r_at = cast(datetime, r_at_raw)
+                        if r_at.tzinfo is not None:
+                            r_at = r_at.replace(tzinfo=None)
+                        
+                        if r_at >= threshold_date:
+                            content = str(r.get('content', ''))
+                            if content and len(content.strip()) >= 2:
+                                r_id = r.get('reviewId', content)
+                                all_fetched_map[r_id] = {"text": content, "date": r_at, "rating": str(score)}
+                        batch_dates.append(r_at)
                 
                 if _progress_callback:
                     # Progress calculation: current score progress + overall progress
@@ -807,8 +812,10 @@ with tab1:
                         
                         st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
+                        loading_placeholder.empty()
                         st.info(f"{time_range} kriterine uygun yorum bulunamadı.")
                 except Exception as e:
+                    loading_placeholder.empty()
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
