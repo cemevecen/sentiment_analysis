@@ -67,6 +67,9 @@ def setup_api():
 GEMINI_CLIENT = setup_api()
 HAS_GEMINI = GEMINI_CLIENT is not None
 
+# Define total cost tracker
+API_TRACKER = {"cost_tl": 0.0}
+
 # Special check for Streamlit Cloud users
 if not HAS_GEMINI and "streamlit" in str(st.__file__).lower():
     st.sidebar.error("⚠️ Gemini API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY tanımlayın.")
@@ -1128,6 +1131,9 @@ if comments_to_analyze:
 
 
 def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
+    if API_TRACKER["cost_tl"] >= 50.0:
+        return {"_error": "cost_limit"}
+        
     if not HAS_GEMINI:
         return None
     
@@ -1230,6 +1236,17 @@ Yorum: "{text}"
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(temperature=0)
             )
+            
+            # Update Cost
+            meta = getattr(response, 'usage_metadata', None)
+            if meta:
+                prompt_tokens = getattr(meta, 'prompt_token_count', 0)
+                cand_tokens = getattr(meta, 'candidates_token_count', 0)
+                is_pro = 'pro' in current_model.lower()
+                cost_in = prompt_tokens * (3.50 if is_pro else 0.075) / 1000000
+                cost_out = cand_tokens * (10.50 if is_pro else 0.30) / 1000000
+                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0 # Approx USD to TL
+                
             content = response.text
             match = re.search(r'\{.*?\}', content, re.DOTALL)
             if match:
@@ -1370,6 +1387,11 @@ def run_bulk_analysis(data_to_process, is_append=False):
             if err == "quota":
                 q = st.session_state.get('_quota_hits', 0) + 1
                 st.session_state['_quota_hits'] = q
+            elif err == "cost_limit":
+                if not st.session_state.get('_cost_warned'):
+                    st.error("🚨 Tahmini 50 TL faturaya yaklaşıldı. Analiz işlemi otomatik durduruldu!")
+                    st.session_state['_cost_warned'] = True
+                break
             elif err:
                 st.warning(err)
             
