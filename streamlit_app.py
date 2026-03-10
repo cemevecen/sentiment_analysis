@@ -665,6 +665,7 @@ with tab1:
         col_u, col_r = st.columns([2, 1])
         with col_u:
             store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745")
+            st.session_state.app_url = store_url # Sync for share report
         with col_r:
             time_range = st.selectbox(
                 "Tarih Aralığı Seçin:",
@@ -1742,8 +1743,74 @@ if "bulk_results" in st.session_state:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
-        st.download_button(label=" Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl")
-    except: pass
+        
+        col_dl, col_share_btn = st.columns([1, 1])
+        with col_dl:
+            st.download_button(label="📥 Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl", use_container_width=True)
+        
+        # --- SHARE SECTION ---
+        st.write("---")
+        st.subheader("📤 Analiz Raporunu Paylaş")
+        
+        # Calculate Stats for Sharing
+        total_q = len(df)
+        pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
+        neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
+        
+        app_name = "Uygulama"
+        if st.session_state.get('app_url'):
+            if "id=" in st.session_state.app_url: app_name = st.session_state.app_url.split("id=")[-1].split("&")[0]
+            elif "/id" in st.session_state.app_url: app_name = st.session_state.app_url.split("/id")[-1].split("?")[0]
+
+        summary_text = f"🚀 {app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
+        summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
+        summary_text += f"📊 Toplam Veri: {total_q} Yorum\n"
+        summary_text += f"✅ Olumlu Deneyim: %{pos_p}\n"
+        summary_text += f"❌ Olumsuz Deneyim: %{neg_p}\n"
+        if st.session_state.get('ai_summary'):
+            summary_text += f"💡 Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
+        summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
+        summary_text += "🔗 Detaylı analiz için Cem Evecen NLP sistemini ziyaret edin.\n"
+        summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
+        
+        import urllib.parse
+        encoded_text = urllib.parse.quote(summary_text)
+        
+        share_data = [
+            ("WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}", "�"),
+            ("LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}", "�"),
+            ("Twitter / X", f"https://twitter.com/intent/tweet?text={encoded_text}", "✖️"),
+            ("Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}", "✈️"),
+            ("Facebook", f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}", "�"),
+            ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}", "📧"),
+            ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}", "🤖"),
+            ("Slack", f"slack://share?text={encoded_text}", "🚥"),
+            ("Teams", f"https://teams.microsoft.com/l/chat/0/0?users=&message={encoded_text}", "🤝"),
+            ("Kopyala", summary_text, "✂️")
+        ]
+        
+        s_cols = st.columns(5)
+        for i, (name, link, icon) in enumerate(share_data):
+            idx = i % 5
+            with s_cols[idx]:
+                if name == "Kopyala":
+                    if st.button(f"{icon} {name}", key=f"copy_{i}", use_container_width=True):
+                        st.code(link, language="markdown")
+                        st.toast("📋 Analiz özeti kopyalandı!")
+                else:
+                    st.link_button(f"{icon} {name}", link, use_container_width=True)
+                    
+        # Optional PDF/Print Trigger
+        st.markdown("""
+            <div style='text-align: center; margin-top: 20px;'>
+                <button onclick='window.print()' style='background: #6366F1; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: Poppins; font-weight: 600;'>
+                    🖨️ Raporu PDF Olarak Kaydet / Yazdır
+                </button>
+            </div>
+        """, unsafe_allow_html=True)
+                    
+    except Exception as e:
+        st.error(f"Paylaşım aracı hazırlanırken hata: {e}")
 
 # Footer
 st.divider()
