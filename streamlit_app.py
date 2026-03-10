@@ -1767,7 +1767,6 @@ if "bulk_results" in st.session_state:
             """, unsafe_allow_html=True)
 
         if total_items > 3:
-            st.markdown("<br>", unsafe_allow_html=True)
             if not show_all:
                 if st.button("Tüm Yorumları Göster", key=f"btn_show_{tab_id}", use_container_width=True):
                     st.session_state[show_all_key] = True
@@ -1837,7 +1836,7 @@ if "bulk_results" in st.session_state:
             df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
         
         # --- SHARE SECTION ---
-        st.write("---")
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         st.subheader("Analiz Raporunu Paylaş")
         
         # Calculate Stats for Sharing
