@@ -1829,8 +1829,11 @@ if "bulk_results" in st.session_state:
         f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)")
         display_comments(f_df, "neu")
 
-    # --- SHARE SECTION ---
+    # Excel Download
     try:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
         
         # --- SHARE SECTION ---
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
@@ -1920,7 +1923,6 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
 
         st.info("💡 Yukarıdaki kartı ekran görüntüsü alarak veya aşağıdaki butonlarla paylaşabilirsiniz.")
         
-        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         # --- SHARE BUTTONS ---
         s_cols = st.columns(5)
         for i, (name, link) in enumerate(share_data):
@@ -1933,6 +1935,31 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                         st.text_area("Kopyalanacak Metin", link, height=100)
                 else:
                     st.link_button(name, link, use_container_width=True)
+                    
+        # Actions Row: Excel and PDF triggers side-by-side
+        st.markdown("<br>", unsafe_allow_html=True)
+        action_cols = st.columns(2)
+        
+        with action_cols[0]:
+            st.download_button(
+                label="Sonuçları Excel Olarak İndir", 
+                data=output.getvalue(), 
+                file_name=f"{app_name} ai sentiment report.xlsx".replace(" ", "_"), 
+                key="bulk_dl", 
+                use_container_width=True
+            )
+            
+        with action_cols[1]:
+            import streamlit.components.v1 as components
+            components.html("""
+                <style>body { margin: 0; padding: 0; overflow: hidden; }</style>
+                <div style='text-align: center; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 50px;'>
+                    <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 400; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.95rem;'>
+                        Raporu PDF Olarak İndir / Yazdır
+                    </button>
+                </div>
+            """, height=50)
+
                     
     except Exception as e:
         st.error(f"Paylaşım aracı hazırlanırken hata: {e}")
