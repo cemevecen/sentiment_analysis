@@ -12,6 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 import requests
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
 # Removed app-store-scraper due to dependency conflicts with streamlit
@@ -88,7 +89,7 @@ def load_lottieurl(url: str):
 lottie_loading = load_lottieurl("https://lottie.host/81729486-455b-426d-8833-255e2a222857/YV77X3ZzPZ.json") # Updated to a working modern Lottie asset
 
 # --- UTILS: Content Cleanup Filter ---
-def is_valid_comment(text):
+def is_valid_comment(text: Any) -> bool:
     """
     Sophisticated filter to remove metadata, developer responses, and garbage lines.
     Useful for App Store Connect / Play Store copy-pastes.
@@ -158,12 +159,12 @@ def is_valid_comment(text):
 
     return True
 
-def get_app_store_reviews(app_id, country='tr', _progress_callback=None, _days_limit=30):
+def get_app_store_reviews(app_id: str, country: str = 'tr', _progress_callback: Any = None, _days_limit: int = 30) -> List[Dict[str, Any]]:
     """Fetch reviews using App Store RSS Feed (Pagination)"""
-    reviews = []
+    reviews: List[Dict[str, Any]] = []
     now = datetime.now()
     threshold_dt = now - timedelta(days=_days_limit)
-    total_range_secs = (now - threshold_dt).total_seconds()
+    total_range_secs = float((now - threshold_dt).total_seconds())
     
     try:
         total_pages = 10
@@ -252,10 +253,10 @@ def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
                 date_prog = min(elapsed_secs / total_requested_secs, 1.0)
                 
                 # Count progress: how many we've fetched vs the upper limit for this range
-                count_prog = min(len(fetched) / fetch_limit, 1.0)
+                count_prog = min(float(len(fetched)) / float(fetch_limit), 1.0)
                 
                 # Iteration progress: how many batches we've done vs max planned
-                iter_prog = (i + 1) / max_requests
+                iter_prog = float(i + 1) / float(max_requests)
                 
                 # Use whichever is most advanced for a steadier feel
                 prog = max(date_prog, count_prog, iter_prog)
@@ -745,13 +746,13 @@ with tab1:
                 
                 try:
                     if platform == "google":
-                        fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
+                        fetched_comments = fetch_google_play_reviews(str(app_id), days_limit, _progress_callback=update_fetch_progress)
                     elif platform == "apple":
-                        def apple_cb(p): update_fetch_progress(p)
-                        results = get_app_store_reviews(app_id, country, _progress_callback=apple_cb, _days_limit=days_limit)
+                        def apple_cb(p: float) -> None: update_fetch_progress(p)
+                        results = get_app_store_reviews(str(app_id), country, _progress_callback=apple_cb, _days_limit=days_limit)
                         if not results:
                             alt_country = 'tr' if country != 'tr' else 'us'
-                            results = get_app_store_reviews(app_id, alt_country)
+                            results = get_app_store_reviews(str(app_id), alt_country, _days_limit=days_limit)
                         
                         for r in results:
                             r_date = r.get('date')
@@ -972,9 +973,10 @@ with tab3:
             if re.search(store_meta_regex, l, re.IGNORECASE):
                 skip_dev_block = False # Reset on new review
                 # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
-                if len(processed_comments) > 0:
-                    last_item = processed_comments[-1]
-                    if len(str(last_item.get("text", ""))) < 85:
+                if processed_comments:
+                    # Using indexing safely after checking truthiness
+                    last_idx = len(processed_comments) - 1
+                    if len(str(processed_comments[last_idx].get("text", ""))) < 85:
                         processed_comments.pop()
                 continue
                 
