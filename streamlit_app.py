@@ -2025,7 +2025,6 @@ if "bulk_results" in st.session_state:
         # 1. Background Logic inside an invisible component
         import streamlit.components.v1 as components
         components.html(f"""
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <script>
                 // Add Notification UI dynamically to parent body
@@ -2089,6 +2088,7 @@ if "bulk_results" in st.session_state:
         # 2. Render the UI
         share_ui = textwrap.dedent(f"""
             <style>
+                @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
                 .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
                 .u-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
