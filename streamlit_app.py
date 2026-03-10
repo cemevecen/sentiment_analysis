@@ -458,14 +458,17 @@ st.markdown("""
         color: #000000 !important;
         font-weight: 600 !important;
         border-radius: 12px !important;
-        padding: 10px 24px !important;
+        padding: 10px 12px !important;
         transition: all 0.2s ease !important;
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
         text-decoration: none !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        height: 50px !important; /* Fixed height for uniform size */
+        width: 100% !important;
+        text-align: center !important;
     }
     .stButton>button:hover, .stLinkButton>a:hover {
         background-color: #F8FAFC !important;
@@ -1752,11 +1755,11 @@ if "bulk_results" in st.session_state:
         
         col_dl, col_share_btn = st.columns([1, 1])
         with col_dl:
-            st.download_button(label="📥 Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl", use_container_width=True)
+            st.download_button(label="Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl", use_container_width=True)
         
         # --- SHARE SECTION ---
         st.write("---")
-        st.subheader("📤 Analiz Raporunu Paylaş")
+        st.subheader("Analiz Raporunu Paylaş")
         
         # Calculate Stats for Sharing
         total_q = len(df)
@@ -1768,49 +1771,49 @@ if "bulk_results" in st.session_state:
             if "id=" in st.session_state.app_url: app_name = st.session_state.app_url.split("id=")[-1].split("&")[0]
             elif "/id" in st.session_state.app_url: app_name = st.session_state.app_url.split("/id")[-1].split("?")[0]
 
-        summary_text = f"🚀 {app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
+        summary_text = f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
         summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
-        summary_text += f"📊 Toplam Veri: {total_q} Yorum\n"
-        summary_text += f"✅ Olumlu Deneyim: %{pos_p}\n"
-        summary_text += f"❌ Olumsuz Deneyim: %{neg_p}\n"
+        summary_text += f"Toplam Veri: {total_q} Yorum\n"
+        summary_text += f"Olumlu Deneyim: %{pos_p}\n"
+        summary_text += f"Olumsuz Deneyim: %{neg_p}\n"
         if st.session_state.get('ai_summary'):
-            summary_text += f"💡 Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
+            summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
         summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
-        summary_text += "🔗 Detaylı analiz için Cem Evecen NLP sistemini ziyaret edin.\n"
+        summary_text += "Detaylı analiz için Cem Evecen NLP sistemini ziyaret edin.\n"
         summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
         
         import urllib.parse
         encoded_text = urllib.parse.quote(summary_text)
         
         share_data = [
-            ("WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}", "�"),
-            ("LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}", "�"),
-            ("Twitter / X", f"https://twitter.com/intent/tweet?text={encoded_text}", "✖️"),
-            ("Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}", "✈️"),
-            ("Facebook", f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}", "�"),
-            ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}", "📧"),
-            ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}", "🤖"),
-            ("Slack", f"slack://share?text={encoded_text}", "🚥"),
-            ("Teams", f"https://teams.microsoft.com/l/chat/0/0?users=&message={encoded_text}", "🤝"),
-            ("Kopyala", summary_text, "✂️")
+            ("WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}"),
+            ("LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}"),
+            ("Twitter / X", f"https://twitter.com/intent/tweet?text={encoded_text}"),
+            ("Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}"),
+            ("Facebook", f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}"),
+            ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}"),
+            ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}"),
+            ("Slack", f"slack://share?text={encoded_text}"),
+            ("Teams", f"https://teams.microsoft.com/l/chat/0/0?users=&message={encoded_text}"),
+            ("Kopyala", summary_text)
         ]
-        
+
         s_cols = st.columns(5)
-        for i, (name, link, icon) in enumerate(share_data):
+        for i, (name, link) in enumerate(share_data):
             idx = i % 5
             with s_cols[idx]:
                 if name == "Kopyala":
-                    if st.button(f"{icon} {name}", key=f"copy_{i}", use_container_width=True):
+                    if st.button(name, key=f"copy_{i}", use_container_width=True):
                         st.code(link, language="markdown")
-                        st.toast("📋 Analiz özeti kopyalandı!")
+                        st.toast("Analiz özeti kopyalandı!")
                 else:
-                    st.link_button(f"{icon} {name}", link, use_container_width=True)
+                    st.link_button(name, link, use_container_width=True)
                     
         # Optional PDF/Print Trigger
         st.markdown("""
             <div style='text-align: center; margin-top: 20px;'>
-                <button onclick='window.print()' style='background: #FFFFFF; color: #000000; border: 1px solid #E2E8F0; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: Poppins; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
-                    🖨️ Raporu PDF Olarak Kaydet / Yazdır
+                <button onclick='window.print()' style='background: #FFFFFF; color: #000000; border: 1px solid #E2E8F0; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: Poppins; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: 50px; min-width: 250px;'>
+                    Raporu PDF Olarak Kaydet / Yazdır
                 </button>
             </div>
         """, unsafe_allow_html=True)
