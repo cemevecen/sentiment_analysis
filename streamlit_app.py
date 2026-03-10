@@ -2071,6 +2071,28 @@ if "bulk_results" in st.session_state:
                         }}, 'image/png');
                     }});
                 }};
+
+                window.doSocialImageShare = function(platUrl, platName) {{
+                    const target = document.getElementById('nlp-report-card');
+                    if(!target) return;
+                    const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
+                    if(!h2c) {{ window.pushNotif("Sistem Hazırlanıyor... ⏳"); window.open(platUrl, '_blank'); return; }}
+                    window.pushNotif("Kart Kopyalanıyor & " + platName + " Açılıyor... ⏳");
+                    h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+                        canvas.toBlob(blob => {{
+                            try {{
+                                const data = [new ClipboardItem({{ [blob.type]: blob }})];
+                                navigator.clipboard.write(data).then(() => {{
+                                    window.open(platUrl, '_blank');
+                                    window.pushNotif("Görsel Panoda! ✅ " + platName + "'da Yapıştırabilirsiniz (Ctrl+V)");
+                                }}).catch(() => {{ throw new Error(); }});
+                            }} catch(e) {{
+                                window.open(platUrl, '_blank');
+                                window.pushNotif(platName + " Açıldı. Lütfen Görseli Manuel Kopyalayın.");
+                            }}
+                        }}, 'image/png');
+                    }});
+                }};
             </script>
         """).strip()
         st.markdown(global_scripts, unsafe_allow_html=True)
@@ -2101,7 +2123,7 @@ if "bulk_results" in st.session_state:
                 <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li"><i class="fa-brands fa-linkedin-in"></i></a>
                 <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x"><i class="fa-brands fa-x-twitter"></i></a>
                 <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg"><i class="fa-brands fa-telegram"></i></a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-btn btn-fb"><i class="fa-brands fa-facebook-f"></i></a>
+                <div id="btn-fb" class="share-btn btn-fb"><i class="fa-brands fa-facebook-f"></i></div>
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail"><i class="fa-solid fa-envelope"></i></a>
                 <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd"><i class="fa-brands fa-reddit-alien"></i></a>
                 <a href="slack://share?text={encoded_text}" class="share-btn btn-sl"><i class="fa-brands fa-slack"></i></a>
@@ -2111,8 +2133,13 @@ if "bulk_results" in st.session_state:
 
             <script>
                 const summaryTxt = {summary_escaped};
+                const fbUrl = "https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote=" + encodeURIComponent(summaryTxt);
+                
                 document.getElementById('btn-gc').addEventListener('click', () => {{
                     window.parent.doCopyText(summaryTxt, 'Google Chat');
+                }});
+                document.getElementById('btn-fb').addEventListener('click', () => {{
+                    window.parent.doSocialImageShare(fbUrl, 'Facebook');
                 }});
                 document.getElementById('btn-pic').addEventListener('click', () => {{
                     window.parent.doCopyCard();
