@@ -2095,79 +2095,55 @@ if "bulk_results" in st.session_state:
 
         # 2. Render the UI
         share_ui = textwrap.dedent(f"""
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <style>
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; align-items: center; height: 100%; }}
                 .u-btn {{
-                    width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-                    display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
+                    width: 44px; height: 44px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
+                    display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer;
                     transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
                 }}
                 .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; color: #1E293B; }}
                 .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
                 .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
-                
-                .dl-main-btn {{
-                    width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #5a67d8; color: #FFFFFF; 
-                    border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
-                    box-shadow: 0 4px 12px rgba(90, 103, 216, 0.3); transition: all 0.2s;
-                    display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
-                }}
-                .dl-main-btn:hover {{ background: #4c51bf; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(90, 103, 216, 0.4); }}
-                
-                /* Make standard download button green! */
-                div[data-testid="stDownloadButton"] button {{
-                    background-color: #5CB85C !important;
-                    color: white !important;
-                    border: none !important;
-                    border-radius: 12px !important;
-                    height: 50px !important;
-                    font-weight: 600 !important;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-                    transition: all 0.2s !important;
-                }}
-                div[data-testid="stDownloadButton"] button:hover {{
-                    background-color: #4cae4c !important;
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
-                }}
-                div[data-testid="stDownloadButton"] button p {{
-                    color: white !important;
-                }}
             </style>
-
-            <div class="u-tray">
-                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
-                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
-            </div>
-            
-            </div>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
-
+        
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_cols = st.columns(3)
+        # Create a single horizontal row: Social Media on the left, Downloads on the right
+        btn_cols = st.columns([5, 2, 2, 2])
+        
         with btn_cols[0]:
+            st.markdown(f"""
+                <div class="u-tray">
+                    <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
+                    <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
+                    <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with btn_cols[1]:
             st.markdown("""
-                <button id="btn-png-download" style="width: 100%; height: 50px; background: #5a67d8; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                <button id="btn-png-download" style="width: 100%; height: 44px; background: #5a67d8; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
                     📷 PNG
                 </button>
             """, unsafe_allow_html=True)
-        with btn_cols[1]:
-            st.download_button("📊 EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+            
         with btn_cols[2]:
+            st.download_button("📊 EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+            
+        with btn_cols[3]:
             components.html(f"""
                 <style>
                     body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}
                     button:hover {{ filter: brightness(0.9); transform: translateY(-1px); }}
                 </style>
-                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;'>
+                <button onclick='window.parent.print()' style='width: 100%; height: 44px; background: #F4A261; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;'>
                     🖨️ PDF
                 </button>
-            """, height=53)
+            """, height=48)
                     
     except Exception as e:
         st.error(f"Paylaşım sistemi hatası: {e}")
