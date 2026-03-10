@@ -588,55 +588,6 @@ st.markdown("""
         visibility: hidden !important;
         height: 0px !important;
     }
-
-    /* Idea Chips Styling */
-    .idea-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 15px;
-    }
-    .idea-chip {
-        background-color: #F0F9FF;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-        padding: 4px 12px;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        cursor: default;
-    }
-
-    /* Compact Radio Chips specifically for Time Scale */
-    div[data-testid="stRadio"] div[role="radiogroup"] {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 10px !important;
-    }
-    div[data-testid="stRadio"] label {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        padding: 4px 12px !important;
-        border-radius: 50px !important;
-        cursor: pointer !important;
-        font-size: 0.85rem !important;
-        transition: all 0.2s ease !important;
-    }
-    div[data-testid="stRadio"] label:hover {
-        background-color: #F8FAFC !important;
-    }
-    div[data-testid="stRadio"] label[data-selected="true"] {
-        background-color: #6366F1 !important;
-        color: white !important;
-        border-color: #6366F1 !important;
-    }
-    /* Hide the radio circles */
-    div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] {
-        margin-left: 0px !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] > div > div:first-child {
-        display: none !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -651,6 +602,55 @@ st.markdown(f"""
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
 
+def clipboard_paste_bridge():
+    """Helper to read from clipboard using JS and set to query params."""
+    components.html(
+        """
+        <style>
+            .paste-btn {
+                background-color: transparent; 
+                color: #6366F1; 
+                border: 1.5px solid #6366F1; 
+                padding: 6px 14px; 
+                border-radius: 50px; 
+                cursor: pointer;
+                font-family: 'Poppins', sans-serif;
+                font-weight: 600;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                transition: all 0.2s ease;
+                margin-top: 5px;
+            }
+            .paste-btn:hover {
+                background-color: #6366F1;
+                color: white;
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+            }
+        </style>
+        <button id="pasteBtn" class="paste-btn">
+            <span>📋</span> Panodan Yapıştır
+        </button>
+
+        <script>
+            document.getElementById('pasteBtn').addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.length > 3) {
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('auto_url', text);
+                        window.parent.location.href = url.toString();
+                    }
+                } catch (err) {
+                    console.error("Paste error", err);
+                }
+            });
+        </script>
+        """,
+        height=45,
+    )
+
 comments_to_analyze = [] # Reset local ref for tab logic
 
 tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi"])
@@ -659,7 +659,17 @@ with tab1:
     with st.container(border=True):
         col_u, col_r = st.columns([2, 1])
         with col_u:
-            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745")
+            # Check for auto_url from query params
+            auto_url = st.query_params.get("auto_url", "")
+            store_url = st.text_input(
+                "Uygulama linki veya ID girin:", 
+                value=auto_url,
+                placeholder="Örn: com.whatsapp veya 1500198745",
+                key="store_url_input"
+            )
+            # Render the bridge button underneath
+            clipboard_paste_bridge()
+            
         with col_r:
             time_range = st.selectbox(
                 "Tarih Aralığı Seçin:",
