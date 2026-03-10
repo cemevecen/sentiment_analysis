@@ -246,11 +246,20 @@ def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
                 if r_at: batch_dates.append(r_at)
             
             if _progress_callback and batch_dates:
-                # Sync progress bar with actual timeline coverage
+                # Sync progress bar with both timeline and count coverage
                 min_batch_dt = min(batch_dates)
                 elapsed_secs = (now - min_batch_dt).total_seconds()
-                prog = min(elapsed_secs / total_requested_secs, 1.0)
-                _progress_callback(prog)
+                date_prog = min(elapsed_secs / total_requested_secs, 1.0)
+                
+                # Count progress: how many we've fetched vs the upper limit for this range
+                count_prog = min(len(fetched) / fetch_limit, 1.0)
+                
+                # Iteration progress: how many batches we've done vs max planned
+                iter_prog = (i + 1) / max_requests
+                
+                # Use whichever is most advanced for a steadier feel
+                prog = max(date_prog, count_prog, iter_prog)
+                _progress_callback(min(prog, 0.99)) # Keep a tiny bit for the final jump
 
             if batch_dates and min(batch_dates) < threshold_date:
                 break
@@ -716,7 +725,20 @@ with tab1:
                 def update_fetch_progress(p):
                     # Clamp progress to 100% and avoid re-rendering issues
                     p_safe = min(max(float(p), 0.0), 1.0)
-                    p_bar.progress(p_safe, text=f"Veriler indiriliyor: %{int(p_safe*100)}")
+                    
+                    # Store last progress for smooth transition if needed
+                    last_p = st.session_state.get("_last_fetch_p", 0.0)
+                    
+                    # If it's a significant jump (especially at the end), animate slightly
+                    if p_safe >= 1.0 and last_p < 0.95:
+                        for i in range(1, 11):
+                            smooth_p = last_p + (1.0 - last_p) * (i / 10)
+                            p_bar.progress(smooth_p, text=f"Tamamlanıyor: %{int(smooth_p*100)}")
+                            time.sleep(0.05)
+                    else:
+                        p_bar.progress(p_safe, text=f"Veriler indiriliyor: %{int(p_safe*100)}")
+                    
+                    st.session_state["_last_fetch_p"] = p_safe
 
                 fetched_comments = []
                 threshold_date = datetime.now() - timedelta(days=days_limit)
@@ -733,7 +755,8 @@ with tab1:
                         
                         for r in results:
                             r_date = r.get('date')
-                            if r_date and r_date >= threshold_date:
+                            # Ensure r_date is a datetime for comparison
+                            if r_date is not None and isinstance(r_date, datetime) and r_date >= threshold_date:
                                 text = r.get('text', '')
                                 if is_valid_comment(text):
                                     fetched_comments.append(r)
@@ -949,8 +972,10 @@ with tab3:
             if re.search(store_meta_regex, l, re.IGNORECASE):
                 skip_dev_block = False # Reset on new review
                 # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
-                if processed_comments and len(processed_comments[-1]["text"]) < 85:
-                    processed_comments.pop()
+                if len(processed_comments) > 0:
+                    last_item = processed_comments[-1]
+                    if len(str(last_item.get("text", ""))) < 85:
+                        processed_comments.pop()
                 continue
                 
             # Detect Developer Response Header -> Starts a block to IGNORE
