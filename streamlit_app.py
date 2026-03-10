@@ -356,16 +356,15 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* Target Streamlit's internal header containers for expanders */
     .st-emotion-cache-p5mtransition, .st-emotion-cache-1vt4y6f {
-        background-color: #F0F9FF !important;
-        color: #1E293B !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
     }
     
-    /* Header Card - Light Blue */
+    /* Header Card - White */
     .header-container {
-        background-color: #F0F9FF !important;
-        border: 2px solid #E0F2FE;
+        background-color: #FFFFFF !important;
+        border: 2px solid #E2E8F0;
         border-radius: 20px;
         padding: 20px;
         margin-bottom: 5px;
@@ -386,15 +385,15 @@ st.markdown("""
         margin: 0 auto;
     }
     
-    /* File Uploader - Light Blue */
+    /* File Uploader - White */
     [data-testid="stFileUploader"] {
-        background-color: #F0F9FF !important;
-        border: 2px dashed #FFD1B3 !important;
+        background-color: #FFFFFF !important;
+        border: 2px dashed #E2E8F0 !important;
         border-radius: 16px;
         padding: 20px;
     }
     [data-testid="stFileUploadDropzone"] {
-        background-color: #F0F9FF !important;
+        background-color: #FFFFFF !important;
         border: none !important;
         border-radius: 12px;
     }
@@ -427,11 +426,11 @@ st.markdown("""
         margin-left: 5px;
     }
     
-    /* Info/Alert boxes - Light Blue */
+    /* Info/Alert boxes - White */
     .stAlert {
-        background-color: #F0F9FF !important;
-        color: #1E293B !important;
-        border: 2px solid #FFD1B3 !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 2px solid #E2E8F0 !important;
         border-radius: 12px !important;
         margin-bottom: 5px !important;
     }
@@ -1350,13 +1349,13 @@ if "bulk_results" in st.session_state:
     st.markdown("""
 <style>
 /* Results Card Styling */
-.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #F0F9FF !important; }
+.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; }
 
 .neon-pos *, .neon-neg *, .neon-neu *, .normal-card * {
-    color: #1E293B !important;
+    color: #000000 !important;
 }
 
 .metric-container {
@@ -1367,7 +1366,7 @@ if "bulk_results" in st.session_state:
     flex-wrap: wrap;
 }
 .metric-card {
-    background: #F0F9FF !important;
+    background: #FFFFFF !important;
     border: 2px solid #FFE4D6 !important;
     border-radius: 100px !important;
     padding: 1.5rem 1rem !important;
@@ -1380,16 +1379,16 @@ if "bulk_results" in st.session_state:
 .metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
 
 .glass-card {
-    background: #F0F9FF !important;
+    background: #FFFFFF !important;
     border: 2px solid #F1F5F9 !important;
     border-radius: 15px;
     padding: 15px;
     margin-bottom: 15px;
-    color: #1E293B !important;
+    color: #000000 !important;
 }
 
 .glass-card * {
-    color: #1E293B !important;
+    color: #000000 !important;
 }
 
 .sentiment-indicator {
@@ -1700,7 +1699,7 @@ if "bulk_results" in st.session_state:
                     <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment_indicator}{extra_info}</span>
                     <span style="font-size: 0.8em; color: #94a3b8;">{date_tag}</span>
                 </div>
-                <div style="color: #1E293B; line-height: 1.5;">{row['Yorum']}</div>
+                <div style="color: #000000; line-height: 1.5;">{row['Yorum']}</div>
             </div>
             """, unsafe_allow_html=True)
 
