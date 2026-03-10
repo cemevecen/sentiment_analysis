@@ -1756,10 +1756,6 @@ if "bulk_results" in st.session_state:
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
         
-        col_dl, col_share_btn = st.columns([1, 1])
-        with col_dl:
-            st.download_button(label="Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl", use_container_width=True)
-        
         # --- SHARE SECTION ---
         st.write("---")
         st.subheader("Analiz Raporunu Paylaş")
@@ -1849,15 +1845,31 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                 else:
                     st.link_button(name, link, use_container_width=True)
                     
-        # Optional PDF/Print Trigger (Using Components for JS execution)
-        import streamlit.components.v1 as components
-        components.html("""
-            <div style='text-align: center; margin-top: 20px; font-family: sans-serif;'>
-                <button onclick='window.parent.print()' style='background: #000000; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem;'>
-                    Raporu PDF Olarak İndir / Yazdır
-                </button>
-            </div>
-        """, height=80)
+        # Actions Row: Excel and PDF triggers side-by-side
+        st.markdown("<br>", unsafe_allow_html=True)
+        action_cols = st.columns(2)
+        
+        with action_cols[0]:
+            # Space to align with the iframe iframe margin
+            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+            st.download_button(
+                label="Sonuçları Excel Olarak İndir", 
+                data=output.getvalue(), 
+                file_name=f"{app_name} ai sentiment report.xlsx".replace(" ", "_"), 
+                key="bulk_dl", 
+                use_container_width=True
+            )
+            
+        with action_cols[1]:
+            import streamlit.components.v1 as components
+            components.html("""
+                <div style='text-align: center; font-family: sans-serif;'>
+                    <button onclick='window.parent.print()' style='width: 100%; background: #000000; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem; height: 50px;'>
+                        Raporu PDF Olarak İndir / Yazdır
+                    </button>
+                </div>
+            """, height=70)
+
                     
     except Exception as e:
         st.error(f"Paylaşım aracı hazırlanırken hata: {e}")
