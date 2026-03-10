@@ -2128,7 +2128,7 @@ if "bulk_results" in st.session_state:
                                             if(platUrl) window.open(platUrl, '_blank');
                                             pushNotif(platUrl ? "Görsel Panoda! ✅ " + platName + "'da Yapıştırın" : "Görsel Kopyalandı! ✅");
                                         }}).catch(() => {{ throw new Error(); }});
-                                    } catch(e) {{
+                                    }} catch(e) {{
                                         if(platUrl) window.open(platUrl, '_blank');
                                         pushNotif("Görsel Kopyalanamadı, Manuel Deneyin.");
                                     }}
