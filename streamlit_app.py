@@ -1885,7 +1885,7 @@ if "bulk_results" in st.session_state:
             ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}"),
             ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}"),
             ("Slack", f"slack://share?text={encoded_text}"),
-            ("Teams", f"https://teams.microsoft.com/l/chat/0/0?users=&message={encoded_text}"),
+            ("Google Chat", "https://chat.google.com/"),
             ("Kopyala", summary_text)
         ]
 
