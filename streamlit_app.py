@@ -2013,60 +2013,10 @@ if "bulk_results" in st.session_state:
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
         excel_filename = image_name.replace(".png", ".xlsx")
         
-        # 1. Background Logic inside an invisible component (Guaranteed to run, no leaks)
-        import streamlit.components.v1 as components
-        components.html(f"""
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-            <script>
-                // Add Notification UI dynamically to parent body
-                if (!window.parent.document.getElementById('uNotif')) {{
-                    const div = window.parent.document.createElement('div');
-                    div.id = 'uNotif';
-                    div.innerHTML = '<span id="uMsg">Hazırlanıyor...</span>';
-                    Object.assign(div.style, {{
-                        position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%) translateY(-20px) scale(0.9)',
-                        background: '#10B981', color: 'white', padding: '14px 28px', borderRadius: '12px', fontWeight: '700',
-                        opacity: '0', transition: 'all 0.4s cubic-bezier(0.19, 1, 0.22, 1)', zIndex: '9999999',
-                        boxShadow: '0 15px 30px rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', gap: '10px',
-                        pointerEvents: 'none', fontFamily: '"Poppins", sans-serif', whiteSpace: 'nowrap'
-                    }});
-                    window.parent.document.body.appendChild(div);
-                }}
-
-                window.parent.notifyBridge = function(msg) {{
-                    const n = window.parent.document.getElementById('uNotif');
-                    const m = window.parent.document.getElementById('uMsg');
-                    if(n && m) {{
-                        m.innerText = msg; n.style.opacity = '1';
-                        n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                        setTimeout(() => {{ 
-                            n.style.opacity = '0';
-                            n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                        }}, 3000);
-                    }}
-                }};
-                
-                window.parent.triggerExport = function(type) {{
-                    if(type === 'pdf') window.parent.print();
-                    if(type === 'png') {{
-                        const target = window.parent.document.getElementById('nlp-report-card');
-                        if(!target) return;
-                        window.parent.notifyBridge("Görsel Hazırlanıyor... ⏳");
-                        window.html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                            const link = document.createElement('a');
-                            link.download = "{image_name}";
-                            link.href = canvas.toDataURL('image/png');
-                            link.click();
-                            window.parent.notifyBridge("İndirme Başlatıldı! ⬇️");
-                        }}).catch(e => console.error(e));
-                    }}
-                }};
-            </script>
-        """, height=0)
-
-        # 2. Render the UI
+        # 1. Render the UI and Native JS Logic (No Sandboxes)
         share_ui = textwrap.dedent(f"""
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
                 .u-btn {{
@@ -2116,10 +2066,61 @@ if "bulk_results" in st.session_state:
             </div>
             
             <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
-                <button class="dl-main-btn" onclick="window.parent.triggerExport('png')">
+                <button class="dl-main-btn" onclick="window.triggerNativeExport()">
                     <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
                 </button>
             </div>
+            
+            <script>
+                (function() {{
+                    // Add Notification UI dynamically if it doesn't exist yet
+                    if (!document.getElementById('uNotif')) {{
+                        const div = document.createElement('div');
+                        div.id = 'uNotif';
+                        div.innerHTML = '<span id="uMsg">Hazırlanıyor...</span>';
+                        Object.assign(div.style, {{
+                            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%) translateY(-20px) scale(0.9)',
+                            background: '#10B981', color: 'white', padding: '14px 28px', borderRadius: '12px', fontWeight: '700',
+                            opacity: '0', transition: 'all 0.4s cubic-bezier(0.19, 1, 0.22, 1)', zIndex: '9999999',
+                            boxShadow: '0 15px 30px rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', gap: '10px',
+                            pointerEvents: 'none', fontFamily: '"Poppins", sans-serif', whiteSpace: 'nowrap'
+                        }});
+                        document.body.appendChild(div);
+                    }}
+
+                    window.notifyBridge = function(msg) {{
+                        const n = document.getElementById('uNotif');
+                        const m = document.getElementById('uMsg');
+                        if(n && m) {{
+                            m.innerText = msg; n.style.opacity = '1';
+                            n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                            setTimeout(() => {{ 
+                                n.style.opacity = '0';
+                                n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                            }}, 3000);
+                        }}
+                    }};
+                    
+                    window.triggerNativeExport = function() {{
+                        const target = document.getElementById('nlp-report-card');
+                        if(!target) return;
+                        
+                        if (typeof html2canvas === 'undefined') {{
+                            window.notifyBridge("Sistem Hazırlanıyor... ⏳");
+                            return;
+                        }}
+
+                        window.notifyBridge("Görsel Hazırlanıyor... ⏳");
+                        html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
+                            const link = document.createElement('a');
+                            link.download = "{image_name}";
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                            window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                        }}).catch(e => console.error(e));
+                    }};
+                }})();
+            </script>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
 
