@@ -1963,74 +1963,57 @@ if "bulk_results" in st.session_state:
         # Digital Report Card (Visual Summary)
         st.markdown(f"""
 <div id="nlp-report-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black; max-width: 650px; margin-left: auto; margin-right: auto;">
-    <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #1E293B; font-size: 1.4rem; letter-spacing: -0.5px;">{report_title}</h2>
-    </div>
-    
-    <div style="display: flex; justify-content: space-around; margin-bottom: 30px;">
-        <div style="text-align: center; flex: 1;">
-            <div style="font-size: 0.7rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Analiz</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #334155;">{total_q}</div>
-        </div>
-        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-            <div style="font-size: 0.7rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
-        </div>
-        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-            <div style="font-size: 0.7rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
-        </div>
-        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-            <div style="font-size: 0.7rem; color: #3B82F6; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Görüş</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">%{neu_p}</div>
-        </div>
-    </div>
-
-    <!-- 3D Pie Chart Section -->
-    <div style="display: flex; align-items: center; justify-content: space-around; margin: 40px 0; background: #F8FAFC; border-radius: 20px; padding: 25px;">
-        <div style="perspective: 600px; width: 140px; height: 140px;">
-            <div style="
-                width: 140px; 
-                height: 140px; 
-                border-radius: 50%; 
-                background: conic-gradient(
-                    #10B981 0% {stop1}%, 
-                    #EF4444 {stop1}% {stop2}%, 
-                    #3B82F6 {stop2}% 100%
-                ); 
-                transform: rotateX(55deg) rotateZ(0deg); 
-                box-shadow: 0 12px 0 #CBD5E1, 0 15px 25px rgba(0,0,0,0.1);
-            "></div>
-        </div>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 14px; height: 14px; background: #10B981; border-radius: 4px;"></div>
-                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumlu (%{pos_p})</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 14px; height: 14px; background: #EF4444; border-radius: 4px;"></div>
-                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumsuz (%{neg_p})</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 14px; height: 14px; background: #3B82F6; border-radius: 4px;"></div>
-                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Görüş/Talep (%{neu_p})</div>
-            </div>
-        </div>
-    </div>
-
-    <div style="background: #FFFFFF; border-radius: 14px; padding: 20px; border: 1px solid #F1F5F9; border-left: 5px solid #6366F1; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <div style="font-weight: 700; color: #1E293B; margin-bottom: 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-            <span>💡</span> Stratejik Özet
-        </div>
-        <div style="color: #475569; font-size: 0.92rem; line-height: 1.6;">
-            {st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
-        </div>
-    </div>
-    
-    <div style="margin-top: 30px; text-align: center; font-size: 0.8rem; color: #94A3B8; font-weight: 500;">
-        📊 AI-Powered Sentiment Intelligence Report
-    </div>
+<div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
+<h2 style="margin: 0; color: #1E293B; font-size: 1.4rem; letter-spacing: -0.5px;">{report_title}</h2>
+</div>
+<div style="display: flex; justify-content: space-around; margin-bottom: 30px;">
+<div style="text-align: center; flex: 1;">
+<div style="font-size: 0.7rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Analiz</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #334155;">{total_q}</div>
+</div>
+<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+<div style="font-size: 0.7rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
+</div>
+<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+<div style="font-size: 0.7rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
+</div>
+<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+<div style="font-size: 0.7rem; color: #3B82F6; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Görüş</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">%{neu_p}</div>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-around; margin: 40px 0; background: #F8FAFC; border-radius: 20px; padding: 25px;">
+<div style="perspective: 600px; width: 140px; height: 140px;">
+<div style="width: 140px; height: 140px; border-radius: 50%; background: conic-gradient(#10B981 0% {stop1}%, #EF4444 {stop1}% {stop2}%, #3B82F6 {stop2}% 100%); transform: rotateX(55deg) rotateZ(0deg); box-shadow: 0 12px 0 #CBD5E1, 0 15px 25px rgba(0,0,0,0.1);"></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<div style="width: 14px; height: 14px; background: #10B981; border-radius: 4px;"></div>
+<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumlu (%{pos_p})</div>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div style="width: 14px; height: 14px; background: #EF4444; border-radius: 4px;"></div>
+<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumsuz (%{neg_p})</div>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div style="width: 14px; height: 14px; background: #3B82F6; border-radius: 4px;"></div>
+<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Görüş/Talep (%{neu_p})</div>
+</div>
+</div>
+</div>
+<div style="background: #FFFFFF; border-radius: 14px; padding: 20px; border: 1px solid #F1F5F9; border-left: 5px solid #6366F1; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+<div style="font-weight: 700; color: #1E293B; margin-bottom: 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+<span>💡</span> Stratejik Özet
+</div>
+<div style="color: #475569; font-size: 0.92rem; line-height: 1.6;">
+{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
+</div>
+</div>
+<div style="margin-top: 30px; text-align: center; font-size: 0.8rem; color: #94A3B8; font-weight: 500;">
+📊 AI-Powered Sentiment Intelligence Report
+</div>
 </div>
 """, unsafe_allow_html=True)
 
