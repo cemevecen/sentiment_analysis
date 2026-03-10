@@ -788,6 +788,27 @@ with tab1:
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
+                    # Fetch App Details first to get real name if possible
+                    name_for_state = app_id
+                    st_for_state = "Store"
+                    if platform == "google":
+                        try:
+                            from google_play_scraper import app
+                            info = app(app_id)
+                            name_for_state = info.get('title', app_id)
+                            st_for_state = "Google Play"
+                        except: pass
+                    elif platform == "apple":
+                        st_for_state = "App Store"
+                        # Try to get name from URL if it's a link
+                        if "apple.com" in u and "/app/" in u:
+                            try:
+                                name_for_state = u.split("/app/")[-1].split("/")[0].replace("-", " ").title()
+                            except: pass
+                    
+                    st.session_state.detected_app_name = name_for_state
+                    st.session_state.detected_store_type = st_for_state
+
                     if platform == "google":
                         fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
                     elif platform == "apple":
@@ -1844,20 +1865,26 @@ if "bulk_results" in st.session_state:
         pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
         
-        app_name = "Uygulama"
-        store_type = "STORE"
-        if st.session_state.get('app_url'):
+        # Priority: Use detected names from previous fetch if available
+        app_name = st.session_state.get('detected_app_name', "Uygulama")
+        store_type = st.session_state.get('detected_store_type', "STORE")
+
+        # Fallback/Refinement for Link Input (if session state is missing)
+        if app_name == "Uygulama" and st.session_state.get('app_url'):
             url = st.session_state.app_url
             if "youtube.com" in url or "youtu.be" in url:
                 app_name = "YouTube Video"
                 store_type = "YouTube"
             elif "apple.com" in url:
-                if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
-                elif "/id" in url: app_name = url.split("/id")[-1].split("?")[0]
+                if "/app/" in url:
+                    try:
+                        app_name = url.split("/app/")[-1].split("/")[0].replace("-", " ").title()
+                    except: 
+                        if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
                 store_type = "App Store"
             elif "play.google" in url:
                 if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
-                app_name = app_name.replace("com.", "").replace("org.", "").split(".")[0]
+                app_name = app_name.replace("com.", "").replace("org.", "").split(".")[0].title()
                 store_type = "Google Play"
 
         report_title = f"{app_name.upper()} UYGULAMASI {store_type.upper()} ANALİZ RAPORU"
