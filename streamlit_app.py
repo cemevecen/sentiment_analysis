@@ -2089,7 +2089,7 @@ if "bulk_results" in st.session_state:
         share_ui = textwrap.dedent(f"""
             <style>
                 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 0 0 10px 0; }}
                 .u-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
@@ -2135,12 +2135,9 @@ if "bulk_results" in st.session_state:
                 <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
             </div>
-            
-            </div>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
         btn_cols = st.columns(3)
         with btn_cols[0]:
             st.markdown("""
