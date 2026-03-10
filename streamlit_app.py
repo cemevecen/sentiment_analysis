@@ -2009,9 +2009,13 @@ if "bulk_results" in st.session_state:
         # --- ULTIMATE UNIFIED SHARE & DOWNLOAD SYSTEM (Parent Frame) ---
         import textwrap
         import json
+        import base64
+        
         summary_escaped = json.dumps(summary_text)
-        fb_share_url = f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote="
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_")
+        excel_filename = image_name.replace(".png", ".xlsx")
+        excel_b64 = base64.b64encode(output.getvalue()).decode()
+        excel_href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_b64}"
 
         ultimate_share_html = textwrap.dedent(f"""
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -2022,7 +2026,7 @@ if "bulk_results" in st.session_state:
             </div>
 
             <style>
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 30px 0; }}
                 .u-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
@@ -2030,31 +2034,22 @@ if "bulk_results" in st.session_state:
                 }}
                 .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
                 .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
-                .u-tg {{ color: #0088CC; }} .u-fb {{ color: #1877F2; }} .u-mail {{ color: #D44638; }}
-                .u-rd {{ color: #FF4500; }} .u-sl {{ color: #4A154B; }} .u-gc {{ color: #00897B; }}
-                .u-pic {{ color: #8B5CF6; }}
-                
-                .u-dl-btn {{
-                    width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #6366F1; color: #FFFFFF; 
-                    border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
-                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transition: all 0.2s;
-                    display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
-                }}
-                .u-dl-btn:hover {{ background: #4F46E5; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); }}
+                .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
+                .u-xl {{ color: #1D6F42; border-color: #1D6F4222; }}
+                .u-pdf {{ color: #F4A261; border-color: #F4A26122; }}
+                .u-png {{ color: #6366F1; border-color: #6366F122; }}
             </style>
 
             <div class="u-tray">
-                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
-                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
-            </div>
-            
-            <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
-                <button class="u-dl-btn" onclick="doUltimateAction('dl')">
-                    <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
-                </button>
+                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x" title="X (Twitter)"><i class="fa-brands fa-x-twitter"></i></a>
+                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
+                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail" title="E-Posta"><i class="fa-solid fa-envelope"></i></a>
+                
+                <a href="{excel_href}" download="{excel_filename}" class="u-btn u-xl" title="Excel İndir"><i class="fa-solid fa-file-excel"></i></a>
+                <div class="u-btn u-pdf" onclick="window.parent.print()" title="PDF İndir / Yazdır"><i class="fa-solid fa-file-pdf"></i></a></div>
+                <div class="u-btn u-png" onclick="doUltimateAction('dl')" title="PNG Görseli İndir"><i class="fa-solid fa-file-image"></i></div>
             </div>
 
             <script>
@@ -2102,23 +2097,9 @@ if "bulk_results" in st.session_state:
             </script>
         """).strip()
         st.markdown(ultimate_share_html, unsafe_allow_html=True)
-        
-        # Excel & PDF Row
-        st.markdown("<br>", unsafe_allow_html=True)
-        btn_cols = st.columns(2)
-        with btn_cols[0]:
-            st.download_button("Sonuçları Excel Olarak İndir", output.getvalue(), f"{image_name.replace('.png', '.xlsx')}", key="xl_dl", use_container_width=True)
-        with btn_cols[1]:
-            import streamlit.components.v1 as components
-            components.html(f"""
-                <style>body {{ margin: 0; padding: 0; overflow: hidden; }}</style>
-                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-                    Raporu PDF Olarak İndir / Yazdır
-                </button>
-            """, height=53)
                     
     except Exception as e:
-        st.error(f"Paylaşım aracı hatası: {e}")
+        st.error(f"Paylaşım sistemi hatası: {e}")
 
 # Footer
 st.divider()
