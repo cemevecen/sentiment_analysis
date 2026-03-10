@@ -1804,36 +1804,33 @@ if "bulk_results" in st.session_state:
         # Digital Report Card (Visual Summary)
         st.markdown(f"""
 <div style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
-    <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #000000; font-size: 1.5rem;">📊 NLP ANALİZ RAPORU</h2>
-        <p style="color: #64748B; margin: 5px 0 0 0; font-size: 0.9rem;">Cem Evecen NLP Analiz Sistemi v3.0</p>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-        <div style="text-align: center; flex: 1;">
-            <div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Toplam Veri</div>
-            <div style="font-size: 1.8rem; font-weight: 700; color: #000000;">{total_q}</div>
-        </div>
-        <div style="text-align: center; flex: 1; border-left: 1px solid #F1F5F9; border-right: 1px solid #F1F5F9;">
-            <div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumlu</div>
-            <div style="font-size: 1.8rem; font-weight: 700; color: #10B981;">%{pos_p}</div>
-        </div>
-        <div style="text-align: center; flex: 1;">
-            <div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumsuz</div>
-            <div style="font-size: 1.8rem; font-weight: 700; color: #EF4444;">%{neg_p}</div>
-        </div>
-    </div>
-
-    <div style="background: #F8FAFC; border-radius: 12px; padding: 20px; border-left: 4px solid #6366F1;">
-        <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">💡 Stratejik Özet</div>
-        <div style="color: #334155; font-size: 0.9rem; line-height: 1.6;">
-            {st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')[:300]}...
-        </div>
-    </div>
-    
-    <div style="margin-top: 25px; text-align: center; font-size: 0.8rem; color: #94A3B8;">
-        Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
-    </div>
+<div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
+<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">📊 NLP ANALİZ RAPORU</h2>
+<p style="color: #64748B; margin: 5px 0 0 0; font-size: 0.9rem;">Cem Evecen NLP Analiz Sistemi v3.0</p>
+</div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+<div style="text-align: center; flex: 1;">
+<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Toplam Veri</div>
+<div style="font-size: 1.8rem; font-weight: 700; color: #000000;">{total_q}</div>
+</div>
+<div style="text-align: center; flex: 1; border-left: 1px solid #F1F5F9; border-right: 1px solid #F1F5F9;">
+<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumlu</div>
+<div style="font-size: 1.8rem; font-weight: 700; color: #10B981;">%{pos_p}</div>
+</div>
+<div style="text-align: center; flex: 1;">
+<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumsuz</div>
+<div style="font-size: 1.8rem; font-weight: 700; color: #EF4444;">%{neg_p}</div>
+</div>
+</div>
+<div style="background: #F8FAFC; border-radius: 12px; padding: 20px; border-left: 4px solid #6366F1;">
+<div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">💡 Stratejik Özet</div>
+<div style="color: #334155; font-size: 0.9rem; line-height: 1.6;">
+{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')[:300]}...
+</div>
+</div>
+<div style="margin-top: 25px; text-align: center; font-size: 0.8rem; color: #94A3B8;">
+Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
+</div>
 </div>
 """, unsafe_allow_html=True)
 
