@@ -1783,6 +1783,7 @@ if "bulk_results" in st.session_state:
                 store_type = "App Store"
             elif "play.google" in url:
                 if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
+                app_name = app_name.replace("com.", "").replace("org.", "").split(".")[0]
                 store_type = "Google Play"
 
         report_title = f"{app_name.upper()} UYGULAMASI {store_type.upper()} ANALİZ RAPORU"
@@ -1794,7 +1795,8 @@ if "bulk_results" in st.session_state:
         if st.session_state.get('ai_summary'):
             summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
         summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
-        summary_text += "Detaylı analiz için Cem Evecen NLP sistemini ziyaret edin.\n"
+        app_host = "https://sentimentanalysis-aimode.streamlit.app/"
+        summary_text += f"Sen de uygulamanın analizini yap: [tıkla]({app_host})\n"
         summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
         
         import urllib.parse
@@ -1817,8 +1819,7 @@ if "bulk_results" in st.session_state:
         st.markdown(f"""
 <div style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
 <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">📊 {report_title}</h2>
-<p style="color: #64748B; margin: 5px 0 0 0; font-size: 0.9rem;">Cem Evecen NLP Analiz Sistemi v3.0</p>
+<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">{report_title}</h2>
 </div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
 <div style="text-align: center; flex: 1;">
