@@ -2064,6 +2064,7 @@ if "bulk_results" in st.session_state:
             .icon-rd {{ color: #FF4500; }} .icon-rd:hover {{ background: #FF4500; color: white; }}
             .icon-sl {{ color: #4A154B; }} .icon-sl:hover {{ background: #4A154B; color: white; }}
             .icon-gc {{ color: #00897B; }} .icon-gc:hover {{ background: #00897B; color: white; }}
+            .icon-pic {{ color: #8B5CF6; }} .icon-pic:hover {{ background: #8B5CF6; color: white; }}
             
             .copy-notif {{
                 position: fixed; top: 30px; right: 30px; background: #10B981; color: white; 
@@ -2085,10 +2086,10 @@ if "bulk_results" in st.session_state:
             <a href="https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}" target="_blank" class="share-icon icon-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
             <a href="slack://share?text={encoded_text}" class="share-icon icon-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
             <div onclick="window.parent.copyToClipTray('{summary_text_js}', true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
+            <div onclick="window.parent.copyCardAsImage()" class="share-icon icon-pic" title="Görseli Kopyala"><i class="fa-solid fa-camera"></i></div>
         </div>
 
         <script>
-            // Define on window.parent to bypass potential iframe scope issues
             window.parent.copyToClipTray = function(text, isChat) {{
                 const el = document.createElement('textarea');
                 el.value = text;
@@ -2103,6 +2104,49 @@ if "bulk_results" in st.session_state:
                     notif.style.opacity = '1';
                     setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
                 }}
+            }};
+
+            window.parent.copyCardAsImage = function() {{
+                const target = window.parent.document.getElementById('nlp-report-card');
+                const notif = document.getElementById('copyNotif');
+                
+                if (!target) return;
+                
+                const captureFunc = window.html2canvas || window.parent.html2canvas;
+                if (!captureFunc) {{
+                    if (notif) {{
+                        notif.innerText = "Sistem hazırlanıyor... ⏳";
+                        notif.style.opacity = '1';
+                        setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
+                    }}
+                    return;
+                }}
+
+                if (notif) {{
+                    notif.innerText = "Görsel hazırlanıyor... ⏳";
+                    notif.style.opacity = '1';
+                }}
+
+                captureFunc(target, {{scale: 2, backgroundColor: '#FFFFFF', useCORS: true}}).then(canvas => {{
+                    canvas.toBlob(blob => {{
+                        try {{
+                            const item = new ClipboardItem({{ "image/png": blob }});
+                            navigator.clipboard.write([item]).then(() => {{
+                                if (notif) {{
+                                    notif.innerText = "Görsel Kopyalandı! ✅ (X/Slack'e yapıştırabilirsiniz)";
+                                    notif.style.opacity = '1';
+                                    setTimeout(() => {{ notif.style.opacity = '0'; }}, 4000);
+                                }}
+                            }});
+                        }} catch (err) {{
+                            if (notif) {{
+                                notif.innerText = "Hata: Görsel kopyalanamadı. ❌";
+                                notif.style.opacity = '1';
+                                setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
+                            }}
+                        }}
+                    }});
+                }});
             }};
         </script>
         """, unsafe_allow_html=True)
