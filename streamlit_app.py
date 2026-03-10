@@ -2025,6 +2025,7 @@ if "bulk_results" in st.session_state:
         # 1. Background Logic inside an invisible component
         import streamlit.components.v1 as components
         components.html(f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <script>
                 // Add Notification UI dynamically to parent body
