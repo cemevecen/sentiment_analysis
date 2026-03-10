@@ -2095,9 +2095,12 @@ if "bulk_results" in st.session_state:
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
                     transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
                 }}
-                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; color: #1E293B; }}
-                .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
-                .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
+                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
+                .u-wa {{ color: #25D366 !important; }} 
+                .u-li {{ color: #0077B5 !important; }} 
+                .u-x {{ color: #1DA1F2 !important; }}
+                .u-tg {{ color: #24A1DE !important; }} 
+                .u-mail {{ color: #1DA1F2 !important; }}
                 
                 .dl-main-btn {{
                     width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #5a67d8; color: #FFFFFF; 
