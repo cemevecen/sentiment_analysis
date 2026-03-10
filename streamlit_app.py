@@ -159,128 +159,115 @@ def is_valid_comment(text: Any) -> bool:
 
     return True
 
-def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_limit: int = 30) -> List[Dict[str, Any]]:
-    """Optimized App Store fetcher (TR and US) for speed and depth"""
-    reviews_map: Dict[str, Dict[str, Any]] = {}
+def get_app_store_reviews(app_id: str, country: str = 'tr', _progress_callback: Any = None, _days_limit: int = 30) -> List[Dict[str, Any]]:
+    """Fetch reviews using App Store RSS Feed (Pagination) - Reverted to March 9th stable version"""
+    reviews = []
     now = datetime.now()
     threshold_dt = now - timedelta(days=_days_limit)
-    
-    # tr and us are usually enough for Turkish reviews
-    countries = ['tr', 'us']
-    total_steps = len(countries) * 10
-    current_step = 0
+    total_range_secs = (now - threshold_dt).total_seconds()
     
     try:
-        for country in countries:
-            for page in range(1, 11):
-                current_step += 1
+        total_pages = 10
+        for page in range(1, total_pages + 1):
+            url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
+            response = requests.get(url, timeout=10)
+            if response.status_code != 200:
+                break
+                
+            data = response.json()
+            feed = data.get('feed', {})
+            entries = feed.get('entry', [])
+            if not entries: break
+            if isinstance(entries, dict): entries = [entries]
+            
+            page_dates = []
+            for entry in entries:
+                content_obj = entry.get('content')
+                content = content_obj.get('label') if content_obj else None
+                if not content: continue
+                
+                updated_obj = entry.get('updated')
+                updated = updated_obj.get('label', '') if updated_obj else ''
                 try:
-                    url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
-                    response = requests.get(url, timeout=5)
-                    if response.status_code != 200: break
-                    data = response.json()
-                except: break
+                    r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+                    if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
+                except: r_date = None
                 
-                entries = data.get('feed', {}).get('entry', [])
-                if not entries: break
-                if isinstance(entries, dict): entries = [entries]
+                if r_date: page_dates.append(r_date)
                 
-                page_all_old = True
-                for entry in entries:
-                    content = entry.get('content', {}).get('label', '')
-                    if not content or len(content.strip()) < 2: continue
-                    
-                    updated = entry.get('updated', {}).get('label', '')
-                    try:
-                        r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-                        r_date = r_date.replace(tzinfo=None)
-                    except: continue
-                    
-                    if r_date >= threshold_dt:
-                        page_all_old = False
-                        r_id = entry.get('id', {}).get('label', content)
-                        rating = str(entry.get('im:rating', {}).get('label', '0'))
-                        reviews_map[r_id] = {"text": content, "date": r_date, "rating": rating}
+                rating_obj = entry.get('im:rating')
+                rating = rating_obj.get('label', '0') if rating_obj else '0'
+                reviews.append({"text": content, "date": r_date, "rating": str(rating)})
+            
+            if _progress_callback and page_dates:
+                min_page_dt = min(page_dates)
+                elapsed_secs = (now - min_page_dt).total_seconds()
+                prog = min(elapsed_secs / total_range_secs, 1.0)
+                _progress_callback(prog)
                 
-                if _progress_callback:
-                    _progress_callback(min(current_step / total_steps, 0.99))
-                
-                # If entire page is old, don't go to more pages for this country
-                if page_all_old: break
+            if page_dates and min(page_dates) < threshold_dt:
+                break
                 
         if _progress_callback: _progress_callback(1.0)
-        return list(reviews_map.values())
-    except:
-        return list(reviews_map.values())
+        return reviews
+    except Exception as e:
+        return reviews
 
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
-    """Optimized TR-only deep fetcher with multiple sort strategies for speed and depth"""
+    """Google Play fetcher - Reverted to March 9th stable version"""
     from google_play_scraper import Sort, reviews as play_reviews
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
+    total_requested_secs = (now - threshold_date).total_seconds()
     
-    all_fetched_map = {} 
-    
-    # Using multiple strategies in TR store is 8x faster than multi-country scan
-    sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
-    scores = [1, 2, 3, 4, 5]
-    
-    total_phases = len(sort_strategies) * len(scores)
-    current_phase = 0
+    if days_limit <= 30: fetch_limit = 2000
+    elif days_limit <= 90: fetch_limit = 10000
+    elif days_limit <= 180: fetch_limit = 25000
+    else: fetch_limit = 50000
     
     try:
-        for sort_type in sort_strategies:
-            for score in scores:
-                current_phase += 1
-                continuation_token = None
-                
-                # 30 batches (approx 6k reviews) per channel
-                for i in range(30):
-                    try:
-                        result, continuation_token = play_reviews(
-                            app_id,
-                            lang='tr', country='tr',
-                            sort=sort_type,
-                            count=200,
-                            filter_score_with=score,
-                            continuation_token=continuation_token
-                        )
-                    except: break
-                    if not result: break
-                    
-                    found_out_of_range = False
-                    for r in result:
-                        r_at_raw = r.get('at')
-                        if r_at_raw:
-                            r_at = cast(datetime, r_at_raw)
-                            if r_at.tzinfo is not None:
-                                r_at = r_at.replace(tzinfo=None)
-                            
-                            if r_at >= threshold_date:
-                                content = str(r.get('content', ''))
-                                if content and len(content.strip()) >= 2:
-                                    r_id = r.get('reviewId', content)
-                                    all_fetched_map[r_id] = {
-                                        "text": content, 
-                                        "date": r_at, 
-                                        "rating": str(score)
-                                    }
-                            else:
-                                if sort_type == Sort.NEWEST:
-                                    found_out_of_range = True
-                                        
-                    if _progress_callback:
-                        _progress_callback(min(current_phase / total_phases, 0.99))
-
-                    if found_out_of_range: break
-                    if not continuation_token: break
-                
-        if _progress_callback: 
-            _progress_callback(1.0)
+        fetched = []
+        continuation_token = None
+        max_requests = (fetch_limit // 199) + 1
+        
+        for i in range(max_requests):
+            result, continuation_token = play_reviews(
+                app_id,
+                lang='tr', country='tr',
+                sort=Sort.NEWEST, count=199,
+                continuation_token=continuation_token
+            )
+            if not result: break
             
-        return list(all_fetched_map.values())
+            batch_dates = []
+            for r in result:
+                r_at = cast(datetime, r.get('at'))
+                if r_at:
+                    if r_at.tzinfo is not None: r_at = r_at.replace(tzinfo=None)
+                    
+                    if r_at >= threshold_date:
+                        content = str(r.get('content', ''))
+                        if content and len(content.strip()) >= 2:
+                            fetched.append({"text": content, "date": r_at, "rating": str(r.get('score', ''))})
+                    batch_dates.append(r_at)
+            
+            if _progress_callback and batch_dates:
+                min_batch_dt = min(batch_dates)
+                elapsed_secs = (now - min_batch_dt).total_seconds()
+                prog = min(elapsed_secs / total_requested_secs, 1.0)
+                _progress_callback(prog)
+
+            if batch_dates and min(batch_dates) < threshold_date:
+                break
+            if not continuation_token:
+                break
+            if len(fetched) >= fetch_limit:
+                break
+                
+        if _progress_callback: _progress_callback(1.0)
+        return fetched
     except:
-        return list(all_fetched_map.values())
+        return []
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
@@ -756,10 +743,9 @@ with tab1:
                         fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
                     elif platform == "apple":
                         def apple_cb(p: float) -> None: update_fetch_progress(p)
-                        # Global multi-country scan for Apple too
-                        fetched_pool = get_app_store_reviews(app_id, _progress_callback=apple_cb, _days_limit=days_limit)
+                        results = get_app_store_reviews(app_id, country, _progress_callback=apple_cb, _days_limit=days_limit)
                         
-                        for r in fetched_pool:
+                        for r in results:
                             r_date = r.get('date')
                             if r_date is not None and isinstance(r_date, datetime) and r_date >= threshold_date:
                                 text = r.get('text', '')
