@@ -2100,7 +2100,11 @@ if "bulk_results" in st.session_state:
                 .u-li {{ color: #0077B5 !important; }} 
                 .u-x {{ color: #000000 !important; }}
                 .u-tg {{ color: #24A1DE !important; }} 
-                .u-mail {{ color: #1DA1F2 !important; }}
+                .u-mail {{
+                    background: conic-gradient(from 180deg at 50% 50%, #ea4335 0deg, #ea4335 90deg, #fbbc04 90deg, #fbbc04 180deg, #34a853 180deg, #34a853 270deg, #4285f4 270deg, #4285f4 360deg);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
                 
                 .dl-main-btn {{
                     width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #5a67d8; color: #FFFFFF; 
