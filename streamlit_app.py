@@ -602,65 +602,6 @@ st.markdown(f"""
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
 
-def clipboard_paste_bridge():
-    """Helper to read from clipboard using JS and set to query params."""
-    components.html(
-        """
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
-            .paste-btn {
-                background-color: #FFFFFF !important; 
-                color: #000000 !important; 
-                border: 1px solid #CBD5E1 !important; 
-                padding: 8px 16px; 
-                border-radius: 50px; 
-                cursor: pointer;
-                font-family: 'Poppins', sans-serif;
-                font-weight: 600;
-                font-size: 0.85rem;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                transition: all 0.2s ease;
-                margin-top: 5px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            }
-            .paste-btn:hover {
-                background-color: #F8FAFC !important;
-                border-color: #94A3B8 !important;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-        </style>
-        <button id="pasteBtn" class="paste-btn">
-            <span>📋</span> Panodan Yapıştır
-        </button>
-
-        <script>
-            document.getElementById('pasteBtn').addEventListener('click', async () => {
-                try {
-                    // Try to read clipboard
-                    const text = await navigator.clipboard.readText();
-                    if (text && text.trim().length > 2) {
-                        // Use window.top to ensure interaction with the main Streamlit window
-                        const topWin = window.top || window.parent;
-                        const url = new URL(topWin.location.href);
-                        url.searchParams.set('auto_url', text.trim());
-                        
-                        // Force update
-                        topWin.location.href = url.toString();
-                    } else {
-                        alert("Pano boş veya metin çok kısa.");
-                    }
-                } catch (err) {
-                    alert("YAPISTIRMA HATASI: Tarayıcınız güvenli bağlantı (HTTPS) dışında veya iframe içinde clipboard erişimine izin vermiyor olabilir. Lütfen linki kutuya manuel (CMD/CTRL+V) yapıştırın.");
-                    console.error("Paste error:", err);
-                }
-            });
-        </script>
-        """,
-        height=50,
-    )
-
 comments_to_analyze = [] # Reset local ref for tab logic
 
 tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi"])
@@ -669,17 +610,7 @@ with tab1:
     with st.container(border=True):
         col_u, col_r = st.columns([2, 1])
         with col_u:
-            # Check for auto_url from query params
-            auto_url = st.query_params.get("auto_url", "")
-            store_url = st.text_input(
-                "Uygulama linki veya ID girin:", 
-                value=auto_url,
-                placeholder="Örn: com.whatsapp veya 1500198745",
-                key="store_url_input"
-            )
-            # Render the bridge button underneath
-            clipboard_paste_bridge()
-            
+            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745")
         with col_r:
             time_range = st.selectbox(
                 "Tarih Aralığı Seçin:",
