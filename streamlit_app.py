@@ -1427,7 +1427,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-if st.button("Analizini Yap", type="primary", use_container_width=True):
+if st.button("Analizini Yap (Pasif - Bütçe Sınırı)", type="primary", use_container_width=True, disabled=True, help="API kota güvenliği sebebiyle geçici olarak deaktif edilmiştir."):
     if not comments_to_analyze:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
