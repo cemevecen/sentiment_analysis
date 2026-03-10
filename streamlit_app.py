@@ -479,15 +479,16 @@ st.markdown("""
 
     /* Excel Download Button - Specific Styling */
     .stDownloadButton > button {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        background-color: #66BB6A !important; /* Pastel Green */
+        color: #FFFFFF !important;
+        border: none !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        height: 50px !important;
+        font-weight: 600 !important;
     }
     .stDownloadButton > button:hover {
-        background-color: #F8FAFC !important;
-        border-color: #CBD5E1 !important;
-        color: #000000 !important;
+        background-color: #81C784 !important;
+        color: #FFFFFF !important;
         transform: scale(1.02);
     }
     
@@ -1864,7 +1865,7 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
             import streamlit.components.v1 as components
             components.html("""
                 <div style='text-align: center; font-family: sans-serif;'>
-                    <button onclick='window.parent.print()' style='width: 100%; background: #000000; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem; height: 50px;'>
+                    <button onclick='window.parent.print()' style='width: 100%; background: #F4A261; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem; height: 50px;'>
                         Raporu PDF Olarak İndir / Yazdır
                     </button>
                 </div>
