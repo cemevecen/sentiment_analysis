@@ -1895,7 +1895,12 @@ if "bulk_results" in st.session_state:
         total_q = len(df)
         pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
+        neu_p = int((t_neu / total_q) * 100) if total_q > 0 else 0 # İstek/Görüş (Neutral/Request)
         
+        # Calculate stops for 3D CSS Pie
+        stop1 = (t_pos / total_q) * 100 if total_q > 0 else 0
+        stop2 = ((t_pos + t_neg) / total_q) * 100 if total_q > 0 else 0
+
         # Priority: Use detected names from previous fetch if available
         app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
         store_type = st.session_state.get('detected_store_type', "STORE")
@@ -1932,7 +1937,7 @@ if "bulk_results" in st.session_state:
         app_host = "https://sentimentanalysis-aimode.streamlit.app/"
         summary_text += f"Sen de uygulamanın analizini yap: [tıkla]({app_host})\n"
         summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
-        
+
         encoded_text = urllib.parse.quote(summary_text)
         
         share_data = [
@@ -1950,33 +1955,71 @@ if "bulk_results" in st.session_state:
 
         # Digital Report Card (Visual Summary)
         st.markdown(f"""
-<div id="nlp-report-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
-<div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">{report_title}</h2>
-</div>
-<div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-<div style="text-align: center; flex: 1;">
-<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Toplam Veri</div>
-<div style="font-size: 1.8rem; font-weight: 700; color: #000000;">{total_q}</div>
-</div>
-<div style="text-align: center; flex: 1; border-left: 1px solid #F1F5F9; border-right: 1px solid #F1F5F9;">
-<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumlu</div>
-<div style="font-size: 1.8rem; font-weight: 700; color: #10B981;">%{pos_p}</div>
-</div>
-<div style="text-align: center; flex: 1;">
-<div style="font-size: 0.8rem; color: #64748B; text-transform: uppercase;">Olumsuz</div>
-<div style="font-size: 1.8rem; font-weight: 700; color: #EF4444;">%{neg_p}</div>
-</div>
-</div>
-<div style="background: #F8FAFC; border-radius: 12px; padding: 20px; border-left: 4px solid #6366F1;">
-<div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">💡 Stratejik Özet</div>
-<div style="color: #334155; font-size: 0.9rem; line-height: 1.6;">
-{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
-</div>
-</div>
-<div style="margin-top: 25px; text-align: center; font-size: 0.8rem; color: #94A3B8;">
-Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
-</div>
+<div id="nlp-report-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black; max-width: 650px; margin-left: auto; margin-right: auto;">
+    <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #1E293B; font-size: 1.4rem; letter-spacing: -0.5px;">{report_title}</h2>
+    </div>
+    
+    <div style="display: flex; justify-content: space-around; margin-bottom: 30px;">
+        <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Toplam Veri</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #334155;">{total_q}</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid #F1F5F9; border-right: 1px solid #F1F5F9; padding: 0 25px;">
+            <div style="font-size: 0.75rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
+        </div>
+    </div>
+
+    <!-- 3D Pie Chart Section -->
+    <div style="display: flex; align-items: center; justify-content: space-around; margin: 40px 0; background: #F8FAFC; border-radius: 20px; padding: 25px;">
+        <div style="perspective: 600px; width: 140px; height: 140px;">
+            <div style="
+                width: 140px; 
+                height: 140px; 
+                border-radius: 50%; 
+                background: conic-gradient(
+                    #10B981 0% {stop1}%, 
+                    #EF4444 {stop1}% {stop2}%, 
+                    #3B82F6 {stop2}% 100%
+                ); 
+                transform: rotateX(55deg) rotateZ(0deg); 
+                box-shadow: 0 12px 0 #CBD5E1, 0 15px 25px rgba(0,0,0,0.1);
+            "></div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 14px; height: 14px; background: #10B981; border-radius: 4px;"></div>
+                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumlu (%{pos_p})</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 14px; height: 14px; background: #EF4444; border-radius: 4px;"></div>
+                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumsuz (%{neg_p})</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 14px; height: 14px; background: #3B82F6; border-radius: 4px;"></div>
+                <div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Görüş/Talep (%{neu_p})</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 14px; padding: 20px; border: 1px solid #F1F5F9; border-left: 5px solid #6366F1; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+        <div style="font-weight: 700; color: #1E293B; margin-bottom: 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+            <span>💡</span> Stratejik Özet
+        </div>
+        <div style="color: #475569; font-size: 0.92rem; line-height: 1.6;">
+            {st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center; font-size: 0.8rem; color: #94A3B8; font-weight: 500;">
+        📊 AI-Powered Sentiment Intelligence Report
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
