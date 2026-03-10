@@ -236,7 +236,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                     app_id,
                     lang='tr', country='tr',
                     sort=Sort.NEWEST, count=199,
-                    score=score,
+                    filter_score_with=score,
                     continuation_token=continuation_token
                 )
                 if not result: break
