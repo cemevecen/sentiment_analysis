@@ -1948,6 +1948,15 @@ if "bulk_results" in st.session_state:
         # Sanitize summary for card display (remove formatting that might break HTML)
         display_summary = st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')
         display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
+        
+        # Punctuation & Newline Formatting Fix
+        import re
+        # Remove spaces before punctuation (e.g., "durumda ." -> "durumda.")
+        display_summary = re.sub(r'\s+([.,;:!?])', r'\1', display_summary)
+        # Collapse multiple spaces into one single space
+        display_summary = re.sub(r' {2,}', ' ', display_summary)
+        # Convert true newlines/paragraphs into HTML line breaks
+        display_summary = display_summary.replace('\n', '<br>')
 
         card_html = clean_html(f"""
             <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
