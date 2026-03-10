@@ -496,6 +496,23 @@ st.markdown("""
         transform: scale(1.02);
     }
     
+    /* Primary Analyze Button Styling */
+    .stButton > button[kind="primary"] {
+        background-color: #F4A261 !important; /* Pastel Orange */
+        color: #FFFFFF !important;
+        border: none !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        height: 50px !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"] * {
+        color: #FFFFFF !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #F8B478 !important;
+        transform: scale(1.02);
+    }
+
     /* File Uploader Button - Restored & Refined */
     [data-testid="stFileUploader"] button[kind="secondary"] {
         background-color: #FFFFFF !important;
@@ -1350,11 +1367,13 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-if st.button("Analizini Yap", use_container_width=True):
-    if not comments_to_analyze:
-        st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
-    else:
-        run_bulk_analysis(comments_to_analyze)
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button("Analizini Yap", type="primary", use_container_width=True):
+        if not comments_to_analyze:
+            st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
+        else:
+            run_bulk_analysis(comments_to_analyze)
 
 # --- Persistent Results Display ---
 if "bulk_results" in st.session_state:
