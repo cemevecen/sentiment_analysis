@@ -259,7 +259,8 @@ def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
             if len(fetched) >= fetch_limit:
                 break
                 
-        if _progress_callback: _progress_callback(1.0)
+        if _progress_callback: 
+            _progress_callback(1.0)
         return fetched
     except:
         return []
@@ -738,6 +739,10 @@ with tab1:
                                     fetched_comments.append(r)
 
                     if fetched_comments:
+                        # Force 100% and a small sleep to ensure user sees completion
+                        update_fetch_progress(1.0)
+                        time.sleep(0.5)
+                        
                         # Clear loading animation
                         loading_placeholder.empty()
                         
