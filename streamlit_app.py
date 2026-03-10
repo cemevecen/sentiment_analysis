@@ -2022,22 +2022,22 @@ if "bulk_results" in st.session_state:
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
             <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
-                <span id="uMsg">Kopyalandı!</span>
+                <span id="uMsg">Metin Kopyalandı!</span>
             </div>
 
             <style>
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 30px 0; }}
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 30px 0; align-items: center; }}
                 .u-btn {{
-                    width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-                    display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
+                    width: 46px; height: 46px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
+                    display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer;
                     transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
                 }}
                 .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
                 .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
                 .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
-                .u-xl {{ color: #1D6F42; border-color: #1D6F4222; }}
-                .u-pdf {{ color: #F4A261; border-color: #F4A26122; }}
-                .u-png {{ color: #6366F1; border-color: #6366F122; }}
+                .u-xl {{ color: #1D6F42; border-color: rgba(29, 111, 66, 0.1); }}
+                .u-pdf {{ color: #F4A261; border-color: rgba(244, 162, 97, 0.1); }}
+                .u-png {{ color: #6366F1; border-color: rgba(99, 102, 241, 0.1); }}
             </style>
 
             <div class="u-tray">
@@ -2048,7 +2048,7 @@ if "bulk_results" in st.session_state:
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail" title="E-Posta"><i class="fa-solid fa-envelope"></i></a>
                 
                 <a href="{excel_href}" download="{excel_filename}" class="u-btn u-xl" title="Excel İndir"><i class="fa-solid fa-file-excel"></i></a>
-                <div class="u-btn u-pdf" onclick="window.parent.print()" title="PDF İndir / Yazdır"><i class="fa-solid fa-file-pdf"></i></a></div>
+                <div class="u-btn u-pdf" onclick="window.parent.print()" title="PDF Yazdır / Kaydet"><i class="fa-solid fa-file-pdf"></i></div>
                 <div class="u-btn u-png" onclick="doUltimateAction('dl')" title="PNG Görseli İndir"><i class="fa-solid fa-file-image"></i></div>
             </div>
 
@@ -2090,6 +2090,7 @@ if "bulk_results" in st.session_state:
                                 pushNotif("İndirme Başlatıldı! ⬇️");
                             }}).catch(err => {{
                                 console.error("html2canvas error:", err);
+                                pushNotif("İşlem sırasında bir hata oluştu.");
                             }});
                         }}
                     }};
