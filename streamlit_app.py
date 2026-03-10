@@ -1891,7 +1891,7 @@ if "bulk_results" in st.session_state:
 
         # Digital Report Card (Visual Summary)
         st.markdown(f"""
-<div style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
+<div id="nlp-report-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
 <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
 <h2 style="margin: 0; color: #000000; font-size: 1.5rem;">{report_title}</h2>
 </div>
@@ -1936,7 +1936,46 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                             st.info("Kopyaladıktan sonra [Google Chat](https://chat.google.com)'e gidip mesaja yapıştırabilirsiniz.")
                 else:
                     st.link_button(name, link, use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        components.html("""
+        <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }</style>
+        <button onclick="downloadPNG()" style='width: 100%; height: 50px; background: #6366F1; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;'>
+            📷 Kartı PNG Görseli Olarak İndir
+        </button>
+        <script>
+            var pDoc = window.parent.document;
+            if (!pDoc.getElementById('html2canvas-js')) {
+                var s = pDoc.createElement('script');
+                s.id = 'html2canvas-js';
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                pDoc.head.appendChild(s);
+            }
+
+            function downloadPNG() {
+                var target = pDoc.getElementById('nlp-report-card');
+                if (target && window.parent.html2canvas) {
+                    var btn = document.querySelector('button');
+                    var oldText = btn.innerText;
+                    btn.innerText = "⏳ Hazırlanıyor...";
                     
+                    window.parent.html2canvas(target, {scale: 2, backgroundColor: '#FFFFFF', useCORS: true}).then(canvas => {
+                        var link = pDoc.createElement('a');
+                        link.download = 'nlp_analiz_raporu.png';
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+                        btn.innerText = oldText;
+                    }).catch(err => {
+                        alert("Görsel oluşturulurken hata oluştu.");
+                        btn.innerText = oldText;
+                    });
+                } else {
+                    alert('Sistem hazırlanıyor... Lütfen 1-2 saniye bekleyip tekrar deneyin.');
+                }
+            }
+        </script>
+        """, height=53)
+        
         # Actions Row: Excel and PDF triggers side-by-side
         st.markdown("<br>", unsafe_allow_html=True)
         action_cols = st.columns(2)
