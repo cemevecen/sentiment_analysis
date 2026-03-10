@@ -23,7 +23,7 @@ if os.path.exists(".env"):
 # Set Page Config
 st.set_page_config(
     page_title="AI Duygu Analizi",
-    layout="wide"
+    layout="centered"
 )
 
 # API Configuration: Optimized via Caching
@@ -1364,13 +1364,13 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
             ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
             ticker_placeholder.markdown(f"""
-            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0; width: 100%; box-sizing: border-box;">
+            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
                 <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
                     <span>ŞU AN EKLENEN (#{start_offset + i + 1})</span>
                     <span>{ticker_date}</span>
                 </div>
-                <div style="font-weight: 600; color: #1E293B; line-height: 1.5;">{comment[:350]}{'...' if len(comment)>350 else ''}</div>
-                <div style="margin-top: 10px; display: inline-block; padding: 4px 12px; border-radius: 6px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
+                <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
+                <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
                     {verdict.upper()}
                 </div>
             </div>
