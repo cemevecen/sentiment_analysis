@@ -160,32 +160,32 @@ def is_valid_comment(text: Any) -> bool:
     return True
 
 def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_limit: int = 30) -> List[Dict[str, Any]]:
-    """Fast additive multi-store fetcher for App Store to break the 500 limit"""
-    reviews_map: Dict[str, Dict[str, Any]] = {}
+    """Massive Parallel App Store Fetcher (40+ Countries) to break all limits"""
+    import concurrent.futures
+    all_reviews_map: Dict[str, Dict[str, Any]] = {}
     now = datetime.now()
     threshold_dt = now - timedelta(days=_days_limit)
     
-    # Scanning core countries where Turkish reviews often appear
-    countries = ['tr', 'us', 'de', 'gb']
-    total_steps = len(countries) * 10 
-    current_step = 0
+    # 40 target countries to find all possible Turkish reviews globally
+    countries = [
+        'tr', 'us', 'de', 'az', 'nl', 'fr', 'gb', 'at', 'be', 'ch', 'kz', 'uz', 'tm', 'kg', 'ru',
+        'cy', 'gr', 'ro', 'bg', 'pl', 'hu', 'cz', 'se', 'no', 'dk', 'it', 'es', 'ca', 'au', 'sa',
+        'ae', 'qa', 'kw', 'jo', 'lb', 'eg', 'ly', 'dz', 'ma', 'tn'
+    ]
     
-    try:
-        for country in countries:
-            for page in range(1, 11):
-                current_step += 1
-                try:
-                    url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
-                    response = requests.get(url, timeout=5)
-                    if response.status_code != 200: break
-                    data = response.json()
-                except: break
-                
+    def fetch_country_reviews(country: str):
+        country_reviews = []
+        for page in range(1, 11): # Max 10 pages per country (Apple limit)
+            try:
+                url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
+                resp = requests.get(url, timeout=5)
+                if resp.status_code != 200: break
+                data = resp.json()
                 entries = data.get('feed', {}).get('entry', [])
                 if not entries: break
                 if isinstance(entries, dict): entries = [entries]
                 
-                page_exhausted = False
+                found_old = False
                 for entry in entries:
                     content = entry.get('content', {}).get('label', '')
                     if not content or len(content.strip()) < 2: continue
@@ -193,93 +193,98 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
                     updated = entry.get('updated', {}).get('label', '')
                     try:
                         r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-                        r_date = r_date.replace(tzinfo=None) # Make naive
+                        r_date = r_date.replace(tzinfo=None)
                     except: continue
                     
                     if r_date >= threshold_dt:
-                        # Additive: Content-based ID helps avoid duplicates across stores
                         r_id = entry.get('id', {}).get('label', content)
                         rating = str(entry.get('im:rating', {}).get('label', '0'))
-                        reviews_map[r_id] = {"text": content, "date": r_date, "rating": rating}
+                        country_reviews.append({"id": r_id, "text": content, "date": r_date, "rating": rating})
                     else:
-                        page_exhausted = True
+                        found_old = True
                 
-                if _progress_callback:
-                    _progress_callback(min(current_step / total_steps, 0.99))
-                
-                if page_exhausted: break
-                
-        if _progress_callback: _progress_callback(1.0)
-        return list(reviews_map.values())
-    except:
-        return list(reviews_map.values())
+                if found_old: break
+            except: break
+        return country_reviews
+
+    # Parallel execution for massive speed
+    total_countries = len(countries)
+    completed = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        future_to_country = {executor.submit(fetch_country_reviews, c): c for c in countries}
+        for future in concurrent.futures.as_completed(future_to_country):
+            completed += 1
+            if _progress_callback: _progress_callback(min(completed / total_countries, 0.99))
+            res = future.result()
+            for r in res:
+                all_reviews_map[r['id']] = r
+    
+    if _progress_callback: _progress_callback(1.0)
+    return list(all_reviews_map.values())
 
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
-    """Restored 10-channel deep TR fetcher for 30k+ volume and high speed"""
+    """Massive Parallel Google Play Fetcher with Multi-Channel Depth"""
+    import concurrent.futures
     from google_play_scraper import Sort, reviews as play_reviews
+    
+    all_fetched_map = {}
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
     
-    all_fetched_map = {} 
-    
-    # 2 Sorts x 5 Scores = 10 channels. Each channel has a 3k limit.
+    # Combinations to bypass the 3k limit per sort
     sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
     scores = [1, 2, 3, 4, 5]
-    
-    total_phases = len(sort_strategies) * len(scores)
-    current_phase = 0
-    
-    try:
-        for sort_type in sort_strategies:
-            for score in scores:
-                current_phase += 1
-                continuation_token = None
-                
-                # Fetching batches up to 30 pages (approx 6k reviews) per channel
-                for i in range(30):
-                    result, continuation_token = play_reviews(
-                        app_id,
-                        lang='tr', country='tr',
-                        sort=sort_type,
-                        count=200,
-                        filter_score_with=score,
-                        continuation_token=continuation_token
-                    )
-                    if not result: break
-                    
-                    found_limit_edge = False
-                    for r in result:
-                        r_at_raw = r.get('at')
-                        if r_at_raw:
-                            r_at = cast(datetime, r_at_raw)
-                            if r_at.tzinfo is not None:
-                                r_at = r_at.replace(tzinfo=None)
-                            
-                            if r_at >= threshold_date:
-                                content = str(r.get('content', ''))
-                                if content and len(content.strip()) >= 2:
-                                    r_id = r.get('reviewId', content)
-                                    all_fetched_map[r_id] = {
-                                        "text": content, 
-                                        "date": r_at, 
-                                        "rating": str(score)
-                                    }
-                            else:
-                                if sort_type == Sort.NEWEST:
-                                    found_limit_edge = True
-                                        
-                    if _progress_callback:
-                        _progress_callback(min(current_phase / total_phases, 0.99))
-
-                    if found_limit_edge: break
-                    if not continuation_token: break
-                
-        if _progress_callback: 
-            _progress_callback(1.0)
+    channels = []
+    for s in sort_strategies:
+        for sc in scores:
+            channels.append((s, sc))
             
-        return list(all_fetched_map.values())
-    except:
-        return list(all_fetched_map.values())
+    def fetch_channel(sort_type, score):
+        channel_data = []
+        token = None
+        # 30 batches = 6k reviews per channel
+        for _ in range(30):
+            try:
+                result, token = play_reviews(
+                    app_id, lang='tr', country='tr',
+                    sort=sort_type, count=200,
+                    filter_score_with=score,
+                    continuation_token=token
+                )
+                if not result: break
+                
+                out_of_range = False
+                for r in result:
+                    r_at_raw = r.get('at')
+                    if r_at_raw:
+                        r_at = cast(datetime, r_at_raw)
+                        if r_at.tzinfo: r_at = r_at.replace(tzinfo=None)
+                        
+                        if r_at >= threshold_date:
+                            content = str(r.get('content', ''))
+                            if content and len(content.strip()) >= 2:
+                                r_id = r.get('reviewId', content)
+                                channel_data.append({"id": r_id, "text": content, "date": r_at, "rating": str(score)})
+                        else:
+                            if sort_type == Sort.NEWEST: out_of_range = True
+                
+                if out_of_range or not token: break
+            except: break
+        return channel_data
+
+    total_channels = len(channels)
+    completed_channels = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_channel = {executor.submit(fetch_channel, s, sc): (s, sc) for s, sc in channels}
+        for future in concurrent.futures.as_completed(future_to_channel):
+            completed_channels += 1
+            if _progress_callback: _progress_callback(min(completed_channels / total_channels, 0.99))
+            res = future.result()
+            for r in res:
+                all_fetched_map[r['id']] = r
+                
+    if _progress_callback: _progress_callback(1.0)
+    return list(all_fetched_map.values())
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
