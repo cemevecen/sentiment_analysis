@@ -669,9 +669,9 @@ with tab1:
 
     if store_url.strip():
         u = store_url.strip()
-        platform = None
-        app_id = None
-        country = "tr" 
+        platform: Optional[str] = None
+        app_id: str = ""
+        country: str = "tr" 
         
         # Logic Improvement: Flexible link and ID detection
         if "play.google.com" in u:
@@ -723,17 +723,17 @@ with tab1:
                         st_lottie(lottie_loading, height=130, key="fetch_loader")
                     p_bar = st.progress(0, text="Hazırlanıyor...")
                 
-                def update_fetch_progress(p):
+                def update_fetch_progress(p: float) -> None:
                     # Clamp progress to 100% and avoid re-rendering issues
                     p_safe = min(max(float(p), 0.0), 1.0)
                     
                     # Store last progress for smooth transition if needed
-                    last_p = st.session_state.get("_last_fetch_p", 0.0)
+                    last_p = float(st.session_state.get("_last_fetch_p", 0.0))
                     
                     # If it's a significant jump (especially at the end), animate slightly
                     if p_safe >= 1.0 and last_p < 0.95:
                         for i in range(1, 11):
-                            smooth_p = last_p + (1.0 - last_p) * (i / 10)
+                            smooth_p = last_p + (1.0 - last_p) * (i / 10.0)
                             p_bar.progress(smooth_p, text=f"Tamamlanıyor: %{int(smooth_p*100)}")
                             time.sleep(0.05)
                     else:
@@ -741,18 +741,18 @@ with tab1:
                     
                     st.session_state["_last_fetch_p"] = p_safe
 
-                fetched_comments = []
+                fetched_comments: List[Dict[str, Any]] = []
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
                     if platform == "google":
-                        fetched_comments = fetch_google_play_reviews(str(app_id), days_limit, _progress_callback=update_fetch_progress)
+                        fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
                     elif platform == "apple":
                         def apple_cb(p: float) -> None: update_fetch_progress(p)
-                        results = get_app_store_reviews(str(app_id), country, _progress_callback=apple_cb, _days_limit=days_limit)
+                        results = get_app_store_reviews(app_id, country, _progress_callback=apple_cb, _days_limit=days_limit)
                         if not results:
                             alt_country = 'tr' if country != 'tr' else 'us'
-                            results = get_app_store_reviews(str(app_id), alt_country, _days_limit=days_limit)
+                            results = get_app_store_reviews(app_id, alt_country, _days_limit=days_limit)
                         
                         for r in results:
                             r_date = r.get('date')
@@ -779,12 +779,14 @@ with tab1:
                         if len(fetched_comments) > MAX_REVIEWS:
                             total_found = len(fetched_comments)
                             # Initial take: first 500
-                            st.session_state.comments_to_analyze = fetched_comments[:MAX_REVIEWS]
+                            limited_comments = fetched_comments[:MAX_REVIEWS]
+                            st.session_state.comments_to_analyze = limited_comments
                             
-                            min_dt = min([r['date'] for r in st.session_state.comments_to_analyze if r.get('date')]).strftime('%d-%m-%Y')
-                            max_dt = max([r['date'] for r in st.session_state.comments_to_analyze if r.get('date')]).strftime('%d-%m-%Y')
-                            
-                            st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **{MAX_REVIEWS}** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
+                            valid_dates = [r.get('date') for r in limited_comments if r.get('date') is not None]
+                            if valid_dates:
+                                min_dt = min(valid_dates).strftime('%d-%m-%Y')
+                                max_dt = max(valid_dates).strftime('%d-%m-%Y')
+                                st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **{MAX_REVIEWS}** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
                         else:
                             st.session_state.comments_to_analyze = fetched_comments
                         
@@ -801,7 +803,7 @@ with tab2:
         if "bulk_results" in st.session_state:
             del st.session_state.bulk_results
         
-        all_comments = []
+        all_comments: List[Dict[str, Any]] = []
         for uploaded_file in uploaded_files:
             df_upload = None
             try:
@@ -940,9 +942,11 @@ with tab2:
         if all_comments:
             MAX_REVIEWS = 500
             if len(all_comments) > MAX_REVIEWS:
+                sliced_comments = all_comments[0:MAX_REVIEWS]
                 st.warning(f"Dosyadaki ilk {MAX_REVIEWS} yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
-                all_comments = all_comments[:MAX_REVIEWS]
-            st.session_state.comments_to_analyze = all_comments
+                st.session_state.comments_to_analyze = sliced_comments
+            else:
+                st.session_state.comments_to_analyze = all_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
@@ -958,7 +962,7 @@ with tab3:
             del st.session_state.bulk_results
             
         raw_lines = text_input.split('\n')
-        processed_comments = []
+        processed_comments: List[Dict[str, Any]] = []
         
         # Date regex for "Jan 23, 2026 - User"
         store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
@@ -995,8 +999,10 @@ with tab3:
             MAX_REVIEWS = 500
             if len(processed_comments) > MAX_REVIEWS:
                 st.warning(f"En fazla {MAX_REVIEWS} adet yorum girilebilir. Fazlası kırpıldı.")
-                processed_comments = processed_comments[:MAX_REVIEWS]
-            st.session_state.comments_to_analyze = processed_comments
+                processed_final = processed_comments[0:MAX_REVIEWS]
+                st.session_state.comments_to_analyze = processed_final
+            else:
+                st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
 
 # Update the main reference (Important for analysis button)
