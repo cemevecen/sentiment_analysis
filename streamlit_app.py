@@ -1136,7 +1136,7 @@ if comments_to_analyze:
         )
     else:
         # Defaults for Hızlı Analiz
-        st.info("⚡ Heuristic (Kural Bazlı) analiz kullanılıyor. API limiti harcanmaz ve çok hızlıdır.")
+        st.info("🚀 **Hızlı Analiz:** Anahtar kelimeler ve özel duygu kuralları üzerinden anlık değerlendirme yapar. Çok hızlı sonuç verir ve API kotanızı harcamaz.")
         st.session_state.analysis_mode = 0
         mode_idx = 0
 
