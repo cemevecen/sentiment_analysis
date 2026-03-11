@@ -1368,20 +1368,24 @@ def heuristic_analysis(text):
     
     neg_words = [
         "kötü", "berbat", "bozuk", "bozuldu", "yaramaz", "rezalet", "rezil",
-        "açılmıyor", "açılmı", "zor açıl", "girilmiyor", "giremiyorum",
+        "açılmıyor", "açılmı", "acilmiyor", "acilmi", "zor açıl", "girilmiyor", "giremiyorum",
         "donuyor", "dondu", "kasıyor", "kasıldı", "kapanıyor", "kapandı",
         "çöküyor", "çöktü", "durduruldu", "hatası", "hata veriyor",
         "yavaş", "silinmiş", "gitmiş", "kayboldu", "çalışmıyor",
-        "sorun", "problem", "mahvoldu", "batık", "mağdur", "saçma",
+        "sorun", "problem", "mahvoldu", "batık", "mağdur", "saçma", "saçmaladı",
         "gereksiz", "çöp", "vazgeçtim", "iğrenç", "eski hali", "güncelleme boz",
-        "reklam", "dolandırıcı", "para tuzak", "kazık", "hırsız", "bad", "worst", "error"
+        "reklam", "dolandırıcı", "para tuzak", "kazık", "hırsız", "bad", "worst", "error",
+        "rahatsız edici", "ulaşılamıyor", "ulaşılamı", "görünmüyor", "yok",
+        "boş ekran", "bos ekran", "sildim", "siliyorum", "kaldırdım", "kaldırıyorum",
+        "güncelleme kötü", "veriler silinmiş", "param gitti"
     ]
     
     
     neu_words = [
         "keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "mı?", "mi?", "nasıl",
         "neden", "bekliyoruz", "ne zaman", "düzeltilsin", "ekleyin", "yapın", "istiyoruz",
-        "öneri", "görüşüm", "eksik", "daha iyi olabilir", "bi baksanız"
+        "öneri", "görüşüm", "eksik", "daha iyi olabilir", "bi baksanız",
+        "kontrol eder misiniz", "niye böyle", "normal mi", "bilgi bekliyoruz"
     ]
 
     
