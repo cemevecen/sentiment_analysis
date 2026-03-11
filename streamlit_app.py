@@ -1157,8 +1157,8 @@ def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
     if not HAS_GEMINI:
         return None
     
-    # Fallback zinciri: yeni API key'lerde eski modeller çalışmayabilir
-    fallback_chain = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
+    # Fallback zinciri: tam isimleri kullanmak daha sağlıklı olabilir
+    fallback_chain = ['models/gemini-2.5-flash', 'models/gemini-2.5-pro', 'models/gemini-2.0-flash']
     models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
     for current_model in models_to_try:
@@ -1276,7 +1276,12 @@ Yorum: "{text}"
                 neu = float(data.get("istek_gorus", 0))
                 total = p + n + neu
                 if total > 0:
-                    return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
+                    return {
+                        "olumlu": p/total, 
+                        "olumsuz": n/total, 
+                        "istek_gorus": neu/total,
+                        "method": current_model.split('/')[-1]
+                    }
         except Exception as e:
             err_str = str(e)
             if "404" in err_str and current_model != models_to_try[-1]:
@@ -1360,10 +1365,10 @@ def run_bulk_analysis(data_to_process, is_append=False):
     mode_idx = st.session_state.get("analysis_mode", 0)
     
     if mode_idx == 0:
-        ANALYSIS_MODEL = 'gemini-2.5-flash'
+        ANALYSIS_MODEL = 'models/gemini-2.5-flash'
         RPM_LIMIT = 500
     else:
-        ANALYSIS_MODEL = 'gemini-2.5-pro'
+        ANALYSIS_MODEL = 'models/gemini-2.5-pro'
         RPM_LIMIT = 300
 
     start_time = time.time()
@@ -1432,8 +1437,9 @@ def run_bulk_analysis(data_to_process, is_append=False):
             i, entry, res, verdict, err = future.result()
             completed_count += 1
             
+            progress_bar.progress(completed_count / total_items)
             status_text.text(f"Analiz ediliyor: {completed_count} / {total_items}")
-            update_time(completed_count - 1, total_items, start_time)
+            update_time(completed_count, total_items, start_time)
             
             if err == "quota":
                 q = st.session_state.get('_quota_hits', 0) + 1
@@ -1451,10 +1457,11 @@ def run_bulk_analysis(data_to_process, is_append=False):
             ticker_date = f"{date.strftime('%d-%m-%Y')}" if date else ""
 
             ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
+            analysis_method = res.get("method", "Gemini")
             ticker_placeholder.markdown(f"""
             <div class="header-container" style="border-color: {ticker_color}; text-align: left; margin: 10px 0; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 8px;">
-                    <span style="font-weight: 600;">ŞU AN EKLENEN (#{start_offset + i + 1})</span>
+                    <span style="font-weight: 600;">ŞU AN EKLENEN (#{start_offset + i + 1}) — <span style="color: {ticker_color}">{analysis_method}</span></span>
                     <span>{ticker_date}</span>
                 </div>
                 <div style="font-weight: 600; color: #1E293B; line-height: 1.6; font-size: 1.1rem;">
