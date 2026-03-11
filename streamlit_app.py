@@ -1291,31 +1291,56 @@ Yorum: "{text}"
 
 
 def heuristic_analysis(text):
-    """Fallback — used when Gemini API is unavailable."""
+    """Refined Heuristic Engine with expanded word database (50+ keywords)"""
     t = text.lower()
+    
+    # 1. Positive High-Confidence (25+ Keywords)
     pos_words = [
         "teşekkür", "harika", "başarılı", "mükemmel", "güzel", "iyi", "memnun",
-        "sev", "süper", "5 yıldız", "sağolun", "devam etsin", "devam eder"
+        "sev", "süper", "5 yıldız", "sağolun", "devam etsin", "devam eder",
+        "hızlı", "kalite", "bravo", "helal", "efsane", "müthiş", "kusursuz",
+        "kolaylık", "pratik", "stabil", "akıcı", "faydalı", "yararlı", "bayıldım",
+        "özlemişiz", "ideal", "en iyi", "best", "great", "love", "thanks", "wow"
     ]
+    
+    # 2. Negative High-Confidence (30+ Keywords)
     neg_words = [
         "kötü", "berbat", "bozuk", "bozuldu", "yaramaz", "rezalet", "rezil",
         "açılmıyor", "açılmı", "zor açıl", "girilmiyor", "giremiyorum",
         "donuyor", "dondu", "kasıyor", "kasıldı", "kapanıyor", "kapandı",
         "çöküyor", "çöktü", "durduruldu", "hatası", "hata veriyor",
         "yavaş", "silinmiş", "gitmiş", "kayboldu", "çalışmıyor",
-        "sorun", "problem", "mahvoldu", "batık", "mağdur"
+        "sorun", "problem", "mahvoldu", "batık", "mağdur", "saçma",
+        "gereksiz", "çöp", "vazgeçtim", "iğrenç", "eski hali", "güncelleme boz",
+        "reklam", "dolandırıcı", "para tuzak", "kazık", "hırsız", "bad", "worst", "error"
     ]
-    neu_words = ["keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "mı?", "mi?", "nasıl"]
+    
+    # 3. Neutral / Suggestion / Question (15+ Keywords)
+    neu_words = [
+        "keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "mı?", "mi?", "nasıl",
+        "neden", "bekliyoruz", "ne zaman", "düzeltilsin", "ekleyin", "yapın", "istiyoruz",
+        "öneri", "görüşüm", "eksik", "daha iyi olabilir", "bi baksanız"
+    ]
 
-    pos = sum(1 for w in pos_words if w in t)
-    neg = sum(1 for w in neg_words if w in t)
-    neu = sum(1 for w in neu_words if w in t)
+    # Pre-check for clear star-based indicators in text
+    if "1 yıldız" in t or "bir yıldız" in t: 
+        return {"olumlu": 0.0, "olumsuz": 1.0, "istek_gorus": 0.0, "method": "Heuristic+"}
+    if "5 yıldız" in t or "beş yıldız" in t:
+        return {"olumlu": 1.0, "olumsuz": 0.0, "istek_gorus": 0.0, "method": "Heuristic+"}
 
-    if neg > pos:   return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic"}
-    if pos > neg:   return {"olumlu": 0.90, "olumsuz": 0.05, "istek_gorus": 0.05, "method": "Heuristic"}
-    if neu > 0:     return {"olumlu": 0.10, "olumsuz": 0.10, "istek_gorus": 0.80, "method": "Heuristic"}
-    # True default: balanced, slight lean to neutral
-    return {"olumlu": 0.30, "olumsuz": 0.30, "istek_gorus": 0.40, "method": "Heuristic"}
+    pos_score = sum(t.count(w) for w in pos_words)
+    neg_score = sum(t.count(w) for w in neg_words)
+    neu_score = sum(t.count(w) for w in neu_words)
+
+    # Decision Matrix
+    if neg_score > pos_score and neg_score >= neu_score:
+        return {"olumlu": 0.05, "olumsuz": 0.85, "istek_gorus": 0.10, "method": "Heuristic+"}
+    if pos_score > neg_score and pos_score >= neu_score:
+        return {"olumlu": 0.85, "olumsuz": 0.05, "istek_gorus": 0.10, "method": "Heuristic+"}
+    if neu_score > 0:
+        return {"olumlu": 0.15, "olumsuz": 0.15, "istek_gorus": 0.70, "method": "Heuristic+"}
+        
+    return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic+"}
 
 
 
