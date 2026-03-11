@@ -429,28 +429,46 @@ st.markdown("""
         color: #000000 !important;
     }
     
-    /* Header Card - White */
+      /* Header Card - Premium Designer Look */
     .header-container {
-        background-color: #FFFFFF !important;
-        border: 2px solid #E2E8F0;
-        border-radius: 20px;
-        padding: 20px;
-        margin-bottom: 5px;
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #D946EF 100%) !important;
+        border: none !important;
+        border-radius: 28px;
+        padding: 50px 30px;
+        margin-bottom: 35px;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        box-shadow: 0 15px 35px rgba(99, 102, 241, 0.25);
+        position: relative;
+        overflow: hidden;
+    }
+    .header-container::after {
+        content: "";
+        position: absolute;
+        top: -30%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
     }
     .header-title {
         font-family: 'Poppins', sans-serif;
-        font-size: 3.2rem;
-        font-weight: 700;
-        color: #6366F1;
-        margin-bottom: 15px;
+        font-size: 3.2rem !important;
+        font-weight: 800 !important;
+        color: #FFFFFF !important;
+        margin-bottom: 5px !important;
+        letter-spacing: -1.5px;
+        line-height: 1.1;
     }
-    .header-desc {
-        color: #64748b;
-        font-size: 1.1rem;
-        max-width: 600px;
+    .header-subtitle {
+        font-family: 'Poppins', sans-serif;
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 1.15rem;
+        font-weight: 400;
+        max-width: 500px;
         margin: 0 auto;
+        letter-spacing: 0.2px;
     }
     
     /* File Uploader - White */
@@ -753,7 +771,8 @@ st.markdown("""
 
 st.markdown(f"""
     <div class="header-container">
-        <div class="header-title" style="margin-bottom: 0px;">AI Yorum Analizi</div>
+        <div class="header-title">Deneyim Analiz Merkezi</div>
+        <div class="header-subtitle">Müşteri sesini stratejik içgörüye dönüştürün</div>
     </div>
 """, unsafe_allow_html=True)
 
