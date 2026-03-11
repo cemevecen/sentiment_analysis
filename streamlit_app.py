@@ -602,20 +602,32 @@ st.markdown("""
     }
 
     /* Localization: Hide 'Drag and drop files here' and 'Limit 200MB per file' */
-    [data-testid="stFileUploadDropzone"] section div span {
-        display: none !important;
+    /* Aggressive approach: Set font-size to 0 to hide original text while keeping container */
+    [data-testid="stFileUploadDropzone"] section div {
+        font-size: 0px !important;
     }
     [data-testid="stFileUploadDropzone"] section div::after {
         content: "CSV veya Excel dosyalarını buraya sürükleyin/yükleyin";
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #475569 !important;
+        display: block !important;
         visibility: visible !important;
+        margin-top: 10px;
     }
     
-    /* Hide 'Limit 200MB per file' specifically if it still shows */
-    [data-testid="stFileUploadDropzone"] small {
+    /* Hide the small text specifically if it's still visible elsewhere */
+    [data-testid="stFileUploadDropzone"] small, 
+    [data-testid="stFileUploadDropzone"] span {
         display: none !important;
+        font-size: 0px !important;
+    }
+
+    /* Important: Re-show text for the 'Browse Files' button specifically */
+    [data-testid="stFileUploadDropzone"] button span {
+        display: inline-block !important;
+        font-size: 14px !important;
+        visibility: visible !important;
     }
     
     /* Target the 'Clear' buttons in the file list */
