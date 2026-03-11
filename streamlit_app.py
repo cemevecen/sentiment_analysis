@@ -1380,6 +1380,13 @@ def run_bulk_analysis(data_to_process, is_append=False):
         RPM_LIMIT = 300
 
     start_time = time.time()
+    
+    # SECURITY: Hard limit of 250 items per analysis to prevent massive cost spikes
+    MAX_ITEMS = 250
+    if len(data_to_process) > MAX_ITEMS:
+        st.warning(f"⚠️ Güvenlik ve maliyet koruması gereği tek seferde en fazla {MAX_ITEMS} yorum analiz edilebilir. İlk {MAX_ITEMS} yorum işleme alınıyor.")
+        data_to_process = data_to_process[:MAX_ITEMS]
+    
     total_items = len(data_to_process)
     est_total_secs = total_items * (1 if mode_idx == 0 else 2)
 
@@ -1414,9 +1421,9 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
     def fetch_sentiment_worker(args):
         idx, entry = args
-        comment = entry["text"]
+        comment = str(entry.get("text", ""))[:1000] # SECURITY: Max 1000 chars per review to prevent payload abuse
         is_valid = entry.get("is_valid", True)
-        if not is_valid or not comment:
+        if not is_valid or not comment or len(comment.strip()) < 2:
             return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
         
         if analysis_type == "Hızlı Analiz":
