@@ -15,7 +15,7 @@ import requests
 import urllib.parse
 from typing import List, Dict, Any, Optional, Union, cast
 from datetime import datetime, timedelta
-from google_play_scraper import Sort, reviews as play_reviews
+from google_play_scraper import Sort, reviews as play_reviews, app as play_app
 
 from dotenv import load_dotenv
 import textwrap
@@ -230,7 +230,6 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
     """Massive Parallel Google Play Fetcher with Multi-Channel Depth"""
     import concurrent.futures
-    from google_play_scraper import Sort, reviews as play_reviews
     
     all_fetched_map = {}
     now = datetime.now()
@@ -863,13 +862,28 @@ with tab1:
             st_for_state = "Mağaza"
             if platform == "google": 
                 st_for_state = "Google Play"
+                try:
+                    app_info = play_app(app_id, lang='tr', country='tr')
+                    name_for_state = app_info.get('title', app_id)
+                except: pass
             elif platform == "apple":
                 st_for_state = "App Store"
-                if "apple.com" in u and "/app/" in u:
-                    try:
-                        raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
-                        name_for_state = urllib.parse.unquote(raw_name).title()
-                    except: pass
+                # Try iTunes API first for accurate name
+                try:
+                    resp = requests.get(f"https://itunes.apple.com/lookup?id={app_id}&country={country}", timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data.get('results'):
+                            name_for_state = data['results'][0].get('trackCensoredName', app_id)
+                        elif "apple.com" in u and "/app/" in u:
+                            raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
+                            name_for_state = urllib.parse.unquote(raw_name).title()
+                except:
+                    if "apple.com" in u and "/app/" in u:
+                        try:
+                            raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
+                            name_for_state = urllib.parse.unquote(raw_name).title()
+                        except: pass
 
             with st.container():
                 loading_placeholder = st.empty()
