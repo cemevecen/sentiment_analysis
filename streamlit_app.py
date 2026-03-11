@@ -306,11 +306,53 @@ st.markdown("""
         color: #1E293B !important;
     }
     
-    /* Expand the main container width to exactly 707.2px as requested */
+    /* Responsive Container Control */
     [data-testid="stAppViewBlockContainer"] {
         max-width: 707.2px !important;
-        padding-left: 0px !important;
-        padding-right: 0px !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        width: 100% !important;
+    }
+
+    /* Mobile Specific Adjustments */
+    @media (max-width: 768px) {
+        [data-testid="stAppViewBlockContainer"] {
+            max-width: 100% !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        
+        .header-title {
+            font-size: 2rem !important;
+        }
+        
+        .metric-card {
+            min-width: 100% !important;
+            padding: 15px !important;
+        }
+
+        /* Allow tabs to scroll horizontally on mobile instead of wrapping/breaking */
+        div[data-testid="stTabList"] {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            padding-bottom: 8px !important;
+            scrollbar-width: none; /* Hide scrollbar for cleaner look */
+        }
+        div[data-testid="stTabList"]::-webkit-scrollbar {
+            display: none;
+        }
+        
+        button[data-testid="stTab"] {
+            flex: 0 0 auto !important;
+            white-space: nowrap !important;
+        }
+
+        /* Stack columns on mobile */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+        }
     }
 
     /* Strict 5px spacing for headers and common text blocks */
@@ -689,6 +731,7 @@ st.markdown("""
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
+        position: absolute !important;
     }
 </style>
 """, unsafe_allow_html=True)
