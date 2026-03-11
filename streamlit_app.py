@@ -722,14 +722,14 @@ st.markdown("""
     .metric-card {
         flex: 1;
         min-width: 140px;
-        background: rgba(255, 255, 255, 0.45);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: 20px;
-        padding: 25px 20px;
+        background: rgba(255, 255, 255, 0.45) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        border-radius: 20px !important;
+        padding: 25px 20px !important;
         text-align: center;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05) !important;
     }
     .metric-value {
         font-size: 2rem;
@@ -1631,25 +1631,7 @@ if "bulk_results" in st.session_state:
     color: #000000 !important;
 }
 
-.metric-container {
-    display: flex;
-    justify-content: space-around;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-    flex-wrap: wrap;
-}
-.metric-card {
-    background: #FFFFFF !important;
-    border: 2px solid #FFE4D6 !important;
-    border-radius: 100px !important;
-    padding: 1.5rem 1rem !important;
-    text-align: center;
-    flex: 1;
-    min-width: 150px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
-}
-.metric-value { font-size: 2.5em; font-weight: bold; line-height: 1.2; }
-.metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
+
 
 .glass-card {
     background: #FFFFFF !important;
