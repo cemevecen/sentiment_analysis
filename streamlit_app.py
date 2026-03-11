@@ -712,7 +712,7 @@ with tab1:
     with st.container(border=True):
         col_u, col_r = st.columns([2, 1])
         with col_u:
-            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745", disabled=True)
+            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745", disabled=False)
             st.session_state.app_url = store_url # Sync for share report
         with col_r:
             time_range = st.selectbox(
