@@ -1128,8 +1128,8 @@ if comments_to_analyze:
             options=[0, 1],
             format_func=lambda x: ["Genel", "Derin"][x],
             captions=[
-                f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
-                f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
+                f"tahmini {fmt_time(n * 1)}",
+                f"tahmini {fmt_time(n * 2)}"
             ],
             horizontal=True,
             key="analysis_mode"
