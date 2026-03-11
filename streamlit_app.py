@@ -16,34 +16,34 @@ import urllib.parse
 from typing import List, Dict, Any, Optional, Union, cast
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
-# Removed app-store-scraper due to dependency conflicts with streamlit
+
 from dotenv import load_dotenv
 import textwrap
 if os.path.exists(".env"):
     load_dotenv(override=True)
 
-# Set Page Config
+
 st.set_page_config(
     page_title="AI Duygu Analizi",
     layout="centered"
 )
 
-# API Configuration: Optimized via Caching
+
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
 def setup_api():
-    # Priority: 1. GOOGLE_API_KEY (SDK standard), 2. GEMINI_API_KEY, 3. API_KEY
+    
     keys_to_check = ["GOOGLE_API_KEY", "GEMINI_API_KEY", "API_KEY"]
     
     api_key = None
     
-    # Check Environment Variables
+    
     for k in keys_to_check:
         val = os.getenv(k)
         if val and str(val).strip():
             api_key = str(val).strip()
             break
             
-    # Check Streamlit Secrets if still not found
+    
     if not api_key:
         try:
             for k in keys_to_check:
@@ -56,7 +56,7 @@ def setup_api():
 
     if api_key:
         try:
-            # Initialize client with the found key
+            
             client = genai.Client(api_key=api_key)
             return client
         except Exception as e:
@@ -67,20 +67,20 @@ def setup_api():
 GEMINI_CLIENT = setup_api()
 HAS_GEMINI = GEMINI_CLIENT is not None
 
-# Define total cost tracker
+
 API_TRACKER = {"cost_tl": 0.0}
 
-# Special check for Streamlit Cloud users
+
 if not HAS_GEMINI and "streamlit" in str(st.__file__).lower():
     st.sidebar.error("⚠️ Gemini API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY tanımlayın.")
     if st.sidebar.button("API'yi Yeniden Kontrol Et"):
         st.cache_resource.clear()
         st.rerun()
 elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
-    # Optional: Test client connectivity if needed, but we'll stick to a simple success indicator
+    
     pass
 
-# --- Lottie Loader ---
+
 @st.cache_data(ttl=3600)
 def load_lottieurl(url: str):
     try:
@@ -91,9 +91,9 @@ def load_lottieurl(url: str):
     except:
         return None
 
-lottie_loading = load_lottieurl("https://lottie.host/81729486-455b-426d-8833-255e2a222857/YV77X3ZzPZ.json") # Updated to a working modern Lottie asset
+lottie_loading = load_lottieurl("https://lottie.host/81729486-455b-426d-8833-255e2a222857/YV77X3ZzPZ.json") 
 
-# --- UTILS: Content Cleanup Filter ---
+
 def is_valid_comment(text: Any) -> bool:
     """
     Sophisticated filter to remove metadata, developer responses, and garbage lines.
@@ -103,13 +103,13 @@ def is_valid_comment(text: Any) -> bool:
     s = str(text).strip()
     sl = s.lower()
     
-    # 1. Basic length check
+    
     if len(s) < 3: return False
     
-    # 2. Null values
+    
     if sl in ['nan', 'null', 'none']: return False
     
-    # 3. Metadata Keywords / Headers / UI Buttons
+    
     meta_keywords = [
         "developer response", "geliştirici cevabı", "developer answer", 
         "customer review", "müşteri yorumu", "app store connect",
@@ -119,12 +119,12 @@ def is_valid_comment(text: Any) -> bool:
     if any(k in sl for k in meta_keywords):
         return False
 
-    # 4. Version Stamps (e.g. "Version 1.2.3 - Turkey")
+    
     if re.search(r"version\s+\d+(\.\d+)*", sl):
         return False
         
-    # 5. Date Patterns & Store Headers (e.g. "Mar 2, 2026", "21 Feb 2026")
-    # Also block lines starting with Month names (likely nickname/date rows in copy-paste)
+    
+    
     months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
               "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık"]
     
@@ -137,7 +137,7 @@ def is_valid_comment(text: Any) -> bool:
         if re.search(date_regex, s, re.IGNORECASE):
             return False
 
-    # 6. Formal Developer Canned Replies (Aggressive)
+    
     formal_patterns = [
         "aksaklık için üzgünüz", "yaşanan aksaklık için",
         "teşekkür ederiz. yaşadığınız", "teşekkürler. yaşadığınız",
@@ -158,7 +158,7 @@ def is_valid_comment(text: Any) -> bool:
     if any(fp in sl for fp in formal_patterns):
         return False
         
-    # 7. Email Addresses (Common in support replies)
+    
     if re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", sl):
         return False
 
@@ -171,7 +171,7 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
     now = datetime.now()
     threshold_dt = now - timedelta(days=_days_limit)
     
-    # 40 target countries to find all possible Turkish reviews globally
+    
     countries = [
         'tr', 'us', 'de', 'az', 'nl', 'fr', 'gb', 'at', 'be', 'ch', 'kz', 'uz', 'tm', 'kg', 'ru',
         'cy', 'gr', 'ro', 'bg', 'pl', 'hu', 'cz', 'se', 'no', 'dk', 'it', 'es', 'ca', 'au', 'sa',
@@ -180,7 +180,7 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
     
     def fetch_country_reviews(country: str):
         country_reviews = []
-        for page in range(1, 11): # Max 10 pages per country (Apple limit)
+        for page in range(1, 11): 
             try:
                 url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
                 resp = requests.get(url, timeout=5)
@@ -212,7 +212,7 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
             except: break
         return country_reviews
 
-    # Parallel execution for massive speed
+    
     total_countries = len(countries)
     completed = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
@@ -236,7 +236,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
     
-    # Combinations to bypass the 3k limit per sort
+    
     sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
     scores = [1, 2, 3, 4, 5]
     channels = []
@@ -247,7 +247,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     def fetch_channel(sort_type, score):
         channel_data = []
         token = None
-        # 30 batches = 6k reviews per channel
+        
         for _ in range(30):
             try:
                 result, token = play_reviews(
@@ -291,7 +291,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     if _progress_callback: _progress_callback(1.0)
     return list(all_fetched_map.values())
 
-# --- PREMIUM STYLING (GLASSMORPHISM) ---
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
@@ -693,18 +693,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Custom Header
+
 st.markdown(f"""
     <div class="header-container">
         <div class="header-title" style="margin-bottom: 0px;">AI Yorum Analizi</div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- Input Section ---
+
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
 
-comments_to_analyze = [] # Reset local ref for tab logic
+comments_to_analyze = [] 
 
 tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi"])
 
@@ -713,7 +713,7 @@ with tab1:
         col_u, col_r = st.columns([2, 1])
         with col_u:
             store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745", disabled=False)
-            st.session_state.app_url = store_url # Sync for share report
+            st.session_state.app_url = store_url 
         with col_r:
             time_range = st.selectbox(
                 "Tarih Aralığı Seçin:",
@@ -721,7 +721,7 @@ with tab1:
                 index=0
             )
         
-        # Map range to days
+        
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
         st.markdown('<div style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
@@ -733,21 +733,21 @@ with tab1:
         app_id: str = ""
         country: str = "tr" 
         
-        # Logic Improvement: Flexible link and ID detection
+        
         if "play.google.com" in u:
             platform = "google"
             match = re.search(r"id=([^&/]+)", u)
             if match: app_id = match.group(1)
         elif "apple.com" in u:
             platform = "apple"
-            # Search for id followed by digits
+            
             match = re.search(r"id(\d+)", u)
             if match: app_id = match.group(1)
-            # Try to catch country code like apple.com/tr/app/...
+            
             country_match = re.search(r"apple\.com/([a-z]{2,3})/", u)
             if country_match: country = country_match.group(1)
         else:
-            # Direct ID or prefixed ID
+            
             clean_u = u.lower()
             if clean_u.startswith("id") and clean_u[2:].isdigit():
                 platform = "apple"
@@ -759,17 +759,17 @@ with tab1:
                 platform = "google"
                 app_id = u
 
-        # Logic Improvement: Manual cache to avoid re-fetching on every UI interaction
+        
         fetch_key = f"{platform}_{app_id}_{time_range}_{country}"
         
         if not platform or not app_id:
             if store_url.strip():
                 st.warning("Geçerli bir Play Store veya App Store linki bulunamadı.")
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
-            # Already fetched, skip to results summary
+            
             pass
         else:
-            # Clear old results to keep UI in sync during new fetch
+            
             if "bulk_results" in st.session_state:
                 del st.session_state.bulk_results
             if "comments_to_analyze" in st.session_state:
@@ -784,13 +784,13 @@ with tab1:
                     p_bar = st.progress(0, text="Hazırlanıyor...")
                 
                 def update_fetch_progress(p: float) -> None:
-                    # Clamp progress to 100% and avoid re-rendering issues
+                    
                     p_safe = min(max(float(p), 0.0), 1.0)
                     
-                    # Store last progress for smooth transition if needed
+                    
                     last_p = float(st.session_state.get("_last_fetch_p", 0.0))
                     
-                    # If it's a significant jump (especially at the end), animate slightly
+                    
                     if p_safe >= 1.0 and last_p < 0.95:
                         for i in range(1, 11):
                             smooth_p = last_p + (1.0 - last_p) * (i / 10.0)
@@ -805,7 +805,7 @@ with tab1:
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
-                    # Fetch App Details first to get real name if possible
+                    
                     name_for_state = app_id
                     st_for_state = "Store"
                     if platform == "google":
@@ -817,7 +817,7 @@ with tab1:
                         except: pass
                     elif platform == "apple":
                         st_for_state = "App Store"
-                        # Try to get name from URL if it's a link
+                        
                         if "apple.com" in u and "/app/" in u:
                             try:
                                 raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
@@ -841,30 +841,30 @@ with tab1:
                                     fetched_comments.append(r)
 
                     if fetched_comments:
-                        # Force 100% and a small sleep to ensure user sees completion
+                        
                         update_fetch_progress(1.0)
                         time.sleep(0.5)
                         
-                        # Clear loading animation
+                        
                         loading_placeholder.empty()
                         
-                        # Store all fetched comments for potential extended analysis
+                        
                         fetched_comments.sort(key=lambda x: x['date'], reverse=True)
                         st.session_state.all_fetched_pool = fetched_comments
-                        st.session_state.last_fetch_key = fetch_key # Update manual cache key
+                        st.session_state.last_fetch_key = fetch_key 
                         
                         if len(fetched_comments) > 500:
                             total_found = len(fetched_comments)
-                            # Use count-based take for maximum linter compatibility
+                            
                             limited_comments = []
                             for idx in range(500):
                                 limited_comments.append(fetched_comments[idx])
                             
                             st.session_state.comments_to_analyze = limited_comments
                             
-                            # Analyzed Range (Top 500)
+                            
                             v_dates_anal = [r.get('date') for r in limited_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
-                            # Total Range (Entire Pool)
+                            
                             v_dates_pool = [r.get('date') for r in fetched_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
                             
                             if v_dates_anal and v_dates_pool:
@@ -891,7 +891,7 @@ with tab1:
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
     if uploaded_files:
-        # Clear old state when new files are uploaded
+        
         if "bulk_results" in st.session_state:
             del st.session_state.bulk_results
         
@@ -913,19 +913,19 @@ with tab2:
                     df_upload = pd.read_excel(uploaded_file)
                 
                 if df_upload is not None:
-                    # Replace Expander with Container
+                    
                     st.markdown(f"#### Dosya: {uploaded_file.name}")
                     with st.container(border=True):
                         
-                        # Date & Rating Detection
-                        # Priority: 1. Review Last Update, 2. General date keys (excluding 'submit')
+                        
+                        
                         date_keys = ["date", "time", "tarih", "saat"]
                         rate_keys = ["rating", "star", "puan", "yildiz", "skor", "score"]
                         
                         date_col = None
                         rate_col = None
                         
-                        # Explicit check for Priority Column
+                        
                         for col in df_upload.columns:
                             if "Review Last Update Date and Time" in col:
                                 date_col = col
@@ -933,7 +933,7 @@ with tab2:
                         
                         for col in df_upload.columns:
                             col_l = col.lower()
-                            # Never use Submit date
+                            
                             if "Review Submit Date and Time" in col:
                                 continue
                             if not date_col and any(dk in col_l for dk in date_keys): 
@@ -941,16 +941,16 @@ with tab2:
                             if not rate_col and any(rk in col_l for rk in rate_keys): 
                                 rate_col = col
 
-                        # Advanced Sentiment Column Scoring
+                        
                         scores = []
                         for col in df_upload.columns:
                             col_l = col.lower()
                             score = 0
-                            # Textual keywords
+                            
                             if any(k in col_l for k in ["review", "yorum", "text", "metin", "content", "mesaj"]): score += 20
-                            # Metadata keywords
+                            
                             if any(k in col_l for k in ["id", "rating", "star", "puan", "date", "tarih"]): score -= 25
-                            # Content Analysis
+                            
                             sample = df_upload[col].dropna().head(10).astype(str).tolist()
                             if sample:
                                 avg_len = sum(len(s) for s in sample) / len(sample)
@@ -964,7 +964,7 @@ with tab2:
                         scores.sort(key=lambda x: x[0], reverse=True)
                         col_name = scores[0][1] if scores else df_upload.columns[0]
 
-                        # Unified Status Row (File info + Auto column)
+                        
                         st.markdown(f"""
                         <div style="display: flex; justify-content: space-between; align-items: center; background-color: #F0F9FF; padding: 10px 15px; border-radius: 10px; border: 1px solid #E0F2FE; margin-bottom: 5px;">
                             <div style="color: #0369a1; font-weight: 600; font-size: 0.9rem;">
@@ -977,8 +977,8 @@ with tab2:
                         """, unsafe_allow_html=True)
                         
                         if col_name:
-                            # NEW FEATURE: Dosya Istatistikleri
-                            # Removed line separator for tighter look
+                            
+                            
                             col_vals = df_upload[col_name].astype(str)
                             total_words = col_vals.apply(lambda x: len(x.split())).sum()
                             avg_len = col_vals.apply(len).mean()
@@ -996,7 +996,7 @@ with tab2:
                                 st.write(", ".join(meta_status) if meta_status else "Yok")
 
 
-                            # OPTIMIZED: Vectorized Data Processing for performance
+                            
                             valid_masks = df_upload[col_name].astype(str).apply(is_valid_comment)
                             
                             processed_df = pd.DataFrame({
@@ -1004,23 +1004,23 @@ with tab2:
                                 "is_valid": valid_masks
                             })
                             
-                            # Vectorized Date Capture
+                            
                             if date_col:
                                 try:
                                     processed_df["date"] = pd.to_datetime(df_upload[date_col], errors='coerce')
-                                    # If mostly failed, try dayfirst
+                                    
                                     if processed_df["date"].isnull().sum() > len(processed_df) * 0.5:
                                         processed_df["date"] = pd.to_datetime(df_upload[date_col], errors='coerce', dayfirst=True)
-                                    # Clean timezone info for st.session_state compatibility
+                                    
                                     processed_df["date"] = processed_df["date"].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) and hasattr(x, 'tzinfo') else x)
                                 except:
                                     pass
                             
-                            # Vectorized Rating Capture
+                            
                             if rate_col:
                                 processed_df["rating"] = df_upload[rate_col].astype(str)
                             
-                            # Final Filter: Keep rows that are either valid comments or have a rating
+                            
                             mask = processed_df["is_valid"] | (processed_df["rating"].notnull() if rate_col else False)
                             final_comments_df = processed_df[mask]
                             all_comments = final_comments_df.to_dict('records')
@@ -1050,14 +1050,14 @@ with tab3:
         key="manual_text_input"
     )
     if text_input.strip():
-        # Clear old analysis when manual text is changed
+        
         if "bulk_results" in st.session_state:
             del st.session_state.bulk_results
             
         raw_lines = text_input.split('\n')
         processed_comments: List[Dict[str, Any]] = []
         
-        # Date regex for "Jan 23, 2026 - User"
+        
         store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
         
         skip_dev_block = False
@@ -1066,18 +1066,18 @@ with tab3:
             l = line.strip()
             if not l: continue
             
-            # Detect Store Metadata (Date - User) -> This starts a NEW user review block
+            
             if re.search(store_meta_regex, l, re.IGNORECASE):
-                skip_dev_block = False # Reset on new review
-                # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
+                skip_dev_block = False 
+                
                 if processed_comments:
-                    # Using indexing safely after checking truthiness
+                    
                     last_idx = len(processed_comments) - 1
                     if len(str(processed_comments[last_idx].get("text", ""))) < 85:
                         processed_comments.pop()
                 continue
                 
-            # Detect Developer Response Header -> Starts a block to IGNORE
+            
             if any(k in l.lower() for k in ["developer response", "geliştirici cevabı"]):
                 skip_dev_block = True
                 continue
@@ -1099,11 +1099,11 @@ with tab3:
                 st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
 
-# Update the main reference (Important for analysis button)
+
 comments_to_analyze = st.session_state.comments_to_analyze
 
 
-# ── Analiz Yapılandırması ──────────────────────
+
 if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### Analiz Yapılandırması")
@@ -1137,7 +1137,7 @@ if comments_to_analyze:
                 key="analysis_mode"
             )
         else:
-            # Use placeholders or simple spacers to keep the UI aligned if needed
+            
             st.session_state.analysis_mode = 0
             mode_idx = 0
 
@@ -1157,7 +1157,7 @@ def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
     if not HAS_GEMINI:
         return None
     
-    # Fallback zinciri: tam isimleri kullanmak daha sağlıklı olabilir
+    
     fallback_chain = ['models/gemini-2.5-flash', 'models/gemini-2.5-pro', 'models/gemini-2.0-flash']
     models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
@@ -1257,7 +1257,7 @@ Yorum: "{text}"
                 config=genai_types.GenerateContentConfig(temperature=0)
             )
             
-            # Update Cost
+            
             meta = getattr(response, 'usage_metadata', None)
             if meta:
                 prompt_tokens = getattr(meta, 'prompt_token_count', 0)
@@ -1265,7 +1265,7 @@ Yorum: "{text}"
                 is_pro = 'pro' in current_model.lower()
                 cost_in = prompt_tokens * (3.50 if is_pro else 0.075) / 1000000
                 cost_out = cand_tokens * (10.50 if is_pro else 0.30) / 1000000
-                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0 # Approx USD to TL
+                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0 
                 
             content = response.text
             match = re.search(r'\{.*?\}', content, re.DOTALL)
@@ -1299,7 +1299,7 @@ def heuristic_analysis(text):
     """Refined Heuristic Engine with expanded word database (50+ keywords)"""
     t = text.lower()
     
-    # 1. Positive High-Confidence (25+ Keywords)
+    
     pos_words = [
         "teşekkür", "harika", "başarılı", "mükemmel", "güzel", "iyi", "memnun",
         "sev", "süper", "5 yıldız", "sağolun", "devam etsin", "devam eder",
@@ -1308,7 +1308,7 @@ def heuristic_analysis(text):
         "özlemişiz", "ideal", "en iyi", "best", "great", "love", "thanks", "wow"
     ]
     
-    # 2. Negative High-Confidence (30+ Keywords)
+    
     neg_words = [
         "kötü", "berbat", "bozuk", "bozuldu", "yaramaz", "rezalet", "rezil",
         "açılmıyor", "açılmı", "zor açıl", "girilmiyor", "giremiyorum",
@@ -1320,14 +1320,14 @@ def heuristic_analysis(text):
         "reklam", "dolandırıcı", "para tuzak", "kazık", "hırsız", "bad", "worst", "error"
     ]
     
-    # 3. Neutral / Suggestion / Question (15+ Keywords)
+    
     neu_words = [
         "keşke", "gelse", "olsa", "olurdu", "gelebilir", "eklense", "mı?", "mi?", "nasıl",
         "neden", "bekliyoruz", "ne zaman", "düzeltilsin", "ekleyin", "yapın", "istiyoruz",
         "öneri", "görüşüm", "eksik", "daha iyi olabilir", "bi baksanız"
     ]
 
-    # Pre-check for clear star-based indicators or single keywords
+    
     simple_t = t.strip()
     if simple_t in ["guzel", "güzel", "iyi", "süper", "harika", "başarılı", "teşekkürler", "sağolun", "best", "great"]:
         return {"olumlu": 1.0, "olumsuz": 0.0, "istek_gorus": 0.0, "method": "Heuristic+"}
@@ -1341,7 +1341,7 @@ def heuristic_analysis(text):
     neg_score = sum(t.count(w) for w in neg_words)
     neu_score = sum(t.count(w) for w in neu_words)
 
-    # Decision Matrix with higher confidence weights
+    
     total = pos_score + neg_score + neu_score
     if total == 0:
         return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic+"}
@@ -1357,7 +1357,7 @@ def heuristic_analysis(text):
 
 
 
-# Analysis Logic Wrapper
+
 def run_bulk_analysis(data_to_process, is_append=False):
     bulk_results = st.session_state.get("bulk_results", []) if is_append else []
     
@@ -1381,7 +1381,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
     start_time = time.time()
     
-    # SECURITY: Hard limit of 250 items per analysis to prevent massive cost spikes
+    
     MAX_ITEMS = 250
     if len(data_to_process) > MAX_ITEMS:
         st.warning(f"⚠️ Güvenlik ve maliyet koruması gereği tek seferde en fazla {MAX_ITEMS} yorum analiz edilebilir. İlk {MAX_ITEMS} yorum işleme alınıyor.")
@@ -1421,7 +1421,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
     def fetch_sentiment_worker(args):
         idx, entry = args
-        comment = str(entry.get("text", ""))[:1000] # SECURITY: Max 1000 chars per review to prevent payload abuse
+        comment = str(entry.get("text", ""))[:1000] 
         is_valid = entry.get("is_valid", True)
         if not is_valid or not comment or len(comment.strip()) < 2:
             return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
@@ -1506,7 +1506,7 @@ if st.button("Analizini Yap", type="primary", use_container_width=True):
     else:
         run_bulk_analysis(comments_to_analyze)
 
-# --- Persistent Results Display ---
+
 if "bulk_results" in st.session_state:
     df = pd.DataFrame(st.session_state.bulk_results)
     counts = df["Baskın Duygu"].value_counts()
@@ -1577,7 +1577,7 @@ if "bulk_results" in st.session_state:
     analysis_df = df[df["Baskın Duygu"] != "—"].copy()
     counts = analysis_df["Baskın Duygu"].value_counts()
     
-    # Custom Metric Cards
+    
     m_olumlu = counts.get("Olumlu", 0)
     m_olumsuz = counts.get("Olumsuz", 0)
     m_istek = counts.get("İstek/Görüş", 0)
@@ -1609,7 +1609,7 @@ if "bulk_results" in st.session_state:
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
         
-        # Renkleri kategoriye göre sabit harita ile ata (sıraya bağlı değil)
+        
         color_map = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
         pie_colors = [color_map.get(d, "#94a3b8") for d in pie_data["Duygu"]]
         
@@ -1640,38 +1640,38 @@ if "bulk_results" in st.session_state:
 
     with col_summary:
         st.write("#### Yapay Zeka Görüşü")
-        # Calculate summary counts
+        
         total_all = m_olumlu + m_olumsuz + m_istek
         diff_val = abs(m_olumlu - m_olumsuz)
         
-        # Determine Colors and Summary Text based on dominant sentiment
+        
         if total_all == 0:
             grad_bg = "#F8FAFC"
             border_c = "#E2E8F0"
             summary_title = "Henüz yeterli veri yok."
             summary_body = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
-        elif total_all > 10 and (diff_val / total_all) < 0.15 and m_olumlu > 0 and m_olumsuz > 0: # Balanced/Mixed case
-            grad_bg = "#fef9c3" # Light Yellow
-            border_c = "#eab308" # Amber
+        elif total_all > 10 and (diff_val / total_all) < 0.15 and m_olumlu > 0 and m_olumsuz > 0: 
+            grad_bg = "#fef9c3" 
+            border_c = "#eab308" 
             summary_title = f"Dengeli/Karmaşık bir kullanıcı deneyimi gözlendi. ({total_all} yorum)"
             summary_body = "Uygulama şu anda kullanıcı kitlesini neredeyse tam ortadan ikiye bölmüş durumda. Bir grup kullanıcı sunulan hizmetten, hızdan ve arayüzden son derece memnunken; diğer bir önemli grup ise teknik aksaklıklar, bağlantı sorunları veya beklenen özelliklerin eksikliği gibi konularda ciddi eleştiriler dile getiriyor. Marka imajı şu anda bir 'kritik eşik' evresinde; olumlu taraftaki kullanıcılar sadık kalmaya meyilliyken, olumsuz taraftakiler ise her an rakiplere yönelebilir. Bu bıçak sırtı dengeden kurtulmak için en acil şikayetlere (bug'lar, performans sorunları vb.) odaklanılmalı ve bu kitle hızlıca memnun edilmeli. Eğer bu karmaşık tablo doğru yönetilirse kitle olumlu yöne çekilebilir, aksi takdirde olumsuz sesler baskın hale gelecektir."
         elif counts.idxmax() == "Olumlu":
-            grad_bg = "#dcfce7" # Light Green
-            border_c = "#10b981" # Emerald
+            grad_bg = "#dcfce7" 
+            border_c = "#10b981" 
             summary_title = f"Topluluk genel olarak Olumlu bir tavır sergiliyor. ({m_olumlu} yorum)"
             summary_body = "Genel olarak kullanıcı kitlesi, uygulamanın sunduğu temel hizmetlerden, arayüz tasarımından ve kullanım kolaylığından yüksek düzeyde memnuniyet duyuyor diyebiliriz. Özellikle düzenli kullanıcılar uygulamanın günlük hayattaki işlevselliğini olumlu bularak tavsiye etme eğiliminde. Sistem performansı, hız ve güvenilirlik beklentileri büyük ölçüde karşılanıyor. Son güncellemelerle birlikte gelen yenilikler pozitif karşılanmış gibi görünüyor. Kullanıcıların markaya olan güveni bu aşamada sağlam temeller üzerinde duruyor. Müşteri hizmetlerinin ve destek birimlerinin sorunlara hızlı reaksiyon göstermesi de bu olumlu havayı destekleyen ana etkenlerden biri olabilir. Yine de aralardaki küçük oranlı şikayetleri dikkatle ele alıp, bu %100'e yakın memnuniyet oranını koruyacak stratejik adımların devam ettirilmesi oldukça önemli."
         elif counts.idxmax() == "Olumsuz":
-            grad_bg = "#fee2e2" # Light Red
-            border_c = "#f43f5e" # Rose
+            grad_bg = "#fee2e2" 
+            border_c = "#f43f5e" 
             summary_title = f"Dikkat çeken Olumsuz bir eğilim var. ({m_olumsuz} yorum)"
             summary_body = "Analiz edilen veri setinde kullanıcıların çok ciddi hayal kırıklıkları ve sistemsel şikayetleri olduğu açıkça görülmektedir. Özellikle kilitlenme, yavaşlık veya beklenen özelliklerin çalışmaması gibi kronikleşmiş teknik problemler kullanıcı deneyimini ciddi oranda baltalıyor. İade sorunları, müşteri hizmetlerinin ulaşılamaz olması veya vaat edilenle karşılaşılan hizmetin uyuşmaması gibi temel şikayetler marka imajına an itibariyle zarar veriyor. Kullanıcılar uygulamanın temel fonksiyonlarını bile kullanırken pürüzlerle karşılaştıkları için platformu terk etme veya rakiplere yönelme potansiyeline sahipler. Acil ve agresif bir hata ayıklama (bug-fixing) sürecine gidilmeli, müşteri destek hattının kapasitesi artırılmalı ve kullanıcılardan gelen yapısal eleştiriler bir an önce yazılım geliştirme döngüsüne entegre edilmelidir."
-        else: # Neutral dominant
-            grad_bg = "#dbeafe" # Light Blue
-            border_c = "#3b82f6" # Blue
+        else: 
+            grad_bg = "#dbeafe" 
+            border_c = "#3b82f6" 
             summary_title = f"Kullanıcılar yoğun şekilde İstek ve Görüş paylaşıyor. ({m_istek} yorum)"
             summary_body = "Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir."
         
-        # Save to session state for the report card
+        
         st.session_state.ai_summary = summary_body
 
         st.markdown(f"""
@@ -1682,34 +1682,34 @@ if "bulk_results" in st.session_state:
         """, unsafe_allow_html=True)
         
 
-    # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
+    
     if "Puan" in df.columns and df["Puan"].notnull().any():
         st.markdown("---")
         
-        # UI for Frequency Selection
+        
         st.write("#### Puan Dağılımı Trendi")
         freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
-            # Ensure ratings are integers 1-5 for clean legend
+            
             df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce').fillna(0).astype(int)
             df_puan = df_puan[(df_puan["Puan_val"] >= 1) & (df_puan["Puan_val"] <= 5)]
             
             if not df_puan.empty:
                 df_puan["Tarih_dt"] = pd.to_datetime(df_puan["Tarih"])
                 
-                # Show Date Range Info
+                
                 min_d = df_puan["Tarih_dt"].min().strftime('%d-%m-%Y')
                 max_d = df_puan["Tarih_dt"].max().strftime('%d-%m-%Y')
                 st.caption(f"**Tespit Edilen Tarih Aralığı:** {min_d} ile {max_d}")
 
-                # Month names map
+                
                 tr_months = {1:"Ocak", 2:"Şubat", 3:"Mart", 4:"Nisan", 5:"Mayıs", 6:"Haziran", 
                              7:"Temmuz", 8:"Ağustos", 9:"Eylül", 10:"Ekim", 11:"Kasım", 12:"Aralık"}
 
-                # Resample based on choice
+                
                 if freq == "Haftalık":
                     df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('W').apply(lambda r: r.start_time)
                     df_puan["Grup_Label"] = df_puan["Grup"].apply(lambda x: f"{x.day} {tr_months[x.month]} {x.year}")
@@ -1723,7 +1723,7 @@ if "bulk_results" in st.session_state:
                     df_puan["Grup"] = df_puan["Tarih_dt"].dt.date
                     title_txt = "Günlük Puan Dağılımı"
 
-                # Group and Sort
+                
                 dist_trend = df_puan.groupby(["Grup", "Grup_Label", "Puan_val"]).size().reset_index(name='Oy Sayısı')
                 dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
                 dist_trend = dist_trend.sort_values(["Grup", "Puan_val"], ascending=[True, True])
@@ -1755,7 +1755,7 @@ if "bulk_results" in st.session_state:
                     title_font={"color": "#000000", "size": 18}
                 )
                 
-                # Force categorical X axis and black ticks
+                
                 fig_dist.update_xaxes(type='category', tickangle=-45, tickfont={"color": "#000000"}, title_font={"color": "#000000"})
                 fig_dist.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
                 st.plotly_chart(fig_dist, use_container_width=True)
@@ -1764,10 +1764,10 @@ if "bulk_results" in st.session_state:
 
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # --- Extended Analysis Prompt ---
+    
     all_pool = st.session_state.get("all_fetched_pool", [])
     if all_pool:
-        # Indices of comments already analyzed
+        
         analyzed_count = len(df)
         remaining_pool = all_pool[analyzed_count:]
         
@@ -1786,7 +1786,7 @@ if "bulk_results" in st.session_state:
                     next_batch = remaining_pool[:take_next]
                     run_bulk_analysis(next_batch, is_append=True)
 
-    # Chart & List Logic
+    
     def render_trend_chart(filtered_df, key, title_suffix="", freq="Haftalık"):
         df_dates = filtered_df.dropna(subset=["Tarih"]).copy()
         if not df_dates.empty:
@@ -1800,14 +1800,14 @@ if "bulk_results" in st.session_state:
                 df_dates['Grup'] = df_dates['Tarih'].dt.to_period('M').apply(lambda r: r.start_time)
                 xaxis_title = "Tarih (Aylık)"
                 chart_title_prefix = "Aylık"
-            else: # Günlük
+            else: 
                 df_dates['Grup'] = df_dates['Tarih'].dt.date
                 xaxis_title = "Tarih (Günlük)"
                 chart_title_prefix = "Günlük"
 
             trend_data = df_dates.groupby(['Grup', "Baskın Duygu"]).size().reset_index(name='Adet')
             
-            # Custom data for robust selection processing (includes exact Grup and Sentiment)
+            
             trend_data['Grup_str'] = trend_data['Grup'].astype(str)
             fig_trend = px.bar(trend_data, x="Grup", y="Adet", color="Baskın Duygu",
                                title=f"{chart_title_prefix} Duygu Dağılımı {title_suffix}",
@@ -1829,17 +1829,17 @@ if "bulk_results" in st.session_state:
             fig_trend.update_xaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
             fig_trend.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
             
-            # Use on_select for interactivity (Streamlit 1.35+)
+            
             selection = st.plotly_chart(fig_trend, use_container_width=True, on_select="rerun", key=f"chart_{key}")
             
             if selection and "selection" in selection and selection["selection"]["points"]:
                 point = selection["selection"]["points"][0]
-                # Use Grup directly from custom_data for 100% precision
+                
                 sel_grup_str = point["customdata"][0]
                 sel_grup = pd.to_datetime(sel_grup_str).tz_localize(None)
                 sel_sentiment = str(point["customdata"][1]).strip()
                 
-                # Standardize database groups for comparison
+                
                 df_dates['Grup_compare'] = pd.to_datetime(df_dates['Grup']).dt.tz_localize(None)
                 
                 final_filtered = df_dates[
@@ -1890,7 +1890,7 @@ if "bulk_results" in st.session_state:
             if highlight:
                 cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
             
-            # Format extra info (Rating)
+            
             extra_info = ""
             if "Puan" in row and pd.notnull(row["Puan"]):
                 extra_info += f" | Puan: {row['Puan']}"
@@ -1902,7 +1902,7 @@ if "bulk_results" in st.session_state:
                     date_tag = f"Tarih: {d.strftime('%d-%m-%Y')}"
                 except: pass
 
-            # Map sentiment to color dot
+            
             dot_colors = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
             s_color = dot_colors.get(sentiment, "#94a3b8")
             sentiment_indicator = f'<span style="display: inline-block; width: 10px; height: 10px; background-color: {s_color}; border-radius: 50%; margin: 0 4px; vertical-align: middle;"></span>'
@@ -1946,10 +1946,10 @@ if "bulk_results" in st.session_state:
                     st.session_state[page_key] = 1
                     st.rerun()
 
-    # --- Tabs and Unified Display ---
+    
     st.write("### Yorum Listesi")
     
-    # Frequency Selector for Trend Chart
+    
     yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -1984,17 +1984,17 @@ if "bulk_results" in st.session_state:
         f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)", freq=yorum_freq)
         display_comments(f_df, "neu")
 
-    # Excel Download
+    
     try:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
         
-        # --- SHARE SECTION ---
+        
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         st.subheader("Analiz Raporunu Paylaş")
         
-        # --- PIE CHART & STATS PREPARATION ---
+        
         total_q = len(df)
         pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
@@ -2015,12 +2015,12 @@ if "bulk_results" in st.session_state:
         n_path = get_svg_path(pos_p, pos_p + neg_p)
         u_path = get_svg_path(pos_p + neg_p, 100)
 
-        # Priority: Use detected names
+        
         app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
         store_type = st.session_state.get('detected_store_type', "STORE")
         report_title = f"{app_name.upper()} {store_type.upper()} ANALİZ RAPORU"
 
-        # Text generation for sharing (Robust newlines)
+        
         summary_text = (
             f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
@@ -2036,21 +2036,21 @@ if "bulk_results" in st.session_state:
         
         encoded_text = urllib.parse.quote(summary_text)
 
-        # --- DIGITAL REPORT CARD (SVG 3D) ---
+        
         def clean_html(h):
             return "\n".join([line.strip() for line in h.split('\n') if line.strip()])
         
-        # Sanitize summary for card display (remove formatting that might break HTML)
+        
         display_summary = st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')
         display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
         
-        # Punctuation & Newline Formatting Fix
+        
         import re
-        # Remove spaces before punctuation (e.g., "durumda ." -> "durumda.")
+        
         display_summary = re.sub(r'\s+([.,;:!?])', r'\1', display_summary)
-        # Collapse multiple spaces into one single space
+        
         display_summary = re.sub(r' {2,}', ' ', display_summary)
-        # Convert true newlines/paragraphs into HTML line breaks
+        
         display_summary = display_summary.replace('\n', '<br>')
 
         card_html = clean_html(f"""
@@ -2110,14 +2110,14 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- ROBUST BIG CARDS UNIFIED TRAY ---
+        
         import base64
         import json
         
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
         excel_filename = image_name.replace(".png", ".xlsx")
         
-        # 1. Background Logic inside an invisible component
+        
         import streamlit.components.v1 as components
         components.html(f"""
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -2180,7 +2180,7 @@ if "bulk_results" in st.session_state:
             </script>
         """, height=0)
 
-        # 2. Render the UI
+        
         share_ui = textwrap.dedent(f"""
             <style>
                 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
@@ -2263,7 +2263,7 @@ if "bulk_results" in st.session_state:
     except Exception as e:
         st.error(f"Paylaşım sistemi hatası: {e}")
 
-# Footer
+
 
 st.divider()
 st.caption("Geliştiren: ivicin")

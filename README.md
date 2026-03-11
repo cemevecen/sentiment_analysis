@@ -1,49 +1,44 @@
-# AI Sentiment Analysis (Duygu Analizi) 🧠
+# AI App Review Analysis 🧠
 
-Bu proje, metinlerin duygu durumunu (Pozitif/Negatif) analiz eden modern bir web uygulamasıdır. Google Gemini AI desteği ile hibrit bir analiz yöntemi kullanır.
+Modern ve akıllı uygulama mağazası yorum analiz platformu. Bu uygulama, hem Google Play Store hem de Apple App Store yorumlarını otomatik olarak çeker ve en gelişmiş yapay zeka modelleriyle duygu durum analizi yapar.
 
-## Özellikler
+## ✨ Temel Özellikler
 
--   **Gemini AI Analizi:** Google'ın en gelişmiş yapay zeka modellerini kullanarak derinlemesine duygu analizi.
--   **Heuristic (Kelime Bazlı) Analiz:** API'ye erişilemediği durumlarda otomatik devreye giren hızlı kelime eşleştirme sistemi.
--   **Modern Arayüz:** Streamlit ile geliştirilmiş, kullanıcı dostu ve şık tasarım.
--   **Hızlı Yanıt:** Düşük gecikme süreli analiz sonuçları.
+- **Hibrit Analiz Sistemi:** Google Gemini AI (2.5 Pro/Flash) ile derinlemesine analiz veya kotasız yerel "Hızlı Tarama" seçenekleri.
+- **Otomatik Veri Çekme:** Mağaza linki üzerinden tarih filtreli yorum çekme (Play Store & App Store).
+- **Dosya Desteği:** CSV ve Excel dosyalarınızı yükleyerek toplu analiz yapabilme.
+- **Duygu Filtreleme:** Olumlu, olumsuz ve istek/görüş kategorilerinde otomatik sınıflandırma.
+- **Görsel Raporlama:** Etkileşimli grafikler ve indirilebilir analiz raporları.
 
-## Kurulum ve Çalıştırma
+## 🛠️ Kurulum
 
-### 1. Projeyi Klonlayın
+### 1. Dosyaları Klonlayın
 ```bash
-git clone https://github.com/USERNAME/nlp-sentiment-project.git
-cd nlp-sentiment-project
+git clone https://github.com/cemevecen/sentiment_analysis.git
+cd sentiment_analysis
 ```
 
-### 2. Bağımlılıkları Yükleyin
+### 2. Gereksinimleri Yükleyin
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. API Anahtarını Ayarlayın
-Projenin kök dizininde bir `.env` dosyası oluşturun ve Gemini API anahtarınızı ekleyin:
+### 3. Yapılandırma
+Sistem anahtarını `.env` dosyasına veya Streamlit Secrets alanına ekleyin:
 ```env
-GEMINI_API_KEY=YOUR_API_KEY_HERE
+GOOGLE_API_KEY=AIzaSy...
 ```
-> **Not:** API anahtarınızı [Google AI Studio](https://aistudio.google.com/) üzerinden ücretsiz alabilirsiniz.
 
-### 4. Uygulamayı Başlatın
+### 4. Çalıştırın
 ```bash
 streamlit run streamlit_app.py
 ```
 
-## Proje Yapısı
+## 🚀 Güvenlik ve Performans
 
--   `streamlit_app.py`: Ana uygulama dosyası.
--   `requirements.txt`: Gerekli Python kütüphaneleri.
--   `.env`: Hassas veriler (Git'e eklenmez).
--   `README.md`: Proje bilgileri.
-
-## Lisans
-Bu proje MIT Lisansı ile lisanslanmıştır.
+- **Maliyet Kontrolü:** API harcamalarını takip eden ve sınır koyan entegre takip sistemi.
+- **Hız:** Eşzamanlı (Concurrent) analiz yeteneği ile saniyeler içinde yüzlerce yorum işleme.
+- **Veri Güvenliği:** API anahtarları asla kod içerisinde yer almaz, çevre değişkenleri üzerinden yönetilir.
 
 ---
 Geliştiren: **Cem Evecen**
-# yorum_duygu_analizi
