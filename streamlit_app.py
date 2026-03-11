@@ -1138,7 +1138,7 @@ def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
         return None
     
     # Fallback zinciri: yeni API key'lerde eski modeller çalışmayabilir
-    fallback_chain = ['gemini-2.5-flash', 'gemini-2.5-pro']
+    fallback_chain = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
     models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
     for current_model in models_to_try:
