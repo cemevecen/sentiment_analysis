@@ -601,7 +601,7 @@ st.markdown("""
         visibility: visible;
     }
 
-    /* Localization: Hide 'Drag and drop files here' and 'Limit 200MB per file' */
+    /* Localization: Hide 'CSV veya Excel dosyalarını buraya sürükleyin/yükleyin' and 'Limit: Her dosya için 200 MB' */
     /* Aggressive approach: Set font-size to 0 to hide original text while keeping container */
     [data-testid="stFileUploadDropzone"] section div {
         font-size: 0px !important;
