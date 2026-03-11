@@ -722,12 +722,14 @@ st.markdown("""
     .metric-card {
         flex: 1;
         min-width: 140px;
-        background-color: #F8FAFC;
-        border: 2px solid #FFD1B3;
-        border-radius: 100px;
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 20px;
         padding: 25px 20px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
     }
     .metric-value {
         font-size: 2rem;
