@@ -370,8 +370,22 @@ st.markdown("""
 
     /* Fix Selectbox & Inputs to Light Blue with DARK TEXT */
     .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
-        background-color: #F0F9FF !important;
+        background-color: #F8FAFC !important; /* Slightly whiter base */
         color: #1E293B !important;
+        caret-color: #6366F1 !important; /* Indigo blinking cursor */
+        border: 1px solid #E2E8F0 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .stTextInput input:hover, .stTextArea textarea:hover {
+        border-color: #CBD5E1 !important;
+    }
+
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #6366F1 !important;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+        background-color: #FFFFFF !important;
+        outline: none !important;
     }
     
     /* Selectbox Popover (Dropdown) fixes */
@@ -809,19 +823,29 @@ with tab1:
             if store_url.strip():
                 st.warning("Geçerli bir Play Store veya App Store linki bulunamadı.")
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
-            
-            pass
+             pass
         else:
-            
             if "bulk_results" in st.session_state:
                 del st.session_state.bulk_results
             if "comments_to_analyze" in st.session_state:
                 st.session_state.comments_to_analyze = []
-            
+
+            name_for_state = app_id
+            st_for_state = "Mağaza"
+            if platform == "google": 
+                st_for_state = "Google Play"
+            elif platform == "apple":
+                st_for_state = "App Store"
+                if "apple.com" in u and "/app/" in u:
+                    try:
+                        raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
+                        name_for_state = urllib.parse.unquote(raw_name).title()
+                    except: pass
+
             with st.container():
                 loading_placeholder = st.empty()
                 with loading_placeholder.container():
-                    st.markdown(f"#### {time_range} yorumları mağazadan çekiliyor...")
+                    st.markdown(f"### 🔍 {name_for_state} Analizi")
                     if lottie_loading:
                         st_lottie(lottie_loading, height=130, key="fetch_loader")
                     p_bar = st.progress(0, text="Hazırlanıyor...")
@@ -848,25 +872,6 @@ with tab1:
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
                 try:
-                    
-                    name_for_state = app_id
-                    st_for_state = "Store"
-                    if platform == "google":
-                        try:
-                            from google_play_scraper import app
-                            info = app(app_id)
-                            name_for_state = info.get('title', app_id)
-                            st_for_state = "Google Play"
-                        except: pass
-                    elif platform == "apple":
-                        st_for_state = "App Store"
-                        
-                        if "apple.com" in u and "/app/" in u:
-                            try:
-                                raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
-                                name_for_state = urllib.parse.unquote(raw_name).title()
-                            except: pass
-                    
                     st.session_state.detected_app_name = name_for_state
                     st.session_state.detected_store_type = st_for_state
 
@@ -956,8 +961,7 @@ with tab2:
                     df_upload = pd.read_excel(uploaded_file)
                 
                 if df_upload is not None:
-                    
-                    st.markdown(f"#### Dosya: {uploaded_file.name}")
+                    st.markdown(f"### 📄 {uploaded_file.name}")
                     with st.container(border=True):
                         
                         
@@ -1149,7 +1153,7 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("### Analiz Yapılandırması")
+    st.markdown("## ⚙️ Analiz Ayarları")
     
     n = len(comments_to_analyze)
 
@@ -1185,7 +1189,7 @@ if comments_to_analyze:
             mode_idx = 0
 
     if analysis_type == "Zengin Analiz":
-        st.info("Sonuçlar yapay zeka tarafından derinlemesine taranır.")
+        st.info("Zengin Analiz: Sonuçlar yapay zeka tarafından derinlemesine taranır.")
     else:
         st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
@@ -1193,7 +1197,7 @@ if comments_to_analyze:
 
 
 
-def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
+def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
     if API_TRACKER["cost_tl"] >= 50.0:
         return {"_error": "cost_limit"}
         
@@ -1201,7 +1205,7 @@ def get_gemini_sentiment(text, model_name='gemini-2.5-flash'):
         return None
     
     
-    fallback_chain = ['models/gemini-2.5-flash', 'models/gemini-2.5-pro', 'models/gemini-2.0-flash']
+    fallback_chain = ['models/gemini-2.0-flash', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro']
     models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
     for current_model in models_to_try:
@@ -1416,10 +1420,10 @@ def run_bulk_analysis(data_to_process, is_append=False):
     mode_idx = st.session_state.get("analysis_mode", 0)
     
     if mode_idx == 0:
-        ANALYSIS_MODEL = 'models/gemini-2.5-flash'
+        ANALYSIS_MODEL = 'models/gemini-2.0-flash'
         RPM_LIMIT = 500
     else:
-        ANALYSIS_MODEL = 'models/gemini-2.5-pro'
+        ANALYSIS_MODEL = 'models/gemini-1.5-pro'
         RPM_LIMIT = 300
 
     start_time = time.time()
@@ -1615,7 +1619,7 @@ if "bulk_results" in st.session_state:
 """, unsafe_allow_html=True)
 
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("### Analiz Özeti")
+    st.markdown("## 📊 Analiz Sonuçları ve İstatistikler")
     
     analysis_df = df[df["Baskın Duygu"] != "—"].copy()
     counts = analysis_df["Baskın Duygu"].value_counts()
@@ -1682,7 +1686,7 @@ if "bulk_results" in st.session_state:
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_summary:
-        st.write("#### Yapay Zeka Görüşü")
+        st.write("### 📈 Duygu Dağılımı")
         
         total_all = m_olumlu + m_olumsuz + m_istek
         diff_val = abs(m_olumlu - m_olumsuz)
@@ -1730,7 +1734,7 @@ if "bulk_results" in st.session_state:
         st.markdown("---")
         
         
-        st.write("#### Puan Dağılımı Trendi")
+        st.write("### ⭐ Puan Dağılımı")
         freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -2062,6 +2066,7 @@ if "bulk_results" in st.session_state:
         app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
         store_type = st.session_state.get('detected_store_type', "STORE")
         report_title = f"{app_name.upper()} {store_type.upper()} ANALİZ RAPORU"
+        excel_filename = f"{app_name}_yorum_analizi.xlsx".replace(" ", "_").lower()
 
         
         summary_text = (
@@ -2098,31 +2103,40 @@ if "bulk_results" in st.session_state:
 
         card_html = clean_html(f"""
             <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
+                <style>
+                    @media (max-width: 480px) {{
+                        #nlp-report-card {{ padding: 20px !important; margin: 10px auto !important; }}
+                        .metric-row {{ flex-wrap: wrap !important; gap: 8px !important; }}
+                        .metric-box {{ flex: 1 1 40% !important; padding: 8px !important; }}
+                        .chart-container {{ padding: 15px !important; flex-direction: column !important; gap: 20px !important; }}
+                        .chart-svg-box {{ width: 100px !important; height: 100px !important; }}
+                    }}
+                </style>
                 <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
                     <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
                 </div>
                 
-                <div style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
-                    <div style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+                <div class="metric-row" style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
+                    <div class="metric-box" style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
                         <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
                     </div>
-                    <div style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+                    <div class="metric-box" style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
                         <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
                     </div>
-                    <div style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+                    <div class="metric-box" style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
                         <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
                     </div>
-                    <div style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+                    <div class="metric-box" style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
                         <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
-                    <div style="width: 140px; height: 140px; position: relative;">
+                <div class="chart-container" style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
+                    <div class="chart-svg-box" style="width: 140px; height: 140px; position: relative;">
                         <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
                         <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
                             <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
@@ -2153,19 +2167,11 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        
-        import base64
-        import json
-        
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
-        excel_filename = image_name.replace(".png", ".xlsx")
         
-        
-        import streamlit.components.v1 as components
         components.html(f"""
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <script>
-                // Add Notification UI dynamically to parent body
                 if (!window.parent.document.getElementById('uNotif')) {{
                     const div = window.parent.document.createElement('div');
                     div.id = 'uNotif';
@@ -2180,7 +2186,7 @@ if "bulk_results" in st.session_state:
                     window.parent.document.body.appendChild(div);
                 }}
 
-                window.notifyBridge = function(msg) {{
+                window.notifyBridge = function(msg, duration = 3000) {{
                     const n = window.parent.document.getElementById('uNotif');
                     const m = window.parent.document.getElementById('uMsg');
                     if(n && m) {{
@@ -2189,12 +2195,10 @@ if "bulk_results" in st.session_state:
                         setTimeout(() => {{ 
                             n.style.opacity = '0';
                             n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                        }}, 3000);
+                        }}, duration);
                     }}
                 }};
                 
-                // Dynamically attach event listener to bypass Streamlit onclick sanitization robustly
-                // Using setInterval ensures we re-bind if Streamlit completely redraws the DOM
                 setInterval(function() {{
                     const btn = window.parent.document.getElementById('btn-png-download');
                     if (btn && !btn.hasAttribute('data-bound')) {{
@@ -2203,20 +2207,42 @@ if "bulk_results" in st.session_state:
                             const target = window.parent.document.getElementById('nlp-report-card');
                             if(!target) return;
                             
-                            window.notifyBridge("Görsel Hazırlanıyor... ⏳");
+                            window.notifyBridge("Görsel Hazırlanıyor... ⏳", 5000);
                             
                             window.html2canvas(target, {{ 
                                 scale: 2, 
                                 useCORS: true, 
                                 backgroundColor: '#FFFFFF', 
-                                logging: false
+                                logging: false,
+                                allowTaint: true
                             }}).then(canvas => {{
-                                const link = document.createElement('a');
-                                link.download = "{image_name}";
-                                link.href = canvas.toDataURL('image/png');
-                                link.click();
-                                window.notifyBridge("İndirme Başlatıldı! ⬇️");
-                            }}).catch(e => console.error(e));
+                                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                                const dataUrl = canvas.toDataURL('image/png');
+
+                                if (isIOS) {{
+                                    const newTab = window.open();
+                                    if (newTab) {{
+                                        newTab.document.write('<img src="' + dataUrl + '" style="width:100%; height:auto;">');
+                                        newTab.document.title = "Analiz Raporu - Kaydetmek icin Basılı Tut";
+                                        window.notifyBridge("Görsel açıldı! Kaydetmek için üzerine basılı tutun. ⬇️");
+                                    }} else {{
+                                        const link = document.createElement('a');
+                                        link.href = dataUrl;
+                                        link.download = "{image_name}";
+                                        link.click();
+                                        window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                                    }}
+                                }} else {{
+                                    const link = document.createElement('a');
+                                    link.href = dataUrl;
+                                    link.download = "{image_name}";
+                                    link.click();
+                                    window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                                }}
+                            }}).catch(e => {{
+                                console.error(e);
+                                window.notifyBridge("Hata oluştu! ❌");
+                            }});
                         }});
                     }}
                 }}, 1000);
@@ -2227,7 +2253,7 @@ if "bulk_results" in st.session_state:
         share_ui = textwrap.dedent(f"""
             <style>
                 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 0 0 10px 0; }}
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 10px; }}
                 .u-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
@@ -2252,7 +2278,6 @@ if "bulk_results" in st.session_state:
                 }}
                 .dl-main-btn:hover {{ background: #4c51bf; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(90, 103, 216, 0.4); }}
                 
-                /* Make standard download button green! */
                 div[data-testid="stDownloadButton"] button {{
                     background-color: #5CB85C !important;
                     color: white !important;
