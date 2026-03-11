@@ -1134,9 +1134,10 @@ if comments_to_analyze:
             horizontal=True,
             key="analysis_mode"
         )
+        st.info("Sonuçlar daha hızlı ve derinlemesine taranır.")
     else:
         # Defaults for Hızlı Analiz
-        st.info("💡 **Hızlı Tarama:** Kelime bazlı analiz yapar. Sonuçlar basit derinlikte taranır.")
+        st.info("**Hızlı Tarama:** Kelime bazlı analiz yapar. Sonuçlar basit derinlikte taranır.")
         st.session_state.analysis_mode = 0
         mode_idx = 0
 
