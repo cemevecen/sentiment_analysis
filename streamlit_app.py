@@ -1327,7 +1327,11 @@ def heuristic_analysis(text):
         "öneri", "görüşüm", "eksik", "daha iyi olabilir", "bi baksanız"
     ]
 
-    # Pre-check for clear star-based indicators in text
+    # Pre-check for clear star-based indicators or single keywords
+    simple_t = t.strip()
+    if simple_t in ["guzel", "güzel", "iyi", "süper", "harika", "başarılı", "teşekkürler", "sağolun", "best", "great"]:
+        return {"olumlu": 1.0, "olumsuz": 0.0, "istek_gorus": 0.0, "method": "Heuristic+"}
+    
     if "1 yıldız" in t or "bir yıldız" in t: 
         return {"olumlu": 0.0, "olumsuz": 1.0, "istek_gorus": 0.0, "method": "Heuristic+"}
     if "5 yıldız" in t or "beş yıldız" in t:
@@ -1337,13 +1341,17 @@ def heuristic_analysis(text):
     neg_score = sum(t.count(w) for w in neg_words)
     neu_score = sum(t.count(w) for w in neu_words)
 
-    # Decision Matrix
-    if neg_score > pos_score and neg_score >= neu_score:
-        return {"olumlu": 0.05, "olumsuz": 0.85, "istek_gorus": 0.10, "method": "Heuristic+"}
+    # Decision Matrix with higher confidence weights
+    total = pos_score + neg_score + neu_score
+    if total == 0:
+        return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic+"}
+
     if pos_score > neg_score and pos_score >= neu_score:
-        return {"olumlu": 0.85, "olumsuz": 0.05, "istek_gorus": 0.10, "method": "Heuristic+"}
+        return {"olumlu": 0.95, "olumsuz": 0.02, "istek_gorus": 0.03, "method": "Heuristic+"}
+    if neg_score > pos_score and neg_score >= neu_score:
+        return {"olumlu": 0.02, "olumsuz": 0.95, "istek_gorus": 0.03, "method": "Heuristic+"}
     if neu_score > 0:
-        return {"olumlu": 0.15, "olumsuz": 0.15, "istek_gorus": 0.70, "method": "Heuristic+"}
+        return {"olumlu": 0.05, "olumsuz": 0.05, "istek_gorus": 0.90, "method": "Heuristic+"}
         
     return {"olumlu": 0.33, "olumsuz": 0.33, "istek_gorus": 0.34, "method": "Heuristic+"}
 
