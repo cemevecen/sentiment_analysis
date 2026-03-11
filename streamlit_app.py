@@ -600,6 +600,23 @@ st.markdown("""
         font-weight: 600;
         visibility: visible;
     }
+
+    /* Localization: Hide 'Drag and drop files here' and 'Limit 200MB per file' */
+    [data-testid="stFileUploadDropzone"] section div span {
+        display: none !important;
+    }
+    [data-testid="stFileUploadDropzone"] section div::after {
+        content: "CSV veya Excel dosyalarını buraya sürükleyin/yükleyin";
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #475569 !important;
+        visibility: visible !important;
+    }
+    
+    /* Hide 'Limit 200MB per file' specifically if it still shows */
+    [data-testid="stFileUploadDropzone"] small {
+        display: none !important;
+    }
     
     /* Target the 'Clear' buttons in the file list */
     [data-testid="stFileUploaderDeleteBtn"] {
@@ -937,7 +954,7 @@ with tab1:
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
-    uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Dosya Yükle", type=["csv", "xlsx"], accept_multiple_files=True, label_visibility="collapsed")
     if uploaded_files:
         # Use a list of file info as a key to detect if files changed
         current_files_key = "_".join([f"{f.name}_{f.size}" for f in uploaded_files])
