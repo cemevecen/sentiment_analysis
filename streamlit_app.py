@@ -939,9 +939,14 @@ with tab1:
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
     if uploaded_files:
-        
-        if "bulk_results" in st.session_state:
-            del st.session_state.bulk_results
+        # Use a list of file info as a key to detect if files changed
+        current_files_key = "_".join([f"{f.name}_{f.size}" for f in uploaded_files])
+        if st.session_state.get("last_files_key") != current_files_key:
+            if "bulk_results" in st.session_state:
+                del st.session_state.bulk_results
+            if "comments_to_analyze" in st.session_state:
+                st.session_state.comments_to_analyze = []
+            st.session_state.last_files_key = current_files_key
         
         all_comments: List[Dict[str, Any]] = []
         for uploaded_file in uploaded_files:
@@ -1070,7 +1075,7 @@ with tab2:
                             
                             mask = processed_df["is_valid"] | (processed_df["rating"].notnull() if rate_col else False)
                             final_comments_df = processed_df[mask]
-                            all_comments = final_comments_df.to_dict('records')
+                            all_comments.extend(final_comments_df.to_dict('records'))
                             valid_in_file = int(final_comments_df["is_valid"].sum())
 
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
@@ -1098,8 +1103,13 @@ with tab3:
     )
     if text_input.strip():
         
-        if "bulk_results" in st.session_state:
-            del st.session_state.bulk_results
+        current_text_hash = str(hash(text_input))
+        if st.session_state.get("last_text_hash") != current_text_hash:
+            if "bulk_results" in st.session_state:
+                del st.session_state.bulk_results
+            if "comments_to_analyze" in st.session_state:
+                st.session_state.comments_to_analyze = []
+            st.session_state.last_text_hash = current_text_hash
             
         raw_lines = text_input.split('\n')
         processed_comments: List[Dict[str, Any]] = []
