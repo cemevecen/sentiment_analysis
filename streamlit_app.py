@@ -1126,7 +1126,7 @@ if comments_to_analyze:
         mode_idx = st.radio(
             "Analiz hızı ve doğruluk dengesini seçin:",
             options=[0, 1],
-            format_func=lambda x: ["Hızlı", "Yavaş (Daha Tutarlı)"][x],
+            format_func=lambda x: ["Genel", "Derin"][x],
             captions=[
                 f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
                 f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
