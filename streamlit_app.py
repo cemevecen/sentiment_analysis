@@ -1206,7 +1206,7 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("## ⚙️ Analiz Ayarları")
+    st.markdown("## Analiz Ayarları")
     
     n = len(comments_to_analyze)
 
@@ -1676,7 +1676,7 @@ if "bulk_results" in st.session_state:
 """, unsafe_allow_html=True)
 
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("## 📊 Analiz Sonuçları ve İstatistikler")
+    st.markdown("## Analiz Sonuçları ve İstatistikler")
     
     analysis_df = df[df["Baskın Duygu"] != "—"].copy()
     counts = analysis_df["Baskın Duygu"].value_counts()
@@ -1743,7 +1743,7 @@ if "bulk_results" in st.session_state:
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_summary:
-        st.write("### 📈 Duygu Dağılımı")
+        st.write("### Duygu Dağılımı")
         
         total_all = m_olumlu + m_olumsuz + m_istek
         diff_val = abs(m_olumlu - m_olumsuz)
@@ -1791,7 +1791,7 @@ if "bulk_results" in st.session_state:
         st.markdown("---")
         
         
-        st.write("### ⭐ Puan Dağılımı")
+        st.write("### Puan Dağılımı")
         freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -2210,19 +2210,19 @@ if "bulk_results" in st.session_state:
 
                 <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                     <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
+                        Stratejik Özet
                     </div>
                     <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
                         {display_summary}
                     </div>
                 </div>
                 <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
-                    📊 AI SENTIMENT INTELLIGENCE
+                    AI SENTIMENT INTELLIGENCE
                 </div>
             </div>
         """)
         st.markdown(card_html, unsafe_allow_html=True)
-        st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
+        st.info("Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
         
@@ -2373,7 +2373,7 @@ if "bulk_results" in st.session_state:
                 </button>
             """, unsafe_allow_html=True)
         with btn_cols[1]:
-            st.download_button("📊 EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+            st.download_button("EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
         with btn_cols[2]:
             components.html(f"""
                 <style>
