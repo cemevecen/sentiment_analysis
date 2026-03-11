@@ -1707,7 +1707,6 @@ if "bulk_results" in st.session_state:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     col_pie, col_summary = st.columns([1, 1])
     
     with col_pie:
@@ -1866,7 +1865,6 @@ if "bulk_results" in st.session_state:
         except Exception as e:
             st.error(f"Grafik oluşturma hatası: {e}")
 
-    st.markdown('</div>', unsafe_allow_html=True)
     
     
     all_pool = st.session_state.get("all_fetched_pool", [])
