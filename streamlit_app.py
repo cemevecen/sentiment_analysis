@@ -1712,34 +1712,51 @@ if "bulk_results" in st.session_state:
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
         
+        order_map = {"Olumlu": 1, "Olumsuz": 2, "İstek/Görüş": 3}
+        pie_data['order'] = pie_data['Duygu'].map(order_map).fillna(4)
+        pie_data = pie_data.sort_values('order')
         
-        color_map = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
+        color_map = {"Olumlu": "#34D399", "Olumsuz": "#FB7185", "İstek/Görüş": "#60A5FA"}
         pie_colors = [color_map.get(d, "#94a3b8") for d in pie_data["Duygu"]]
+        
+        t_val = m_olumlu + m_olumsuz + m_istek
+        pos_pct = int((m_olumlu / t_val) * 100) if t_val > 0 else 0
         
         fig_pie = go.Figure(data=[go.Pie(
             labels=pie_data["Duygu"], 
             values=pie_data["Sayı"],
-            hole=0.5,
-            pull=[0.05, 0.05, 0.05],
+            hole=0.82,
             marker=dict(
                 colors=pie_colors,
-                line=dict(color='#FFFFFF', width=3)
+                line=dict(color='#F0F9FF', width=6)
             ),
-            textinfo='percent+label',
-            textfont=dict(color='#000000', size=12),
-            insidetextorientation='radial'
+            textinfo='none',
+            hoverinfo='label+percent+value',
+            direction='clockwise',
+            sort=False
         )])
         
         fig_pie.update_layout(
-            height=380,
+            annotations=[
+                dict(
+                    text=f"<span style='font-size: 3.5rem; font-weight: 800; color: #1E293B;'>{pos_pct}%</span><br><span style='font-size: 0.95rem; color: #64748B; font-weight: 700; letter-spacing: 1px;'>OLUMLU</span>",
+                    x=0.5, y=0.5,
+                    showarrow=False,
+                    align="center"
+                )
+            ],
+            height=360,
             showlegend=True,
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             font=dict(color='#000000', family="Poppins, sans-serif"),
-            legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5, "font": {"color": "#000000"}},
-            margin={"t": 30, "b": 30, "l": 0, "r": 0}
+            legend=dict(
+                orientation="h", xanchor="center", x=0.5, y=-0.1,
+                font=dict(color="#475569", size=13)
+            ),
+            margin=dict(t=10, b=10, l=10, r=10)
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
         
         total_valid = m_olumlu + m_olumsuz + m_istek
         if total_valid > 0:
