@@ -1136,7 +1136,7 @@ if comments_to_analyze:
         )
     else:
         # Defaults for Hızlı Analiz
-        st.info("🚀 **Hızlı Analiz:** Anahtar kelimeler ve özel duygu kuralları üzerinden anlık değerlendirme yapar. Çok hızlı sonuç verir ve API kotanızı harcamaz.")
+        st.info("💡 **Hızlı Tarama:** Kelime bazlı analiz yapar. Yapay zeka kadar derinlemesine olmasa da anında sonuç verir ve kotanızı etkilemez.")
         st.session_state.analysis_mode = 0
         mode_idx = 0
 
