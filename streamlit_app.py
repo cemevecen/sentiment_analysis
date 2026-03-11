@@ -1114,32 +1114,36 @@ if comments_to_analyze:
         m, s = divmod(secs, 60)
         return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
 
-    analysis_type = st.radio(
-        "Analiz Yöntemi Seçin:",
-        options=["Hızlı Analiz", "Zengin Analiz"],
-        index=0,
-        horizontal=True,
-        key="analysis_type"
-    )
+    col_method, col_depth = st.columns([1, 1])
+    
+    with col_method:
+        analysis_type = st.radio(
+            "Yöntem:",
+            options=["Hızlı Analiz", "Zengin Analiz"],
+            index=0,
+            key="analysis_type"
+        )
+
+    with col_depth:
+        if analysis_type == "Zengin Analiz":
+            mode_idx = st.radio(
+                "Derinlik:",
+                options=[0, 1],
+                format_func=lambda x: ["Genel", "Derin"][x],
+                captions=[
+                    f"~ {fmt_time(n * 1)}",
+                    f"~ {fmt_time(n * 2)}"
+                ],
+                key="analysis_mode"
+            )
+        else:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.caption("**Hızlı Tarama:** Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
+            st.session_state.analysis_mode = 0
+            mode_idx = 0
 
     if analysis_type == "Zengin Analiz":
-        mode_idx = st.radio(
-            "Analiz hızı ve doğruluk dengesini seçin:",
-            options=[0, 1],
-            format_func=lambda x: ["Genel", "Derin"][x],
-            captions=[
-                f"tahmini {fmt_time(n * 1)}",
-                f"tahmini {fmt_time(n * 2)}"
-            ],
-            horizontal=True,
-            key="analysis_mode"
-        )
-        st.info("Sonuçlar daha hızlı ve derinlemesine taranır.")
-    else:
-        # Defaults for Hızlı Analiz
-        st.info("**Hızlı Tarama:** Kelime bazlı analiz yapar. Sonuçlar basit derinlikte taranır.")
-        st.session_state.analysis_mode = 0
-        mode_idx = 0
+        st.info("Sonuçlar yapay zeka tarafından derinlemesine taranır.")
 
 
 
