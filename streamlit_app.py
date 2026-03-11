@@ -1772,19 +1772,20 @@ if "bulk_results" in st.session_state:
             
             if len(words) >= 5:
                 counter = collections.Counter(words)
-                top_words = [w for w, c in counter.most_common(12)]
+                top_words = counter.most_common(12)
+                
+                tags_html = ""
+                for word, count in top_words:
+                    tags_html += f'<span style="display: inline-block; background-color: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; padding: 4px 10px; margin: 3px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">#{word}</span>'
                 
                 st.markdown(f"""
-                <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; margin-top: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: -15px;">
+                <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; margin-top: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
                     <div style="font-size: 0.85rem; color: #64748B; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">En Kritik Kelimeler</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 2px;">
+                        {tags_html}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                selected_pill = st.pills("En Kritik Kelimeler", options=top_words, selection_mode="single", key="word_filter_pills", label_visibility="collapsed")
-                if selected_pill != st.session_state.get('last_selected_pill'):
-                    st.session_state.last_selected_pill = selected_pill
-                    st.session_state.scroll_to_yorumlar = True
-
 
     with col_summary:
         st.write("### Duygu Dağılımı")
@@ -2094,40 +2095,16 @@ if "bulk_results" in st.session_state:
                     st.rerun()
 
     
-    st.markdown("<div id='yorumlar_scroll'></div>", unsafe_allow_html=True)
     st.write("### Yorum Listesi")
     
-    if st.session_state.get("scroll_to_yorumlar"):
-        st.session_state.scroll_to_yorumlar = False
-        components.html("""
-        <script>
-            var elt = window.parent.document.getElementById("yorumlar_scroll");
-            if(elt) { elt.scrollIntoView({behavior: "smooth", block: "start"}); }
-        </script>
-        """, height=0)
-        
-    active_filter = st.session_state.get("word_filter_pills")
-    
-    if active_filter:
-        if st.button("❌ Filtreyi Temizle", key="clear_pill_filter"):
-            st.session_state.word_filter_pills = None
-            st.session_state.last_selected_pill = None
-            st.rerun()
-            
-        st.info(f"🔍 Sadece içinde **'{active_filter}'** kelimesi geçen yorumlar listeleniyor.")
-        list_df = df[df["Yorum"].str.contains(r'\\b' + active_filter + r'\\b', case=False, na=False, regex=True)].copy()
-        list_analysis_df = list_df[list_df["Baskın Duygu"] != "—"].copy()
-    else:
-        list_df = df.copy()
-        list_analysis_df = analysis_df.copy()
     
     yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    t_pos = len(list_df[list_df["Baskın Duygu"] == "Olumlu"])
-    t_neg = len(list_df[list_df["Baskın Duygu"] == "Olumsuz"])
-    t_neu = len(list_df[list_df["Baskın Duygu"] == "İstek/Görüş"])
-    t_all = len(list_analysis_df)
+    t_pos = counts.get('Olumlu', 0)
+    t_neg = counts.get('Olumsuz', 0)
+    t_neu = counts.get('İstek/Görüş', 0)
+    t_all = len(analysis_df)
 
     tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
         f"Analizler ({t_all})", 
@@ -2137,21 +2114,21 @@ if "bulk_results" in st.session_state:
     ])
 
     with tab_all:
-        f_df = render_trend_chart(list_analysis_df, "all", "(Genel)", freq=yorum_freq)
+        f_df = render_trend_chart(analysis_df, "all", "(Genel)", freq=yorum_freq)
         display_comments(f_df, "all", highlight=False)
     
     with tab_pos:
-        pos_df = list_df[list_df["Baskın Duygu"] == "Olumlu"]
+        pos_df = df[df["Baskın Duygu"] == "Olumlu"]
         f_df = render_trend_chart(pos_df, "pos", "(Olumlu)", freq=yorum_freq)
         display_comments(f_df, "pos")
         
     with tab_neg:
-        neg_df = list_df[list_df["Baskın Duygu"] == "Olumsuz"]
+        neg_df = df[df["Baskın Duygu"] == "Olumsuz"]
         f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)", freq=yorum_freq)
         display_comments(f_df, "neg")
         
     with tab_neu:
-        neu_df = list_df[list_df["Baskın Duygu"] == "İstek/Görüş"]
+        neu_df = df[df["Baskın Duygu"] == "İstek/Görüş"]
         f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)", freq=yorum_freq)
         display_comments(f_df, "neu")
 
