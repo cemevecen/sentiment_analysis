@@ -1137,13 +1137,14 @@ if comments_to_analyze:
                 key="analysis_mode"
             )
         else:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.caption("**Hızlı Tarama:** Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
+            # Use placeholders or simple spacers to keep the UI aligned if needed
             st.session_state.analysis_mode = 0
             mode_idx = 0
 
     if analysis_type == "Zengin Analiz":
         st.info("Sonuçlar yapay zeka tarafından derinlemesine taranır.")
+    else:
+        st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
 
 
