@@ -442,7 +442,7 @@ st.markdown("""
         font-family: 'Poppins', sans-serif;
         font-size: 3.2rem;
         font-weight: 700;
-        color: #6366F1;
+        color: #2563EB !important;
         margin-bottom: 15px;
     }
     .header-desc {
