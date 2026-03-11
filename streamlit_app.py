@@ -428,22 +428,24 @@ st.markdown("""
         color: #000000 !important;
     }
     
-    /* Header Card - White */
+    /* Header Card - Neumorphic */
     .header-container {
-        background-color: #FFFFFF !important;
-        border: 2px solid #E2E8F0;
-        border-radius: 20px;
-        padding: 20px;
-        margin-bottom: 5px;
+        background-color: #F0F9FF !important;
+        border: none !important;
+        border-radius: 30px;
+        padding: 25px;
+        margin-top: 15px;
+        margin-bottom: 25px;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        box-shadow: -10px -10px 20px #FFFFFF, 10px 10px 20px #D1E5F4 !important;
     }
     .header-title {
         font-family: 'Poppins', sans-serif;
         font-size: 3.2rem;
         font-weight: 700;
-        color: #2563EB !important;
-        margin-bottom: 15px;
+        color: #475569 !important;
+        margin-bottom: 0px !important;
+        letter-spacing: -0.5px;
     }
     .header-desc {
         color: #64748b;
