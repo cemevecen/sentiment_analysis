@@ -1114,17 +1114,31 @@ if comments_to_analyze:
         m, s = divmod(secs, 60)
         return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
 
-    mode_idx = st.radio(
-        "Analiz hızı ve doğruluk dengesini seçin:",
-        options=[0, 1],
-        format_func=lambda x: ["Hızlı", "Yavaş (Daha Tutarlı)"][x],
-        captions=[
-            f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
-            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
-        ],
+    analysis_type = st.radio(
+        "Analiz Yöntemi Seçin:",
+        options=["Hızlı Analiz", "Zengin Analiz"],
+        index=0,
         horizontal=True,
-        key="analysis_mode"
+        key="analysis_type"
     )
+
+    if analysis_type == "Zengin Analiz":
+        mode_idx = st.radio(
+            "Analiz hızı ve doğruluk dengesini seçin:",
+            options=[0, 1],
+            format_func=lambda x: ["Hızlı", "Yavaş (Daha Tutarlı)"][x],
+            captions=[
+                f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
+                f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
+            ],
+            horizontal=True,
+            key="analysis_mode"
+        )
+    else:
+        # Defaults for Hızlı Analiz
+        st.info("⚡ Heuristic (Kural Bazlı) analiz kullanılıyor. API limiti harcanmaz ve çok hızlıdır.")
+        st.session_state.analysis_mode = 0
+        mode_idx = 0
 
 
 
@@ -1311,7 +1325,9 @@ def run_bulk_analysis(data_to_process, is_append=False):
     st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
     st.session_state['_quota_hits'] = 0
             
+    analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
     mode_idx = st.session_state.get("analysis_mode", 0)
+    
     if mode_idx == 0:
         ANALYSIS_MODEL = 'gemini-2.5-flash'
         RPM_LIMIT = 500
@@ -1359,11 +1375,15 @@ def run_bulk_analysis(data_to_process, is_append=False):
         if not is_valid or not comment:
             return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
         
-        res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
-        err = None
-        if res_api is None or "_error" in res_api:
-            err = res_api["_error"] if res_api else "unknown"
+        if analysis_type == "Hızlı Analiz":
             res_api = heuristic_analysis(comment)
+            err = None
+        else:
+            res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
+            err = None
+            if res_api is None or "_error" in res_api:
+                err = res_api["_error"] if res_api else "unknown"
+                res_api = heuristic_analysis(comment)
         
         scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
         verdict = max(scores, key=scores.get)
