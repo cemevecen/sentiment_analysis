@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import threading
 from streamlit_lottie import st_lottie
 from google import genai
 from google.genai import types as genai_types
@@ -141,6 +142,9 @@ elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
 
 # Sidebar API Configuration
 st.sidebar.title("🤖 AI Ayarları")
+cost_now = API_TRACKER.get("cost_tl", 0.0)
+if cost_now > 0:
+    st.sidebar.caption(f"💰 Tahmini Maliyet: ₺{cost_now:.2f} / ₺150")
 ai_provider = st.sidebar.selectbox(
     "AI Sağlayıcı:",
     options=["Google Gemini", "Mistral AI", "Groq AI"],
@@ -1389,172 +1393,180 @@ if comments_to_analyze:
         st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
 
-def get_ai_sentiment(text, model_name=None, provider=None):
-    if API_TRACKER["cost_tl"] >= 150.0:
-        return {"_error": "cost_limit"}
-    
-    if provider is None:
-        provider = st.session_state.get('current_ai_provider', 'Google Gemini')
-    if model_name is None:
-        model_name = st.session_state.get('current_ai_model', 'models/gemini-2.0-flash')
+_rate_state = {"Groq AI": [], "Google Gemini": [], "Mistral AI": []}
+_rate_lock  = threading.Lock()
+RPM_LIMITS  = {"Groq AI": 28, "Google Gemini": 28, "Mistral AI": 4}
+PROVIDER_CHAIN = ["Groq AI", "Google Gemini", "Mistral AI"]
+CONFIDENCE_THRESHOLD = 0.82
+COST_LIMIT_TL = 150.0
 
-    prompt = f"""Sen çok dilli (Türkçe, İngilizce, Arapça vb.) bir uygulama mağaza yorumu duygu analizi uzmanısın.
-Aşağıdaki yorumu hangi dilde olursa olsun analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
+_MODEL_MAP = {
+    "Groq AI":       "llama-3.3-70b-versatile",
+    "Google Gemini": "models/gemini-2.0-flash",
+    "Mistral AI":    "mistral-small-latest",
+}
+
+def _is_provider_available(provider):
+    limit = RPM_LIMITS.get(provider, 10)
+    with _rate_lock:
+        now = time.time()
+        _rate_state[provider] = [t for t in _rate_state[provider] if now - t < 60.0]
+        return len(_rate_state[provider]) < limit
+
+def _record_api_call(provider):
+    with _rate_lock:
+        _rate_state[provider].append(time.time())
+
+def _build_prompt(text):
+    return f"""Sen çok dilli uygulama mağaza yorumu analizi uzmanısın.
+Yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
 KATEGORİLER:
-- olumlu: Kullanıcı memnun, övüyor, teşekkür ediyor, tavsiye ediyor. (happy, great, love, ممتاز, احبه vb.)
-- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, kızgın, hayal kırıklığı var. (bad, terrible, سيء, أسوأ vb.)
-- istek_gorus: Tarafsız öneri, soru, beklenti. Olumlu da olumsuz da değil. (when will X?, please add Y vb.)
+- olumlu: Memnun, övgü, teşekkür, tavsiye.
+- olumsuz: Şikayet, sorun, kızgınlık, hayal kırıklığı.
+- istek_gorus: Tarafsız öneri, soru, beklenti.
 
-KARAR KURALLARI (önem sırasına göre):
-1. Son cümle/edit baskındır. Başta şikayet, sonda çözüm varsa → olumlu.
-2. Başta iltifat, sonda şikayet varsa → olumsuz.
-3. Ironi/alaycılık → olumsuz.
-4. Karışık ama net şikayet sonuçlanıyorsa → olumsuz.
-5. Karışık ama net memnuniyet sonuçlanıyorsa → olumlu.
-
-SOMUT ÖRNEKLER - TÜRKÇE - OLUMLU:
-"harika uygulama teşekkürler" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"çok güzel, mükemmel" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"beş yıldız hak ediyor" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
-"güncelleme sonrası düzeldi sağolun" → {{"olumlu":0.88,"olumsuz":0.07,"istek_gorus":0.05}}
-"işe yarıyor, memnunum" → {{"olumlu":0.85,"olumsuz":0.08,"istek_gorus":0.07}}
-"fena değil" → {{"olumlu":0.65,"olumsuz":0.15,"istek_gorus":0.20}}
-
-SOMUT ÖRNEKLER - TÜRKÇE - OLUMSUZ:
-"uygulama açılmıyor, düzeltin" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"donuyor ve kapanıyor, berbat" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"yaramaz bu uygulama" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"iyiydi ama son güncellemeden sonra bozuldu" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
-"teşekkürler ama hâlâ açılmıyor" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
-"helal olsun, yine çöktü" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
-"para iade etmiyorlar, dolandırıcılık" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"çok yavaş, kasıyor" → {{"olumlu":0.03,"olumsuz":0.94,"istek_gorus":0.03}}
-"reklam çok fazla, rahatsız edici" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
-
-SOMUT ÖRNEKLER - TÜRKÇE - İSTEK/GÖRÜŞ:
-"şu özelliği ekleseniz çok iyi olur" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"ne zaman karanlık mod gelecek?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
-
-SOMUT ÖRNEKLER - İNGİLİZCE - OLUMLU:
-"Great app, love it!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"Good" → {{"olumlu":0.85,"olumsuz":0.05,"istek_gorus":0.10}}
-"Amazing experience, highly recommend!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"Works perfectly, no issues" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
-"Excellent customer service, got my refund quickly" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
-
-SOMUT ÖRNEKLER - İNGİLİZCE - OLUMSUZ:
-"Terrible app, keeps crashing" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Not recommended" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
-"Doesn't work at all" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"App crashes every time I open it" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Can't login, stuck on loading screen" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"I never received my refund after contacting support many times!" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Prices shown are different from what you actually pay" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Received wrong item and no one is helping" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"Scam! Don't trust them" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-
-SOMUT ÖRNEKLER - İNGİLİZCE - İSTEK/GÖRÜŞ:
-"When will the US be able to use this app?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
-"Please add dark mode" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-
-SOMUT ÖRNEKLER - ARAPÇA - OLUMLU:
-"ممتاز" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
-"احبه" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"رائع جداً وسهل الاستخدام" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
-"أفضل تطبيق، أنصح به الجميع" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-
-SOMUT ÖRNEKLER - ARAPÇA - OLUMSUZ:
-"سيء جدا جدا جدا جدا أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"أخيس تطبيق" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"اسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-"لا يعمل التطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"يتعطل باستمرار" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"لا أستطيع الدخول إلى حسابı" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"لم أستلم أمwal الاسترجاع رغم تواصلي مرات عديدة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"الموقع ممتاز لكن عند الاسترجاع لا تصلك الامwal" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
-"سعر المنتج قبل اضافته للسله يختلف عن بعد الاضافة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"yتم شحن الwal مختلفه واغراض غير اصليه بجودة رdiئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
-
-SOMUT ÖRNEKLER - ARAPÇA - İSTEK/GÖRÜŞ:
-"أتمنى أن يضيفوا خاصية البحث بالصور" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"متى سيكون التطبيق mتاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
-"مو سامح لي اختar دولة" → {{"olumlu":0.05,"olumsuz":0.40,"istek_gorus":0.55}}
+KARAR KURALLARI:
+1. Son cümle baskındır. Başta şikayet sonda çözüm → olumlu.
+2. Başta iltifat sonda şikayet → olumsuz.
+3. İroni/sarkasm → olumsuz.
 
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
 
-ZENGİN ANALİZ EK NOTU: Eğer kullanıcı "Zengin ve Derin" seçmişse, yorumdaki alt metinleri, imaları ve yapısal eleştirileri de dikkate al.
-
-Yorum: "{text}"
+Yorum: "{text[:500]}"
 """
 
-    content = ""
+def _parse_response(content, provider):
     try:
-        if provider == "Google Gemini":
-            response = GEMINI_CLIENT.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(temperature=0)
-            )
-            meta = getattr(response, 'usage_metadata', None)
-            if meta:
-                prompt_tokens = getattr(meta, 'prompt_token_count', 0)
-                cand_tokens = getattr(meta, 'candidates_token_count', 0)
-                is_pro = 'pro' in model_name.lower()
-                cost_in = prompt_tokens * (3.50 if is_pro else 0.075) / 1000000
-                cost_out = cand_tokens * (10.50 if is_pro else 0.30) / 1000000
-                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0 
-            content = response.text
-        elif provider == "Mistral AI":
-            response = MISTRAL_CLIENT.chat.complete(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            usage = getattr(response, 'usage', None)
-            if usage:
-                p_t = getattr(usage, 'prompt_tokens', 0)
-                c_t = getattr(usage, 'completion_tokens', 0)
-                is_large = 'large' in model_name.lower()
-                cost_in = p_t * (2.0 if is_large else 0.2) / 1000000
-                cost_out = c_t * (6.0 if is_large else 0.6) / 1000000
-                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
-            content = response.choices[0].message.content
-        elif provider == "Groq AI":
-            response = GROQ_CLIENT.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0
-            )
-            usage = getattr(response, 'usage', None)
-            if usage:
-                p_t = getattr(usage, 'prompt_tokens', 0)
-                c_t = getattr(usage, 'completion_tokens', 0)
-                # Groq pricing is much lower usually
-                cost_in = p_t * 0.1 / 1000000
-                cost_out = c_t * 0.4 / 1000000
-                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
-            content = response.choices[0].message.content
-    except Exception as e:
-        return {"_error": f"{provider} hatası: {str(e)[:100]}"}
+        match = re.search(r'\{[^{}]*"olumlu"[^{}]*\}', content, re.DOTALL)
+        if not match:
+            return None
+        data  = json.loads(match.group())
+        p     = float(data.get("olumlu",     0))
+        n     = float(data.get("olumsuz",    0))
+        neu   = float(data.get("istek_gorus",0))
+        total = p + n + neu
+        if total <= 0:
+            return None
+        return {
+            "olumlu":      round(p   / total, 4),
+            "olumsuz":     round(n   / total, 4),
+            "istek_gorus": round(neu / total, 4),
+            "method":      provider,
+        }
+    except Exception:
+        return None
 
-    match = re.search(r'\{.*?\}', content, re.DOTALL)
-    if match:
-        try:
-            data = json.loads(match.group())
-            p = float(data.get("olumlu", 0))
-            n = float(data.get("olumsuz", 0))
-            neu = float(data.get("istek_gorus", 0))
-            total = p + n + neu
-            if total > 0:
-                return {
-                    "olumlu": p/total, 
-                    "olumsuz": n/total, 
-                    "istek_gorus": neu/total,
-                    "method": model_name.split('/')[-1]
-                }
-        except: pass
-    return {"_error": "Yapay zeka yanıtı anlaşılamadı."}
+def _call_groq(text, client, model):
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": _build_prompt(text)}],
+            temperature=0,
+            timeout=12,
+        )
+        usage = getattr(resp, "usage", None)
+        if usage:
+            p_t = getattr(usage, "prompt_tokens", 0)
+            c_t = getattr(usage, "completion_tokens", 0)
+            API_TRACKER["cost_tl"] += (p_t * 0.1 + c_t * 0.4) / 1_000_000 * 36.0
+        return _parse_response(resp.choices[0].message.content or "", "Groq AI")
+    except Exception:
+        return None
+
+def _call_gemini(text, client, model):
+    try:
+        resp = client.models.generate_content(
+            model=model,
+            contents=_build_prompt(text),
+            config=genai_types.GenerateContentConfig(temperature=0),
+        )
+        meta = getattr(resp, "usage_metadata", None)
+        if meta:
+            p_t = getattr(meta, "prompt_token_count", 0)
+            c_t = getattr(meta, "candidates_token_count", 0)
+            is_pro = "pro" in model.lower()
+            cost_in  = p_t * (3.50 if is_pro else 0.075) / 1_000_000
+            cost_out = c_t * (10.50 if is_pro else 0.30)  / 1_000_000
+            API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
+        return _parse_response(getattr(resp, "text", "") or "", "Google Gemini")
+    except Exception:
+        return None
+
+def _call_mistral(text, client, model):
+    try:
+        resp = client.chat.complete(
+            model=model,
+            messages=[{"role": "user", "content": _build_prompt(text)}],
+        )
+        usage = getattr(resp, "usage", None)
+        if usage:
+            p_t = getattr(usage, "prompt_tokens", 0)
+            c_t = getattr(usage, "completion_tokens", 0)
+            is_large = "large" in model.lower()
+            cost_in  = p_t * (2.0 if is_large else 0.2) / 1_000_000
+            cost_out = c_t * (6.0 if is_large else 0.6) / 1_000_000
+            API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
+        return _parse_response(resp.choices[0].message.content or "", "Mistral AI")
+    except Exception:
+        return None
+
+_CALLER_MAP = {
+    "Groq AI":       _call_groq,
+    "Google Gemini": _call_gemini,
+    "Mistral AI":    _call_mistral,
+}
+_CLIENT_MAP_FN = lambda: {
+    "Groq AI":       GROQ_CLIENT,
+    "Google Gemini": GEMINI_CLIENT,
+    "Mistral AI":    MISTRAL_CLIENT,
+}
+
+def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
+    """
+    Hibrit AI zinciri: Heuristic önfiltre → Groq → Gemini → Mistral → Fallback.
+    Asla exception fırlatmaz. Her zaman geçerli dict döner.
+    """
+    FALLBACK = {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33,
+                "method": "Heuristic+Fallback"}
+
+    if not text or len(str(text).strip()) < 2:
+        return FALLBACK
+
+    # Maliyet limiti
+    if API_TRACKER["cost_tl"] >= COST_LIMIT_TL:
+        return {"_error": "cost_limit"}
+
+    # Heuristic önfiltre
+    h = heuristic_analysis(text, rating=rating)
+    max_conf = max(h["olumlu"], h["olumsuz"], h["istek_gorus"])
+    if max_conf >= CONFIDENCE_THRESHOLD:
+        h["method"] = "Heuristic+Skip"
+        return h
+
+    # Provider zinciri
+    clients = _CLIENT_MAP_FN()
+    chain = [provider] if provider else PROVIDER_CHAIN
+
+    for prov in chain:
+        client = clients.get(prov)
+        if client is None:
+            continue
+        if not _is_provider_available(prov):
+            continue
+        model = model_name if provider else _MODEL_MAP[prov]
+        caller = _CALLER_MAP.get(prov)
+        if caller is None:
+            continue
+        _record_api_call(prov)
+        result = caller(text, client, model)
+        if result is not None:
+            return result
+
+    # Tüm provider'lar başarısız
+    h["method"] = "Heuristic+Fallback"
+    return h
 
 
 def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=None, provider=None):
@@ -2154,28 +2166,41 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
     def fetch_sentiment_worker(args):
         idx, entry = args
-        comment = str(entry.get("text", ""))[:1000] 
-        is_valid = entry.get("is_valid", True)
-        if not is_valid or not comment or len(comment.strip()) < 2:
-            return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
-        
-        current_rating = entry.get("rating")
-        if analysis_type == "Hızlı Analiz":
-            res_api = heuristic_analysis(comment, rating=current_rating)
-            err = None
-        else:
-            res_api = get_ai_sentiment(comment, model_name=ANALYSIS_MODEL)
-            err = None
-            if res_api is None or "_error" in res_api:
-                err = res_api["_error"] if res_api else "unknown"
+        try:
+            comment = str(entry.get("text", ""))[:1000].strip()
+            is_valid = entry.get("is_valid", True)
+            if not is_valid or not comment or len(comment) < 2:
+                return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0,
+                                    "method": "Skipped"}, "—", None
+
+            current_rating = entry.get("rating")
+
+            if analysis_type == "Hızlı Analiz":
                 res_api = heuristic_analysis(comment, rating=current_rating)
-        
-        scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
-        verdict = str(max(scores, key=lambda k: scores[k]))
-        return idx, entry, res_api, verdict, err
+                err = None
+            else:
+                res_api = get_ai_sentiment(
+                    text=comment,
+                    rating=current_rating,
+                )
+                err = None
+                if "_error" in res_api:
+                    err = res_api.get("_error", "unknown")
+                    res_api = heuristic_analysis(comment, rating=current_rating)
+                    res_api["method"] = "Heuristic+Fallback"
+
+            scores  = {"Olumlu": res_api["olumlu"], "Olumsuz": res_api["olumsuz"],
+                       "İstek/Görüş": res_api["istek_gorus"]}
+            verdict = str(max(scores, key=lambda k: scores[k]))
+            return idx, entry, res_api, verdict, err
+
+        except Exception:
+            safe = {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33,
+                    "method": "Error+Fallback"}
+            return idx, entry, safe, "—", None
 
     completed_count = 0
-    workers = 10 if mode_idx == 0 else 6
+    workers = 20 if analysis_type == "Hızlı Analiz" else 10
     
     start_offset = len(bulk_results)
 
