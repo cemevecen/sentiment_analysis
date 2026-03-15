@@ -1784,6 +1784,207 @@ def heuristic_analysis(text):
         "könntet ihr", "wann kommt",
     ]
 
+    # ── YENİ NEGATİF KEYWORDLER (751-1750 yorumlardan) ──────────────────────────
+    neg_words_new = [
+        # TR — Fotoğraf/galeri karışıklığı (ÇOK SIK yeni sorun)
+        "fotoğraflar karışık", "sıralanmıyor", "tarih sırasına göre değil",
+        "galeri karışık", "fotoğraf seçemiyorum", "fotoğraf açılmıyor",
+        "foto açılamadı", "resim yüklenmiyor", "fotoğraf yüklenmiyor",
+        "albüm karışık", "sonraki fotoğraflar gelmiyor",
+
+        # TR — Ses sorunları
+        "ses yok", "ses gitmiyor", "ses çalışmıyor", "ses oynatılamıyor",
+        "audio çalışmıyor", "sessize alma çalışmıyor",
+
+        # TR — Cihaz/giriş sorunları
+        "telefonumdan giremiyorum", "uygulamadan giremiyorum",
+        "safariden giriyor ama uygulamadan girmiyor",
+        "şifre doğru ama yanlış diyor", "şifre yanlış hatası",
+        "başka cihazdan giriyor ama bu telefondan girmiyor",
+        "güncelledim ama giremiyorum", "bilinmeyen bir hata",
+        "bir sorun oluştu", "sürekli hata veriyor",
+
+        # TR — IP/cihaz ban
+        "ip ban", "cihaz ban", "cihaz banı", "ip banı",
+        "yeni hesap açınca da kapanıyor", "açtığım her hesap kapanıyor",
+        "10 hesap açtım hepsi kapandı", "her hesap kapatılıyor",
+
+        # TR — Özellik gelmiyor
+        "bana gelmiyor", "hesabıma gelmiyor", "özellik gelmiyor",
+        "çoklu profil gelmiyor", "repost gelmiyor", "tekrar paylaşım yok",
+        "güncelleme gelmiyor", "yeni özellikler gelmiyor",
+        "herkeste var bende yok",
+
+        # EN — Photos out of order (very frequent new bug)
+        "photos out of order", "pictures out of order", "not in chronological order",
+        "photos not sorted", "photos jumbled", "can't find recent photos",
+        "photos all mixed up", "gallery mixed up", "photos by date",
+        "scroll through all photos", "latest photos not showing",
+        "photos from years ago mixed",
+
+        # EN — Login via browser but not app
+        "can login on safari but not app", "works on browser not app",
+        "can log in on computer but not app", "login works on web not app",
+        "app won't let me login but website does",
+
+        # EN — CSE false ban (very high frequency)
+        "falsely banned for cse", "cse ban", "false cse", "wrongfully banned cse",
+        "child exploitation false", "falsely accused cse", "accused of cse",
+        "banned for cse", "cse false positive", "wrongful cse",
+
+        # EN — No human support
+        "no human support", "no human review", "ai no human",
+        "automated system", "no real person", "can't reach anyone",
+        "no way to contact", "zero support", "no support contact",
+        "appeal ignored", "appeal rejected instantly", "appeal in seconds",
+        "months without response", "no response to appeal",
+
+        # EN — Account hacked then banned
+        "account hacked then banned", "hacked and suspended",
+        "banned after hack", "suspended due to hacker",
+
+        # EN — Microphone not working
+        "microphone not working", "mic not working", "can't send voice notes",
+        "voice notes not working", "no one can hear me",
+
+        # EN — Ads every 2 posts
+        "ad every", "every 2 posts ad", "every other post ad",
+        "ads between every", "non stop ads", "constant ads",
+        "too many ads", "flooded with ads", "full of ads",
+        "ad breaks", "pause ads", "mid video ads",
+
+        # EN — Photos not uploading after update
+        "can't upload photos", "photos won't upload", "upload photos broken",
+        "can't post pictures", "photos not appearing", "can't select photos",
+
+        # EN — Saved posts bug
+        "saved posts jumping to top", "saved posts going back to start",
+        "unsave sends to top", "saved collection bug", "saved reels limit",
+
+        # EN — Story bug
+        "story comments not working", "can't comment on stories",
+        "story not loading", "stories not showing",
+
+        # EN — Sound blasting in stories
+        "sound blasts", "sound loud in stories", "volume increases",
+
+        # RU — Фото не по порядку
+        "фото не по порядку", "галерея перемешана", "фотографии перемешались",
+        "не сортируются", "вперемешку", "не по дате",
+        "не могу загрузить foto", "фото не загружается",
+
+        # RU — IP/устройство заблокировано
+        "блокируют все аккаунты", "каждый аккаунт блокируют",
+        "не дают создать аккаунт", "каждый новый аккаунт",
+
+        # FR — Photos mélangées
+        "photos mélangées", "pas dans l'ordre", "photos dans le désordre",
+        "photos chronologiques", "photos triées par date",
+        "photos en vrac", "impossible de trouver",
+
+        # FR — Bannissement faux
+        "banni sans raison", "compte supprimé sans raison",
+        "comptes suspendus", "suspension sans raison",
+        "faux bannissement", "intelligence artificielle banni",
+
+        # DE — Fotos durcheinander (sehr häufig)
+        "fotos durcheinander", "fotos nicht nach datum", "bilder durcheinander",
+        "bilder nicht sortiert", "fotos chronologisch", "neueste fotos nicht",
+        "fotos gemischt", "galerie durcheinander",
+
+        # DE — KI-Sperre
+        "konto gesperrt ki", "ki sperrt", "grundlos gesperrt",
+        "ohne grund gesperrt", "falscher ban",
+
+        # ES — Fotos desordenadas
+        "fotos desordenadas", "fotos mezcladas", "no están ordenadas",
+        "fotos por fecha", "fotos no orden cronológico",
+        "fotos antiguas mezcladas",
+
+        # IT/PT — 
+        "foto disordinate", "foto mescolate",
+        "fotos desordenadas", "fotos embaralhadas",
+
+        # TR/EN — Reklam aralarında duraklatma
+        "reklam duraklatma", "pause publicitaire", "pausa publicitaria",
+        "werbepause", "ad pause", "ad break mid video",
+
+        # TR/EN — Kayıtlar başa dönüyor
+        "kaydedilenlerden silince başa dönüyor",
+        "saved posts back to top", "jumps to top",
+        "goes back to beginning", "scroll back to start",
+
+        # TR — Arşiv/anı yok
+        "anılar yok", "arşiv yok", "geçmiş hikayeler gözükmüyor",
+        "eski hikayeler yok", "anılar çıkmıyor",
+
+        # TR — Sticker/filtre sorunu
+        "sticker yok", "filtre yok", "eski filtreler gitti",
+        "efektler kaldırıldı", "filtreler kötü",
+
+        # EN — Flicker/black screen reels
+        "reels flickering", "screen flickers", "black screen reels",
+        "reel goes black", "video goes black",
+    ]
+
+    # ── YENİ OLUMLU KEYWORDLER ──────────────────────────────────────────────────
+    pos_words_new = [
+        # Çok kısa ama net olumlu
+        "megaa", "mega", "muhteşem", "şahane", "bayıldım",
+        "keremett", "kermet", "мощь", "огонь", "нравится",
+        "très bien", "très bonne", "très pratique", "très utile",
+        "muy buena", "muy bien", "muy útil", "excelente app",
+        "aplicação ótima", "ótima aplicação",
+        "bellissima", "ottima", "bravissimi",
+        "świetna", "super aplikacja",
+        "çok iyi uygulama", "çok beğendim", "çok güzel uygulama",
+        "harika uygulama", "mükemmel uygulama",
+    ]
+
+    # ── YENİ İSTEK/GÖRÜŞ KEYWORDLER ─────────────────────────────────────────────
+    neu_words_new = [
+        # Fotoğraf sıralama isteği
+        "kronolojik sıra", "tarih sırasına göre sıralasın",
+        "fotoğrafları sıralayın", "date order please",
+        "chronological order please", "sort by date",
+
+        # Özellik isteği — yeni
+        "repost özelliği gelsin", "repost geri gelsin",
+        "bring back repost", "add repost", "repost feature",
+        "profile views please", "profil görüntüleme gelsin",
+        "takipten çıkanları görelim", "unfollow tracker",
+        "story comments please", "hikaye yorumları gelsin",
+        "live for everyone", "canlı yayın herkese",
+        "remove follower limit live", "live without followers",
+        "dark mode please", "dark mode gelsin",
+        "offline mode", "çevrimdışı mod",
+        "multiple profile photos", "çoklu profil fotoğrafı gelsin",
+        "bring back filters", "eski filtreleri geri getir",
+        "lagos filter back", "abu dhabi filter",
+        "bring back stories acceleration", "hikaye hızlandırma gelsin",
+        "add music to posted photo", "atılmış gönderiye müzik",
+        "change music on post", "posted photo music change",
+        "reorganize posts", "gönderi sırasını değiştir",
+        "add photos to existing post", "mevcut gönderiye fotoğraf ekle",
+        "close friends multiple lists", "yakın arkadaş birden fazla",
+        "hide followers list", "takipçi listesi gizle",
+        "remove friends tab", "arkadaşlar sekmesi kaldır",
+        "more hashtags", "daha fazla hashtag",
+        "search in saved", "kaydedilenlerda ara",
+        "delete all likes", "tüm beğenileri sil",
+        "select all delete messages", "toplu mesaj sil",
+        "stop story notifications", "hikaye bildirimleri kapat",
+        "disable notes expiry notification", "not süresi bildirimi kapat",
+        "allow 1 minute stories", "1 dakika hikaye",
+        "disable reels", "reels kapat",
+        "remove reel from homepage", "anasayfada reel olmasın",
+    ]
+
+    # 750-1750 yorumlardan öğrenilen yeni pattern'lar
+    neg_words.extend(neg_words_new)
+    pos_words.extend(pos_words_new)
+    neu_words.extend(neu_words_new)
+
     # ── PUAN BAZLI GÜÇLÜ SİNYALLER (yorum içinde geçen puan ifadeleri) ──────
     if any(x in t for x in ["puan: 1", "1/5", "one star", "ein stern", "1 étoile"]):
         neg_words.append("___FORCE_NEG___")
