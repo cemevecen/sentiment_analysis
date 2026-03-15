@@ -338,21 +338,35 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     threshold_date = now - timedelta(days=days_limit)
     
     
+    # Multi-language and Multi-region configuration
+    LANG_COUNTRY_PAIRS = [
+        ('tr', 'tr'),
+        ('en', 'us'),
+        ('en', 'gb'),
+        ('ar', 'sa'),
+        ('de', 'de'),
+        ('fr', 'fr'),
+        ('ru', 'ru'),
+        ('nl', 'nl'),
+        ('es', 'es'),
+    ]
+    
     sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
     scores = [1, 2, 3, 4, 5]
     channels = []
     for s in sort_strategies:
         for sc in scores:
-            channels.append((s, sc))
+            for lang, country in LANG_COUNTRY_PAIRS:
+                channels.append((s, sc, lang, country))
             
-    def fetch_channel(sort_type, score):
+    def fetch_channel(sort_type, score, lang, country):
         channel_data = []
         token = None
         
         for _ in range(30):
             try:
                 result, token = play_reviews(
-                    app_id, lang='tr', country='tr',
+                    app_id, lang=lang, country=country,
                     sort=sort_type, count=200,
                     filter_score_with=score,
                     continuation_token=token
@@ -370,7 +384,9 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                             content = str(r.get('content', ''))
                             if content and len(content.strip()) >= 2:
                                 r_id = r.get('reviewId', content)
-                                channel_data.append({"id": r_id, "text": content, "date": r_at, "rating": str(score)})
+                                # Append language info to ID to avoid collisions across regions
+                                unique_id = f"{r_id}_{lang}_{country}"
+                                channel_data.append({"id": unique_id, "text": content, "date": r_at, "rating": str(score)})
                         else:
                             if sort_type == Sort.NEWEST: out_of_range = True
                 
@@ -380,8 +396,8 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
 
     total_channels = len(channels)
     completed_channels = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_channel = {executor.submit(fetch_channel, s, sc): (s, sc) for s, sc in channels}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        future_to_channel = {executor.submit(fetch_channel, s, sc, l, c): (s, sc, l, c) for s, sc, l, c in channels}
         for future in concurrent.futures.as_completed(future_to_channel):
             completed_channels += 1
             if _progress_callback: _progress_callback(min(completed_channels / total_channels, 0.99))
@@ -901,7 +917,7 @@ with tab1:
     with st.container(border=True):
         col_u, col_r = st.columns([2, 1])
         with col_u:
-            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745", disabled=False)
+            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.instagram.android veya 1500198745", disabled=False)
             st.session_state.app_url = store_url 
         with col_r:
             time_range = st.selectbox(
