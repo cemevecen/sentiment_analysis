@@ -2602,26 +2602,101 @@ if "bulk_results" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
         else:
+            # Hızlı Analiz — heuristic özet (API kullanmaz)
             if total_all == 0:
-                summary_body = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
-                grad_bg, border_c, summary_title = "#F8FAFC", "#E2E8F0", "Henüz yeterli veri yok."
-            elif total_all > 10 and (diff_val / total_all) < 0.15:
-                summary_title = "Dengeli/Karmaşık bir kullanıcı deneyimi"
-                summary_body = "Uygulama şu anda kullanıcı kitlesini neredeyse tam ortadan ikiye bölmüş durumda. Teknik aksaklıklar ile memnuniyetler başa baş gidiyor."
-                grad_bg, border_c = "#fef9c3", "#eab308"
-            elif counts.idxmax() == "Olumlu":
-                summary_title = "Topluluk genel olarak Olumlu"
-                summary_body = "Kullanıcılar uygulamadan genel olarak memnun. Arayüz ve hız beklentileri karşılıyor."
-                grad_bg, border_c = "#dcfce7", "#10b981"
+                summary_title = "Henüz yeterli veri yok."
+                summary_body  = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
+                grad_bg, border_c = "#F8FAFC", "#E2E8F0"
             else:
-                summary_title = "Dikkat çeken Olumsuz bir eğilim"
-                summary_body = "Kullanıcıların kronik teknik şikayetleri veya hizmet aksaklıkları olduğu görülüyor."
-                grad_bg, border_c = "#fee2e2", "#f43f5e"
+                import random
+
+                pos_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "Olumlu"]
+                neg_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "Olumsuz"]
+                neu_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "İstek/Görüş"]
+
+                pos_p = int(len(pos_list) / total_all * 100) if total_all else 0
+                neg_p = int(len(neg_list) / total_all * 100) if total_all else 0
+                neu_p = int(len(neu_list) / total_all * 100) if total_all else 0
+
+                def _pick(lst, n=3):
+                    chosen = lst[:n] if len(lst) <= n else random.sample(lst, n)
+                    return [t[:120] for t in chosen]
+
+                pos_samples = _pick(pos_list)
+                neg_samples = _pick(neg_list)
+                neu_samples = _pick(neu_list)
+
+                # Ton belirle
+                if total_all > 10 and (diff_val / total_all) < 0.15:
+                    summary_title = "Dengeli/Karmaşık bir kullanıcı deneyimi"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorum incelendiğinde kullanıcı deneyiminin oldukça karmaşık bir tablo çizdiği görülüyor. "
+                        f"Olumlu yorumlar %{pos_p} oranıyla olumsuzlarla (%{neg_p}) neredeyse eşit düzeyde seyrediyor. "
+                        "Bu durum, uygulamanın bazı kullanıcı kesimlerini memnun ederken diğerlerinde ciddi sorunlara yol açtığına işaret ediyor."
+                    )
+                    grad_bg, border_c = "#fef9c3", "#eab308"
+                elif pos_p >= 55:
+                    summary_title = "Topluluk genel olarak Olumlu"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorumun %{pos_p}'i olumlu, %{neg_p}'i olumsuz, %{neu_p}'i ise istek ve görüş içeriyor. "
+                        "Genel tablo kullanıcıların uygulamadan büyük ölçüde memnun olduğunu ortaya koyuyor. "
+                        "Özellikle uygulama deneyimine dair yapılan yorumlar, kullanıcı kitlesinin sadakatinin yüksek olduğuna işaret ediyor."
+                    )
+                    grad_bg, border_c = "#dcfce7", "#10b981"
+                else:
+                    summary_title = "Dikkat çeken Olumsuz bir eğilim"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorumun %{neg_p}'i olumsuz, %{pos_p}'i olumlu, %{neu_p}'i ise istek ve görüş içeriyor. "
+                        "Kullanıcıların önemli bir kısmı teknik sorunlar, performans düşüklüğü veya hizmet aksaklıkları yaşadığını dile getiriyor. "
+                        "Bu eğilim, geliştirici ekibin kısa vadede müdahale etmesi gereken kritik alanların bulunduğuna işaret ediyor."
+                    )
+                    grad_bg, border_c = "#fee2e2", "#f43f5e"
+
+                # Olumlu bölüm
+                if pos_samples:
+                    pos_text = (
+                        "Olumlu geri bildirimlerde öne çıkan temalar arasında şunlar yer alıyor: "
+                        + "; ".join(f'"{s}"' for s in pos_samples[:2])
+                        + ". Bu yorumlar, uygulamanın güçlü yönlerinin kullanıcılar tarafından açıkça fark edildiğini gösteriyor."
+                    )
+                else:
+                    pos_text = ""
+
+                # Olumsuz bölüm
+                if neg_samples:
+                    neg_text = (
+                        "Olumsuz yorumlarda ise şu konular sıklıkla gündeme geliyor: "
+                        + "; ".join(f'"{s}"' for s in neg_samples[:2])
+                        + ". Bu şikayetlerin geliştirici ekip tarafından öncelikli olarak ele alınması, kullanıcı memnuniyetini doğrudan artıracaktır."
+                    )
+                else:
+                    neg_text = ""
+
+                # İstek bölüm
+                if neu_samples:
+                    neu_text = (
+                        "Kullanıcıların dile getirdiği başlıca istekler arasında şunlar öne çıkıyor: "
+                        + "; ".join(f'"{s}"' for s in neu_samples[:2])
+                        + ". Bu taleplerin bir yol haritasına dahil edilmesi, uygulamanın uzun vadeli başarısına katkı sağlayacaktır."
+                    )
+                else:
+                    neu_text = ""
+
+                parts = [tone_intro, pos_text, neg_text, neu_text]
+                summary_body = " ".join(p for p in parts if p)
 
             st.markdown(f"""
-            <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
-                <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">{summary_title}</div>
-                <div style="font-size: 0.95rem; opacity: 0.9;">{summary_body}</div>
+            <div style="background: {grad_bg}; padding: 20px; border-radius: 12px;
+                        border: 2px solid {border_c}; color: #1e293b; line-height: 1.8;">
+                <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">
+                    {summary_title}
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.95;">
+                    {summary_body}
+                </div>
             </div>
             """, unsafe_allow_html=True)
         
