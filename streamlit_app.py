@@ -1417,9 +1417,12 @@ def _record_api_call(provider):
     with _rate_lock:
         _rate_state[provider].append(time.time())
 
-def _build_prompt(text):
+def _build_prompt(text, rating=None):
+    rating_str = f"Kullanıcı Puanı: {rating}/5" if rating else "Kullanıcı Puanı: Belirtilmemiş"
     return f"""Sen çok dilli uygulama mağaza yorumu analizi uzmanısın.
 Yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
+
+{rating_str}
 
 KATEGORİLER:
 - olumlu: Memnun, övgü, teşekkür, tavsiye.
@@ -1430,6 +1433,7 @@ KARAR KURALLARI:
 1. Son cümle baskındır. Başta şikayet sonda çözüm → olumlu.
 2. Başta iltifat sonda şikayet → olumsuz.
 3. İroni/sarkasm → olumsuz.
+4. ÖNEMLİ: Bazı kullanıcılar yorumlarının öne çıkması için bilinçli olarak 5 yıldız verip çok sert eleştiri yazabilirler. Bu durumlarda puanı değil, metindeki duyguyu (ironi, kızgınlık, şikayet) baz al.
 
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
@@ -1458,11 +1462,11 @@ def _parse_response(content, provider):
     except Exception:
         return None
 
-def _call_groq(text, client, model):
+def _call_groq(text, client, model, rating=None):
     try:
         resp = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": _build_prompt(text)}],
+            messages=[{"role": "user", "content": _build_prompt(text, rating=rating)}],
             temperature=0,
             timeout=12,
         )
@@ -1475,11 +1479,11 @@ def _call_groq(text, client, model):
     except Exception:
         return None
 
-def _call_gemini(text, client, model):
+def _call_gemini(text, client, model, rating=None):
     try:
         resp = client.models.generate_content(
             model=model,
-            contents=_build_prompt(text),
+            contents=_build_prompt(text, rating=rating),
             config=genai_types.GenerateContentConfig(temperature=0),
         )
         meta = getattr(resp, "usage_metadata", None)
@@ -1494,11 +1498,11 @@ def _call_gemini(text, client, model):
     except Exception:
         return None
 
-def _call_mistral(text, client, model):
+def _call_mistral(text, client, model, rating=None):
     try:
         resp = client.chat.complete(
             model=model,
-            messages=[{"role": "user", "content": _build_prompt(text)}],
+            messages=[{"role": "user", "content": _build_prompt(text, rating=rating)}],
         )
         usage = getattr(resp, "usage", None)
         if usage:
@@ -1560,7 +1564,7 @@ def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
         if caller is None:
             continue
         _record_api_call(prov)
-        result = caller(text, client, model)
+        result = caller(text, client, model, rating=rating)
         if result is not None:
             return result
 
@@ -1717,7 +1721,8 @@ def heuristic_analysis(text, rating=None):
         "askıya", "askıya alındı", "askıya alınmış", "askıya alınıyor",
         "hesabım kapatıldı", "hesabımı kapattılar", "hesaplarım kapandı",
         "hesabım kapandı", "kapatılmış", "kapatıldı",
-        "itiraz", "itiraz ettim",
+        "itiraz", "itiraz ettim", "kayboldu", "silindi",
+        "yok oldu", "nereye gitti", "kaybolmuş", "bulamıyorum",
         "giriş yapamıyorum", "giremiyorum", "giriş yapamıyorum",
         "hesabıma giremiyorum", "hesabıma girilmiyor",
         "şifre yanlış", "şifremi doğru girdiğim halde",
