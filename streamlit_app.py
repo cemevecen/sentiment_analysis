@@ -1033,6 +1033,57 @@ st.markdown("""
             visibility: visible !important;
         }
 
+        /* Genel Deneyim Skoru kutusu sayfa ortasında bölünmesin */
+        [data-testid="stMarkdownContainer"] > div {
+            page-break-inside: avoid !important;
+        }
+
+        /* Rapor kartı kesinlikle bölünmesin */
+        #nlp-report-card {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* Rapor kartı SVG pie — transform print'te çalışmıyor,
+           düz daire olarak göster */
+        #nlp-report-card .chart-svg-box {
+            transform: none !important;
+        }
+        #nlp-report-card .chart-svg-box > div {
+            display: none !important;
+        }
+        #nlp-report-card .chart-svg-box svg {
+            transform: none !important;
+            position: relative !important;
+            top: 0 !important;
+            width: 130px !important;
+            height: 130px !important;
+        }
+        #nlp-report-card .chart-svg-box svg path {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Son sayfadaki boşluğu önle */
+        .stApp > * {
+            page-break-after: auto !important;
+        }
+
+        /* Analiz Sonuçları başlığı öncesinde sayfa kırılmasın */
+        h2 {
+            page-break-before: avoid !important;
+            page-break-after: avoid !important;
+        }
+
+        /* Boş div'ler ekstra sayfa açmasın */
+        [data-testid="stVerticalBlock"] > div:empty {
+            display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
         /* Sayfa ayarları */
         @page {
             margin: 1.2cm;
@@ -1073,7 +1124,7 @@ with tab1:
         
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
-        st.markdown('<div style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="no-print" style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
 
 
     if store_url.strip():
@@ -2960,7 +3011,9 @@ if "bulk_results" in st.session_state:
         
         
         st.write("### Puan Dağılımı")
+        st.markdown('<div class="no-print">', unsafe_allow_html=True)
         freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
@@ -3227,7 +3280,9 @@ if "bulk_results" in st.session_state:
     st.write("### Yorum Listesi")
     
     
+    st.markdown('<div class="no-print">', unsafe_allow_html=True)
     yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
+    st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     t_pos = counts.get('Olumlu', 0)
