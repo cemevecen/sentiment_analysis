@@ -1,6 +1,5 @@
 streamlit
 google-genai
-
 python-dotenv
 requests
 pandas
@@ -8,3 +7,5 @@ openpyxl
 plotly
 google-play-scraper
 streamlit-lottie
+mistralai
+groq

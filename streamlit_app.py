@@ -3,6 +3,8 @@ import streamlit.components.v1 as components
 from streamlit_lottie import st_lottie
 from google import genai
 from google.genai import types as genai_types
+from mistralai import Mistral
+from groq import Groq
 import os
 import json
 import re
@@ -64,21 +66,106 @@ def setup_api():
             return None
     return None
 
+@st.cache_resource(show_spinner="Mistral API yapılandırılıyor...")
+def setup_mistral():
+    api_key = os.getenv("MISTRAL_API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("MISTRAL_API_KEY")
+        except:
+            pass
+    
+    if api_key:
+        try:
+            client = Mistral(api_key=api_key)
+            return client
+        except Exception as e:
+            st.error(f"Mistral API Client başlatma hatası: {e}")
+            return None
+    return None
+
+@st.cache_resource(show_spinner="Groq API yapılandırılıyor...")
+def setup_groq():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("GROQ_API_KEY")
+        except:
+            pass
+    
+    if api_key:
+        try:
+            client = Groq(api_key=api_key)
+            return client
+        except Exception as e:
+            st.error(f"Groq API Client başlatma hatası: {e}")
+            return None
+    return None
+
 GEMINI_CLIENT = setup_api()
 HAS_GEMINI = GEMINI_CLIENT is not None
+
+MISTRAL_CLIENT = setup_mistral()
+HAS_MISTRAL = MISTRAL_CLIENT is not None
+
+GROQ_CLIENT = setup_groq()
+HAS_GROQ = GROQ_CLIENT is not None
 
 
 API_TRACKER = {"cost_tl": 0.0}
 
 
-if not HAS_GEMINI and "streamlit" in str(st.__file__).lower():
-    st.sidebar.error("⚠️ Gemini API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY tanımlayın.")
+if not HAS_GEMINI and not HAS_MISTRAL and "streamlit" in str(st.__file__).lower():
+    st.sidebar.error("⚠️ AI API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY veya MISTRAL_API_KEY tanımlayın.")
     if st.sidebar.button("API'yi Yeniden Kontrol Et"):
         st.cache_resource.clear()
         st.rerun()
 elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
     
     pass
+
+# Sidebar API Configuration
+st.sidebar.title("🤖 AI Ayarları")
+ai_provider = st.sidebar.selectbox(
+    "AI Sağlayıcı:",
+    options=["Google Gemini", "Mistral AI", "Groq AI"],
+    index=0 if HAS_GEMINI else 1 if HAS_MISTRAL else 2 if HAS_GROQ else 0,
+    key="ai_provider"
+)
+
+if ai_provider == "Google Gemini":
+    if not HAS_GEMINI:
+        st.sidebar.error("⚠️ Gemini API Key bulunamadı!")
+    ai_model = st.sidebar.selectbox(
+        "Model:",
+        options=["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        index=0,
+        key="ai_model_gemini"
+    )
+    model_full_name = f"models/{ai_model}"
+elif ai_provider == "Mistral AI":
+    if not HAS_MISTRAL:
+        st.sidebar.error("⚠️ Mistral API Key bulunamadı!")
+    ai_model = st.sidebar.selectbox(
+        "Model:",
+        options=["mistral-tiny", "mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b", "open-mixtral-8x7b"],
+        index=1,
+        key="ai_model_mistral"
+    )
+    model_full_name = ai_model
+else:
+    if not HAS_GROQ:
+        st.sidebar.error("⚠️ Groq API Key bulunamadı!")
+    ai_model = st.sidebar.selectbox(
+        "Model:",
+        options=["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "deepseek-r1-distill-llama-70b"],
+        index=0,
+        key="ai_model_groq"
+    )
+    model_full_name = ai_model
+
+st.session_state.current_ai_provider = ai_provider
+st.session_state.current_ai_model = model_full_name
 
 
 @st.cache_data(ttl=3600)
@@ -946,32 +1033,31 @@ with tab1:
                         st.session_state.all_fetched_pool = fetched_comments
                         st.session_state.last_fetch_key = fetch_key 
                         
-                        if len(fetched_comments) > 500:
+                        analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+                        AI_LIMIT = 500
+
+                        if analysis_type_now == "Zengin Analiz" and len(fetched_comments) > AI_LIMIT:
                             total_found = len(fetched_comments)
-                            
-                            limited_comments = []
-                            for idx in range(500):
-                                limited_comments.append(fetched_comments[idx])
-                            
+                            limited_comments = fetched_comments[:AI_LIMIT]
                             st.session_state.comments_to_analyze = limited_comments
-                            
-                            
-                            v_dates_anal = [r.get('date') for r in limited_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
-                            
-                            v_dates_pool = [r.get('date') for r in fetched_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
-                            
+
+                            v_dates_anal = [r.get('date') for r in limited_comments if isinstance(r.get('date'), datetime)]
+                            v_dates_pool = [r.get('date') for r in fetched_comments if isinstance(r.get('date'), datetime)]
                             if v_dates_anal and v_dates_pool:
                                 pool_start = cast(datetime, min(v_dates_pool)).strftime('%d-%m-%Y')
-                                pool_end = cast(datetime, max(v_dates_pool)).strftime('%d-%m-%Y')
+                                pool_end   = cast(datetime, max(v_dates_pool)).strftime('%d-%m-%Y')
                                 anal_start = cast(datetime, min(v_dates_anal)).strftime('%d-%m-%Y')
-                                anal_end = cast(datetime, max(v_dates_anal)).strftime('%d-%m-%Y')
-                                
+                                anal_end   = cast(datetime, max(v_dates_anal)).strftime('%d-%m-%Y')
                                 st.warning(f"""
                                     Toplamda **{total_found}** yorum bulundu (Tüm Aralık: {pool_start} - {pool_end}).
-                                    Hızlı analiz için **en güncel 500 tanesi** seçildi (Analiz Aralığı: {anal_start} - {anal_end}).
+                                    Zengin Analiz kotası için **en güncel {AI_LIMIT} tanesi** seçildi 
+                                    (Analiz Aralığı: {anal_start} - {anal_end}).
                                 """)
                         else:
+                            # Hızlı Analiz — limit yok, tamamı alınır
                             st.session_state.comments_to_analyze = fetched_comments
+                            if len(fetched_comments) > AI_LIMIT:
+                                st.info(f"Hızlı Analiz modunda tüm **{len(fetched_comments)}** yorum analiz edilecek.")
                         
                         st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
@@ -1129,14 +1215,16 @@ with tab2:
                 st.error(f"{uploaded_file.name} okuma hatası: {e}")
         
         if all_comments:
-            if len(all_comments) > 500:
-                sliced_comments = []
-                for idx in range(500):
-                    sliced_comments.append(all_comments[idx])
-                st.warning(f"Dosyadaki ilk 500 yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
-                st.session_state.comments_to_analyze = sliced_comments
+            analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+            AI_LIMIT = 500
+
+            if analysis_type_now == "Zengin Analiz" and len(all_comments) > AI_LIMIT:
+                st.warning(f"Zengin Analiz kotası: ilk {AI_LIMIT} yorum alındı (Toplam: {len(all_comments)}).")
+                st.session_state.comments_to_analyze = all_comments[:AI_LIMIT]
             else:
                 st.session_state.comments_to_analyze = all_comments
+                if len(all_comments) > AI_LIMIT:
+                    st.info(f"Hızlı Analiz: tüm **{len(all_comments)}** yorum işlenecek.")
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
@@ -1190,15 +1278,14 @@ with tab3:
             if is_valid_comment(l):
                 processed_comments.append({"text": l})
                 
-        if processed_comments:
-            if len(processed_comments) > 500:
-                st.warning("En fazla 500 adet yorum girilebilir. Fazlası kırpıldı.")
-                processed_final = []
-                for idx in range(500):
-                    processed_final.append(processed_comments[idx])
-                st.session_state.comments_to_analyze = processed_final
-            else:
-                st.session_state.comments_to_analyze = processed_comments
+        analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+        AI_LIMIT = 500
+
+        if analysis_type_now == "Zengin Analiz" and len(processed_comments) > AI_LIMIT:
+            st.warning(f"Zengin Analiz kotası: ilk {AI_LIMIT} yorum alındı.")
+            st.session_state.comments_to_analyze = processed_comments[:AI_LIMIT]
+        else:
+            st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
 
 
@@ -1249,23 +1336,16 @@ if comments_to_analyze:
         st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
 
-
-
-
-def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
-    if API_TRACKER["cost_tl"] >= 50.0:
+def get_ai_sentiment(text, model_name=None, provider=None):
+    if API_TRACKER["cost_tl"] >= 150.0:
         return {"_error": "cost_limit"}
-        
-    if not HAS_GEMINI:
-        return None
     
-    
-    fallback_chain = ['models/gemini-2.0-flash', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro']
-    models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
-    
-    for current_model in models_to_try:
-        try:
-            prompt = f"""Sen çok dilli (Türkçe, İngilizce, Arapça vb.) bir uygulama mağaza yorumu duygu analizi uzmanısın.
+    if provider is None:
+        provider = st.session_state.get('current_ai_provider', 'Google Gemini')
+    if model_name is None:
+        model_name = st.session_state.get('current_ai_model', 'models/gemini-2.0-flash')
+
+    prompt = f"""Sen çok dilli (Türkçe, İngilizce, Arapça vb.) bir uygulama mağaza yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu hangi dilde olursa olsun analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
 KATEGORİLER:
@@ -1337,62 +1417,131 @@ SOMUT ÖRNEKLER - ARAPÇA - OLUMSUZ:
 "اسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
 "لا يعمل التطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "يتعطل باستمرار" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"لا أستطيع الدخول إلى حسابي" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"لم أستلم أموال الاسترجاع رغم تواصلي مرات عديدة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"الموقع ممتاز لكن عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
+"لا أستطيع الدخول إلى حسابı" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"لم أستلم أمwal الاسترجاع رغم تواصلي مرات عديدة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"الموقع ممتاز لكن عند الاسترجاع لا تصلك الامwal" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
 "سعر المنتج قبل اضافته للسله يختلف عن بعد الاضافة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"يتم شحن الوان مختلفه واغراض غير اصليه بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"yتم شحن الwal مختلفه واغراض غير اصليه بجودة رdiئة" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
 
 SOMUT ÖRNEKLER - ARAPÇA - İSTEK/GÖRÜŞ:
 "أتمنى أن يضيفوا خاصية البحث بالصور" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"متى سيكون التطبيق متاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
-"مو سامح لي اختار دولة" → {{"olumlu":0.05,"olumsuz":0.40,"istek_gorus":0.55}}
+"متى سيكون التطبيق mتاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
+"مو سامح لي اختar دولة" → {{"olumlu":0.05,"olumsuz":0.40,"istek_gorus":0.55}}
 
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
 
+ZENGİN ANALİZ EK NOTU: Eğer kullanıcı "Zengin ve Derin" seçmişse, yorumdaki alt metinleri, imaları ve yapısal eleştirileri de dikkate al.
+
 Yorum: "{text}"
 """
+
+    content = ""
+    try:
+        if provider == "Google Gemini":
             response = GEMINI_CLIENT.models.generate_content(
-                model=current_model,
+                model=model_name,
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(temperature=0)
             )
-            
-            
             meta = getattr(response, 'usage_metadata', None)
             if meta:
                 prompt_tokens = getattr(meta, 'prompt_token_count', 0)
                 cand_tokens = getattr(meta, 'candidates_token_count', 0)
-                is_pro = 'pro' in current_model.lower()
+                is_pro = 'pro' in model_name.lower()
                 cost_in = prompt_tokens * (3.50 if is_pro else 0.075) / 1000000
                 cost_out = cand_tokens * (10.50 if is_pro else 0.30) / 1000000
                 API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0 
-                
             content = response.text
-            match = re.search(r'\{.*?\}', content, re.DOTALL)
-            if match:
-                data = json.loads(match.group())
-                p = float(data.get("olumlu", 0))
-                n = float(data.get("olumsuz", 0))
-                neu = float(data.get("istek_gorus", 0))
-                total = p + n + neu
-                if total > 0:
-                    return {
-                        "olumlu": p/total, 
-                        "olumsuz": n/total, 
-                        "istek_gorus": neu/total,
-                        "method": current_model.split('/')[-1]
-                    }
-        except Exception as e:
-            err_str = str(e)
-            if "404" in err_str and current_model != models_to_try[-1]:
-                continue
-            elif "429" in err_str or "quota" in err_str.lower():
-                return {"_error": "quota"}
-            else:
-                return {"_error": f"Gemini API hatası: {err_str[:120]}"}
-    return None
+        elif provider == "Mistral AI":
+            response = MISTRAL_CLIENT.chat.complete(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            usage = getattr(response, 'usage', None)
+            if usage:
+                p_t = getattr(usage, 'prompt_tokens', 0)
+                c_t = getattr(usage, 'completion_tokens', 0)
+                is_large = 'large' in model_name.lower()
+                cost_in = p_t * (2.0 if is_large else 0.2) / 1000000
+                cost_out = c_t * (6.0 if is_large else 0.6) / 1000000
+                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
+            content = response.choices[0].message.content
+        elif provider == "Groq AI":
+            response = GROQ_CLIENT.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            usage = getattr(response, 'usage', None)
+            if usage:
+                p_t = getattr(usage, 'prompt_tokens', 0)
+                c_t = getattr(usage, 'completion_tokens', 0)
+                # Groq pricing is much lower usually
+                cost_in = p_t * 0.1 / 1000000
+                cost_out = c_t * 0.4 / 1000000
+                API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
+            content = response.choices[0].message.content
+    except Exception as e:
+        return {"_error": f"{provider} hatası: {str(e)[:100]}"}
+
+    match = re.search(r'\{.*?\}', content, re.DOTALL)
+    if match:
+        try:
+            data = json.loads(match.group())
+            p = float(data.get("olumlu", 0))
+            n = float(data.get("olumsuz", 0))
+            neu = float(data.get("istek_gorus", 0))
+            total = p + n + neu
+            if total > 0:
+                return {
+                    "olumlu": p/total, 
+                    "olumsuz": n/total, 
+                    "istek_gorus": neu/total,
+                    "method": model_name.split('/')[-1]
+                }
+        except: pass
+    return {"_error": "Yapay zeka yanıtı anlaşılamadı."}
+
+
+def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=None, provider=None):
+    if provider is None:
+        provider = st.session_state.get('current_ai_provider', 'Google Gemini')
+    if model_name is None:
+        model_name = st.session_state.get('current_ai_model', 'models/gemini-1.5-flash')
+        
+    if not analysis_results: return None
+    valid_results = [r for r in analysis_results if r.get('Baskın Duygu') != "—"]
+    if not valid_results: return "Yeterli veri analiz edilemedi."
+
+    pos = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "Olumlu"]
+    neg = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "Olumsuz"]
+    neu = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "İstek/Görüş"]
+    
+    def get_sample(texts, count=15):
+        import random
+        if len(texts) <= count: return "\n".join([f"- {t[:200]}" for t in texts])
+        return "\n".join([f"- {t[:200]}" for t in random.sample(texts, count)])
+
+    prompt = f"""Bir uygulama mağazası yorum analisti gibi davran. Aşağıdaki analiz sonuçlarını inceleyip derinlemesine bir rapor sun.
+    {get_sample(neu)}
+
+    RAPOR FORMATI:
+    1. "Kullanıcı Deneyimi Özeti": (Dinamik ve profesyonel bir başlık ve 4-5 cümlelik derin analiz)
+    2. "Öne Çıkan Güçlü Yönler": (Kullanıcıları en çok mutlu eden 2-3 madde)
+    3. "Kritik Sorunlar ve Çözüm Önerileri": (En çok şikayet edilen konular ve geliştirici ekibe öneri)
+
+    Dil: TÜRKÇE. Markdown formatında yaz. Link veya emoji kullanabilirsin.
+    """
+    try:
+        response = GEMINI_CLIENT.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(temperature=0.7)
+        )
+        return response.text
+    except Exception as e:
+        return f"Dinamik özet oluşturulurken bir hata oluştu: {str(e)[:100]}"
 
 
 
@@ -1488,10 +1637,12 @@ def run_bulk_analysis(data_to_process, is_append=False):
     start_time = time.time()
     
     
-    MAX_ITEMS = 250
-    if len(data_to_process) > MAX_ITEMS:
-        st.warning(f"⚠️ Güvenlik ve maliyet koruması gereği tek seferde en fazla {MAX_ITEMS} yorum analiz edilebilir. İlk {MAX_ITEMS} yorum işleme alınıyor.")
-        data_to_process = data_to_process[:MAX_ITEMS]
+    if analysis_type == "Zengin Analiz":
+        MAX_ITEMS = 500
+        if len(data_to_process) > MAX_ITEMS:
+            st.warning(f"⚠️ Zengin Analiz kotası: en fazla {MAX_ITEMS} yorum işleniyor.")
+            data_to_process = data_to_process[:MAX_ITEMS]
+    # Hızlı Analiz'de hiçbir üst sınır yok — tüm liste işlenir
     
     total_items = len(data_to_process)
     est_total_secs = total_items * (1 if mode_idx == 0 else 2)
@@ -1536,14 +1687,14 @@ def run_bulk_analysis(data_to_process, is_append=False):
             res_api = heuristic_analysis(comment)
             err = None
         else:
-            res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
+            res_api = get_ai_sentiment(comment, model_name=ANALYSIS_MODEL)
             err = None
             if res_api is None or "_error" in res_api:
                 err = res_api["_error"] if res_api else "unknown"
                 res_api = heuristic_analysis(comment)
         
         scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
-        verdict = max(scores, key=scores.get)
+        verdict = str(max(scores, key=lambda k: scores[k]))
         return idx, entry, res_api, verdict, err
 
     completed_count = 0
@@ -1607,10 +1758,21 @@ def run_bulk_analysis(data_to_process, is_append=False):
     st.rerun()
 
 if st.button("Analizini Yap", type="primary", use_container_width=True):
-    if not comments_to_analyze:
+    # Hızlı Analiz seçiliyse all_fetched_pool'dan tüm yorumları al
+    current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
+    all_pool = st.session_state.get("all_fetched_pool", [])
+    
+    if current_analysis_type == "Hızlı Analiz" and all_pool:
+        # Pool'dan tümünü al, limit yok
+        data_for_run = all_pool
+        st.session_state.comments_to_analyze = all_pool
+    else:
+        data_for_run = st.session_state.comments_to_analyze
+
+    if not data_for_run:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
-        run_bulk_analysis(comments_to_analyze)
+        run_bulk_analysis(data_for_run)
 
 
 if "bulk_results" in st.session_state:
@@ -1687,6 +1849,7 @@ if "bulk_results" in st.session_state:
     m_olumlu = counts.get("Olumlu", 0)
     m_olumsuz = counts.get("Olumsuz", 0)
     m_istek = counts.get("İstek/Görüş", 0)
+    m_skipped = len(df[df["Baskın Duygu"] == "—"])
     
     st.markdown(f"""
     <div class="metric-container">
@@ -1702,9 +1865,13 @@ if "bulk_results" in st.session_state:
             <div class="metric-value" style="color: #3b82f6;">{m_istek}</div>
             <div class="metric-label">İstek / Görüş</div>
         </div>
+        <div class="metric-card" style="border-style: dashed !important; opacity: 0.7;">
+            <div class="metric-value" style="color: #64748b;">{m_skipped}</div>
+            <div class="metric-label">Kısa / Atlandı</div>
+        </div>
         <div class="metric-card">
             <div class="metric-value" style="color: #a78bfa;">{len(df)}</div>
-            <div class="metric-label">Toplam Analiz</div>
+            <div class="metric-label">Toplam Veri</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1812,42 +1979,46 @@ if "bulk_results" in st.session_state:
         total_all = m_olumlu + m_olumsuz + m_istek
         diff_val = abs(m_olumlu - m_olumsuz)
         
-        
-        if total_all == 0:
-            grad_bg = "#F8FAFC"
-            border_c = "#E2E8F0"
-            summary_title = "Henüz yeterli veri yok."
-            summary_body = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
-        elif total_all > 10 and (diff_val / total_all) < 0.15 and m_olumlu > 0 and m_olumsuz > 0: 
-            grad_bg = "#fef9c3" 
-            border_c = "#eab308" 
-            summary_title = f"Dengeli/Karmaşık bir kullanıcı deneyimi gözlendi. ({total_all} yorum)"
-            summary_body = "Uygulama şu anda kullanıcı kitlesini neredeyse tam ortadan ikiye bölmüş durumda. Bir grup kullanıcı sunulan hizmetten, hızdan ve arayüzden son derece memnunken; diğer bir önemli grup ise teknik aksaklıklar, bağlantı sorunları veya beklenen özelliklerin eksikliği gibi konularda ciddi eleştiriler dile getiriyor. Marka imajı şu anda bir 'kritik eşik' evresinde; olumlu taraftaki kullanıcılar sadık kalmaya meyilliyken, olumsuz taraftakiler ise her an rakiplere yönelebilir. Bu bıçak sırtı dengeden kurtulmak için en acil şikayetlere (bug'lar, performans sorunları vb.) odaklanılmalı ve bu kitle hızlıca memnun edilmeli. Eğer bu karmaşık tablo doğru yönetilirse kitle olumlu yöne çekilebilir, aksi takdirde olumsuz sesler baskın hale gelecektir."
-        elif counts.idxmax() == "Olumlu":
-            grad_bg = "#dcfce7" 
-            border_c = "#10b981" 
-            summary_title = f"Topluluk genel olarak Olumlu bir tavır sergiliyor. ({m_olumlu} yorum)"
-            summary_body = "Genel olarak kullanıcı kitlesi, uygulamanın sunduğu temel hizmetlerden, arayüz tasarımından ve kullanım kolaylığından yüksek düzeyde memnuniyet duyuyor diyebiliriz. Özellikle düzenli kullanıcılar uygulamanın günlük hayattaki işlevselliğini olumlu bularak tavsiye etme eğiliminde. Sistem performansı, hız ve güvenilirlik beklentileri büyük ölçüde karşılanıyor. Son güncellemelerle birlikte gelen yenilikler pozitif karşılanmış gibi görünüyor. Kullanıcıların markaya olan güveni bu aşamada sağlam temeller üzerinde duruyor. Müşteri hizmetlerinin ve destek birimlerinin sorunlara hızlı reaksiyon göstermesi de bu olumlu havayı destekleyen ana etkenlerden biri olabilir. Yine de aralardaki küçük oranlı şikayetleri dikkatle ele alıp, bu %100'e yakın memnuniyet oranını koruyacak stratejik adımların devam ettirilmesi oldukça önemli."
-        elif counts.idxmax() == "Olumsuz":
-            grad_bg = "#fee2e2" 
-            border_c = "#f43f5e" 
-            summary_title = f"Dikkat çeken Olumsuz bir eğilim var. ({m_olumsuz} yorum)"
-            summary_body = "Analiz edilen veri setinde kullanıcıların çok ciddi hayal kırıklıkları ve sistemsel şikayetleri olduğu açıkça görülmektedir. Özellikle kilitlenme, yavaşlık veya beklenen özelliklerin çalışmaması gibi kronikleşmiş teknik problemler kullanıcı deneyimini ciddi oranda baltalıyor. İade sorunları, müşteri hizmetlerinin ulaşılamaz olması veya vaat edilenle karşılaşılan hizmetin uyuşmaması gibi temel şikayetler marka imajına an itibariyle zarar veriyor. Kullanıcılar uygulamanın temel fonksiyonlarını bile kullanırken pürüzlerle karşılaştıkları için platformu terk etme veya rakiplere yönelme potansiyeline sahipler. Acil ve agresif bir hata ayıklama (bug-fixing) sürecine gidilmeli, müşteri destek hattının kapasitesi artırılmalı ve kullanıcılardan gelen yapısal eleştiriler bir an önce yazılım geliştirme döngüsüne entegre edilmelidir."
-        else: 
-            grad_bg = "#dbeafe" 
-            border_c = "#3b82f6" 
-            summary_title = f"Kullanıcılar yoğun şekilde İstek ve Görüş paylaşıyor. ({m_istek} yorum)"
-            summary_body = "Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir."
-        
-        
-        st.session_state.ai_summary = summary_body
+        if st.session_state.get("analysis_type") == "Zengin Analiz":
+            if "ai_summary_cache" not in st.session_state or st.session_state.get("last_results_len") != len(analysis_df):
+                with st.spinner("🤖 Yapay zeka derinlemesine raporu hazırlıyor..."):
+                    summary_text = generate_dynamic_summary(analysis_results=st.session_state.bulk_results)
+                    st.session_state.ai_summary_cache = summary_text
+                    st.session_state.last_results_len = len(analysis_df)
+            
+            st.markdown(f"""
+            <div style="background: #FFFFFF; padding: 25px; border-radius: 12px; border: 2px solid #a78bfa; color: #1e293b; line-height: 1.6; box-shadow: 0 4px 15px rgba(167, 139, 250, 0.1);">
+                <div style="font-weight: 800; font-size: 1.3rem; margin-bottom: 15px; color: #7c3aed; display: flex; align-items: center; gap: 10px;">
+                    <span>✨ Yapay Zeka Derin Analiz Raporu</span>
+                </div>
+                <div style="font-size: 0.95rem;">
+                    {st.session_state.ai_summary_cache}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            if total_all == 0:
+                summary_body = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
+                grad_bg, border_c, summary_title = "#F8FAFC", "#E2E8F0", "Henüz yeterli veri yok."
+            elif total_all > 10 and (diff_val / total_all) < 0.15:
+                summary_title = "Dengeli/Karmaşık bir kullanıcı deneyimi"
+                summary_body = "Uygulama şu anda kullanıcı kitlesini neredeyse tam ortadan ikiye bölmüş durumda. Teknik aksaklıklar ile memnuniyetler başa baş gidiyor."
+                grad_bg, border_c = "#fef9c3", "#eab308"
+            elif counts.idxmax() == "Olumlu":
+                summary_title = "Topluluk genel olarak Olumlu"
+                summary_body = "Kullanıcılar uygulamadan genel olarak memnun. Arayüz ve hız beklentileri karşılıyor."
+                grad_bg, border_c = "#dcfce7", "#10b981"
+            else:
+                summary_title = "Dikkat çeken Olumsuz bir eğilim"
+                summary_body = "Kullanıcıların kronik teknik şikayetleri veya hizmet aksaklıkları olduğu görülüyor."
+                grad_bg, border_c = "#fee2e2", "#f43f5e"
 
-        st.markdown(f"""
-        <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
-            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">{summary_title}</div>
-            <div style="font-size: 0.95rem; opacity: 0.9;">{summary_body}</div>
-        </div>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style="background: {grad_bg}; padding: 20px; border-radius: 12px; border: 2px solid {border_c}; color: #1e293b; line-height: 1.6;">
+                <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">{summary_title}</div>
+                <div style="font-size: 0.95rem; opacity: 0.9;">{summary_body}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
 
     
@@ -1948,8 +2119,14 @@ if "bulk_results" in st.session_state:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                take_next = min(len(remaining_pool), 500)
-                if st.button(f"Sonraki {take_next} yorumu da analiz et ve sonuçlara ekle", use_container_width=True):
+                analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+                take_next = min(len(remaining_pool), 500) if analysis_type_now == "Zengin Analiz" else len(remaining_pool)
+
+                label = (f"Sonraki {take_next} yorumu da analiz et" 
+                         if analysis_type_now == "Zengin Analiz" 
+                         else f"Kalan tüm {take_next} yorumu analiz et")
+
+                if st.button(label, use_container_width=True):
                     next_batch = remaining_pool[:take_next]
                     run_bulk_analysis(next_batch, is_append=True)
 
