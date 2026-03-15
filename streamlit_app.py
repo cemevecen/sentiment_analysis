@@ -159,7 +159,7 @@ if ai_provider == "Google Gemini":
         st.sidebar.error("⚠️ Gemini API Key bulunamadı!")
     ai_model = st.sidebar.selectbox(
         "Model:",
-        options=["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        options=["gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"],
         index=0,
         key="ai_model_gemini"
     )
@@ -1591,7 +1591,7 @@ def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=
     if provider is None:
         provider = st.session_state.get('current_ai_provider', 'Google Gemini')
     if model_name is None:
-        model_name = st.session_state.get('current_ai_model', 'models/gemini-1.5-flash')
+        model_name = st.session_state.get('current_ai_model', 'models/gemini-2.0-flash-lite')
         
     if not analysis_results: return None
     valid_results = [r for r in analysis_results if r.get('Baskın Duygu') != "—"]
@@ -2135,10 +2135,10 @@ def run_bulk_analysis(data_to_process, is_append=False):
     mode_idx = st.session_state.get("analysis_mode", 0)
     
     if mode_idx == 0:
-        ANALYSIS_MODEL = 'models/gemini-2.0-flash'
+        ANALYSIS_MODEL = 'models/gemini-2.0-flash-lite'
         RPM_LIMIT = 500
     else:
-        ANALYSIS_MODEL = 'models/gemini-1.5-pro'
+        ANALYSIS_MODEL = 'models/gemini-2.5-flash'
         RPM_LIMIT = 300
 
     start_time = time.time()
@@ -2242,11 +2242,10 @@ def run_bulk_analysis(data_to_process, is_append=False):
             if err == "quota":
                 q = st.session_state.get('_quota_hits', 0) + 1
                 st.session_state['_quota_hits'] = q
-            elif err == "cost_limit":
+            elif res.get("method") == "Heuristic+CostLimit":
                 if not st.session_state.get('_cost_warned'):
-                    st.error("🚨 Tahmini 50 TL faturaya yaklaşıldı. Analiz işlemi otomatik durduruldu!")
+                    st.error(f"🚨 Maliyet limiti aşıldı (₺{COST_LIMIT_TL:.0f}). Kalan yorumlar heuristic ile tamamlanıyor.")
                     st.session_state['_cost_warned'] = True
-                break
             
             comment = entry["text"]
             date = entry.get("date")
