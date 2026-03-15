@@ -917,6 +917,69 @@ st.markdown("""
         height: 0px !important;
         position: absolute !important;
     }
+
+    /* ── PRINT / PDF MODU ─────────────────────────────── */
+    @media print {
+        /* Sidebar tamamen gizle */
+        [data-testid="stSidebar"],
+        [data-testid="stSidebarNav"],
+        section[data-testid="stSidebar"] { display: none !important; }
+
+        /* Üst toolbar ve header gizle */
+        [data-testid="stToolbar"],
+        [data-testid="stHeader"],
+        [data-testid="stDecoration"] { display: none !important; }
+
+        /* Tab barı gizle (Mağaza Linki / Dosya Yükle / Metin Girişi) */
+        div[data-testid="stTabList"] { display: none !important; }
+
+        /* Analiz Ayarları bölümü gizle */
+        .stRadio, [data-testid="stRadio"] { display: none !important; }
+
+        /* Analizini Yap butonu gizle */
+        [data-testid="stButton"] { display: none !important; }
+
+        /* Havuzda yorum kaldı / Sonraki batch butonu gizle */
+        [data-testid="stContainer"] > div > [data-testid="stButton"] { display: none !important; }
+
+        /* Paylaş bölümü başlığı, sosyal butonlar, PNG/Excel/PDF butonları gizle */
+        [data-testid="stSubheader"],
+        [data-testid="stDownloadButton"],
+        .u-tray,
+        #btn-png-download { display: none !important; }
+
+        /* "Yukarıdaki kartı kopyalayabilirsiniz" info kutusu gizle */
+        [data-testid="stAlert"] { display: none !important; }
+
+        /* Yorum listesi sekmeleri (Analizler / Olumlu / Olumsuz / İstek) gizle */
+        div[data-baseweb="tab-list"] { display: none !important; }
+
+        /* Tüm Yorumları Göster / Daha Az Göster butonları gizle */
+        button { display: none !important; }
+
+        /* Footer gizle */
+        footer, [data-testid="stFooter"] { display: none !important; }
+
+        /* st.divider gizle */
+        hr { display: none !important; }
+
+        /* Sayfa kenar boşlukları */
+        @page {
+            margin: 1.5cm;
+        }
+
+        /* Arka plan rengini koru */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Ana içerik tam genişlik */
+        [data-testid="stAppViewBlockContainer"] {
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
