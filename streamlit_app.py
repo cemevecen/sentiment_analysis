@@ -2578,6 +2578,157 @@ if "bulk_results" in st.session_state:
                 </div>
                 """, unsafe_allow_html=True)
 
+            # ── TREND GÖSTERGESİ ─────────────────────────────
+            try:
+                dated = [r for r in st.session_state.get("bulk_results", [])
+                         if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated and len(dated) >= 20:
+                    dated_sorted = sorted(dated, key=lambda x: x["Tarih"])
+                    half = len(dated_sorted) // 2
+                    first_half = dated_sorted[:half]
+                    second_half = dated_sorted[half:]
+                    def _neg_rate(lst):
+                        if not lst: return 0
+                        return sum(1 for r in lst if r["Baskın Duygu"] == "Olumsuz") / len(lst)
+                    r1 = _neg_rate(first_half)
+                    r2 = _neg_rate(second_half)
+                    diff_trend = r2 - r1
+                    if diff_trend > 0.05:
+                        trend_icon, trend_color, trend_text = "↑", "#f43f5e", f"Olumsuz oran artıyor (+%{int(diff_trend*100)})"
+                    elif diff_trend < -0.05:
+                        trend_icon, trend_color, trend_text = "↓", "#10b981", f"Memnuniyet artıyor (+%{int(abs(diff_trend)*100)})"
+                    else:
+                        trend_icon, trend_color, trend_text = "→", "#f59e0b", "Oran stabil seyrediyor"
+                    st.markdown(f"""
+                    <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                padding:12px 15px;margin-top:8px;display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:1.6rem;color:{trend_color};font-weight:800;line-height:1;">{trend_icon}</span>
+                        <div>
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Trend</div>
+                            <div style="font-size:0.85rem;font-weight:600;color:{trend_color};">{trend_text}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── DUYGU ISI HARİTASI ────────────────────────────
+            try:
+                dated2 = [r for r in st.session_state.get("bulk_results", [])
+                          if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated2 and len(dated2) >= 14:
+                    import collections as _col
+                    day_neg2 = _col.defaultdict(int)
+                    day_total2 = _col.defaultdict(int)
+                    for r in dated2:
+                        try:
+                            d = pd.to_datetime(r["Tarih"]).strftime("%a")
+                            day_total2[d] += 1
+                            if r["Baskın Duygu"] == "Olumsuz":
+                                day_neg2[d] += 1
+                        except Exception:
+                            pass
+                    days_order2 = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+                    days_tr2 = {"Mon":"Pzt","Tue":"Sal","Wed":"Çrş","Thu":"Per","Fri":"Cum","Sat":"Cmt","Sun":"Paz"}
+                    cells2 = ""
+                    for d in days_order2:
+                        if day_total2[d] == 0: continue
+                        rate2 = day_neg2[d] / day_total2[d]
+                        bg2 = "#FEE2E2" if rate2 >= 0.6 else ("#FEF9C3" if rate2 >= 0.35 else "#DCFCE7")
+                        fc2 = "#DC2626" if rate2 >= 0.6 else ("#D97706" if rate2 >= 0.35 else "#16A34A")
+                        cells2 += (
+                            f'<div style="flex:1;text-align:center;background:{bg2};border-radius:8px;padding:6px 2px;">'
+                            f'<div style="font-size:0.65rem;color:{fc2};font-weight:700;">{days_tr2[d]}</div>'
+                            f'<div style="font-size:0.7rem;color:{fc2};font-weight:600;">%{int(rate2*100)}</div>'
+                            f'</div>'
+                        )
+                    if cells2:
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Günlük Olumsuz Oran</div>
+                            <div style="display:flex;gap:4px;">{cells2}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── HIZLI İSTATİSTİKLER ───────────────────────────
+            try:
+                dated3 = [r for r in st.session_state.get("bulk_results", [])
+                          if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated3:
+                    import collections as _col2
+                    dates_only3 = []
+                    for r in dated3:
+                        try:
+                            dates_only3.append(pd.to_datetime(r["Tarih"]).date())
+                        except Exception:
+                            pass
+                    if dates_only3:
+                        date_counts3 = _col2.Counter(dates_only3)
+                        busiest_date3 = max(date_counts3, key=date_counts3.get)
+                        busiest_count3 = date_counts3[busiest_date3]
+                        unique_days3 = len(date_counts3)
+                        daily_avg3 = round(len(dated3) / unique_days3, 1) if unique_days3 else 0
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Hızlı İstatistikler</div>
+                            <div style="display:flex;justify-content:space-between;gap:8px;">
+                                <div style="text-align:center;flex:1;">
+                                    <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{daily_avg3}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Günlük Ort.</div>
+                                </div>
+                                <div style="text-align:center;flex:2;">
+                                    <div style="font-size:0.85rem;font-weight:800;color:#6366F1;">{busiest_date3.strftime('%d %b')}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">En Yoğun ({busiest_count3} yorum)</div>
+                                </div>
+                                <div style="text-align:center;flex:1;">
+                                    <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{unique_days3}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Aktif Gün</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── AKSİYON LİSTESİ ──────────────────────────────
+            try:
+                neg_yorumlar5 = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                                 if r.get("Baskın Duygu") == "Olumsuz"]
+                if neg_yorumlar5:
+                    action_keywords5 = {
+                        "Giriş / şifre sorunu giderilmeli": ["giriş yapamıyorum", "şifre", "login", "giremiyorum", "can't login", "password"],
+                        "Uygulama çökmesi / donması düzeltilmeli": ["donuyor", "çöküyor", "crash", "freezing", "lag", "kapanıyor", "crashing"],
+                        "Reklam yoğunluğu azaltılmalı": ["reklam", "ads", "ad every", "too many ads", "publicidad"],
+                        "Hesap askı / ban süreci iyileştirilmeli": ["askıya", "banned", "suspended", "ban", "hesabım kapatıldı", "disabled"],
+                        "Müzik / medya sorunu çözülmeli": ["müzik", "ses yok", "music", "audio", "no sound"],
+                        "Güncelleme sonrası bozulan özellikler düzeltilmeli": ["güncelleme", "update", "son güncelleme", "after update"],
+                        "Mesaj / bildirim sorunları giderilmeli": ["mesaj", "bildirim", "messages", "notification", "dm not working"],
+                    }
+                    neg_text_all5 = " ".join(neg_yorumlar5).lower()
+                    found_actions5 = []
+                    for action5, kws5 in action_keywords5.items():
+                        if any(kw5 in neg_text_all5 for kw5 in kws5):
+                            found_actions5.append(action5)
+                        if len(found_actions5) >= 4:
+                            break
+                    if found_actions5:
+                        items_html5 = "".join(
+                            f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+                            f'<span style="color:#f43f5e;font-size:0.8rem;margin-top:1px;">●</span>'
+                            f'<span style="font-size:0.8rem;color:#334155;font-weight:500;">{a5}</span></div>'
+                            for a5 in found_actions5
+                        )
+                        st.markdown(f"""
+                        <div style="background:#FEF2F2;border:1px solid #FEE2E2;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#DC2626;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⚡ Aksiyon Listesi</div>
+                            {items_html5}
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
     with col_summary:
         st.write("### Duygu Dağılımı")
         
@@ -2700,192 +2851,6 @@ if "bulk_results" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
 
-                # ── TREND GÖSTERGESİ ─────────────────────────────
-                try:
-                    dated = [r for r in st.session_state.get("bulk_results", [])
-                             if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
-                    if dated and len(dated) >= 20:
-                        dated_sorted = sorted(dated, key=lambda x: x["Tarih"])
-                        half = len(dated_sorted) // 2
-                        first_half = dated_sorted[:half]
-                        second_half = dated_sorted[half:]
-                        def _neg_rate(lst):
-                            if not lst: return 0
-                            return sum(1 for r in lst if r["Baskın Duygu"] == "Olumsuz") / len(lst)
-                        r1 = _neg_rate(first_half)
-                        r2 = _neg_rate(second_half)
-                        diff_trend = r2 - r1
-                        if diff_trend > 0.05:
-                            trend_icon, trend_color, trend_text = "↑", "#f43f5e", f"Olumsuz oran artıyor (+%{int(diff_trend*100)})"
-                        elif diff_trend < -0.05:
-                            trend_icon, trend_color, trend_text = "↓", "#10b981", f"Memnuniyet artıyor (+%{int(abs(diff_trend)*100)})"
-                        else:
-                            trend_icon, trend_color, trend_text = "→", "#f59e0b", "Oran stabil seyrediyor"
-                        st.markdown(f"""
-                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
-                                    padding:12px 15px;margin-top:8px;display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:1.6rem;color:{trend_color};font-weight:800;line-height:1;">{trend_icon}</span>
-                            <div>
-                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Trend</div>
-                                <div style="font-size:0.85rem;font-weight:600;color:{trend_color};">{trend_text}</div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                except Exception:
-                    pass
-
-                # ── KULLANICI PROFİLİ ─────────────────────────────
-                try:
-                    all_results = st.session_state.get("bulk_results", [])
-                    if all_results:
-                        lengths = [len(str(r.get("Yorum", ""))) for r in all_results]
-                        avg_len_p = int(sum(lengths) / len(lengths)) if lengths else 0
-                        texts_p = " ".join(str(r.get("Yorum", "")) for r in all_results).lower()
-                        lang_scores_p = {
-                            "TR": sum(1 for w in ["bir", "çok", "ama", "için", "bu"] if w in texts_p),
-                            "EN": sum(1 for w in ["the", "this", "app", "good", "bad"] if w in texts_p),
-                            "AR": sum(1 for w in ["لا", "في", "من", "على", "هذا"] if w in texts_p),
-                            "RU": sum(1 for w in ["не", "это", "для", "что", "как"] if w in texts_p),
-                        }
-                        top_langs_p = sorted(lang_scores_p.items(), key=lambda x: x[1], reverse=True)[:3]
-                        top_langs_p = [(l, s) for l, s in top_langs_p if s > 0]
-                        total_lang_p = sum(s for _, s in top_langs_p) or 1
-                        lang_bars_p = "".join(
-                            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-                            f'<span style="font-size:0.75rem;font-weight:700;color:#475569;width:20px;">{l}</span>'
-                            f'<div style="flex:1;background:#F1F5F9;border-radius:4px;height:6px;">'
-                            f'<div style="width:{int(s/total_lang_p*100)}%;background:#818CF8;height:6px;border-radius:4px;"></div>'
-                            f'</div>'
-                            f'<span style="font-size:0.7rem;color:#94A3B8;">%{int(s/total_lang_p*100)}</span>'
-                            f'</div>'
-                            for l, s in top_langs_p
-                        )
-                        st.markdown(f"""
-                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
-                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Kullanıcı Profili</div>
-                            <div style="font-size:0.8rem;color:#475569;margin-bottom:6px;">Ort. yorum uzunluğu: <strong>{avg_len_p} karakter</strong></div>
-                            {lang_bars_p}
-                        </div>
-                        """, unsafe_allow_html=True)
-                except Exception:
-                    pass
-
-                # ── DUYGU ISI HARİTASI ────────────────────────────
-                try:
-                    dated2 = [r for r in st.session_state.get("bulk_results", [])
-                              if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
-                    if dated2 and len(dated2) >= 14:
-                        import collections as _col
-                        day_neg2 = _col.defaultdict(int)
-                        day_total2 = _col.defaultdict(int)
-                        for r in dated2:
-                            try:
-                                d = pd.to_datetime(r["Tarih"]).strftime("%a")
-                                day_total2[d] += 1
-                                if r["Baskın Duygu"] == "Olumsuz":
-                                    day_neg2[d] += 1
-                            except Exception:
-                                pass
-                        days_order2 = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
-                        days_tr2 = {"Mon":"Pzt","Tue":"Sal","Wed":"Çrş","Thu":"Per","Fri":"Cum","Sat":"Cmt","Sun":"Paz"}
-                        cells2 = ""
-                        for d in days_order2:
-                            if day_total2[d] == 0: continue
-                            rate2 = day_neg2[d] / day_total2[d]
-                            bg2 = "#FEE2E2" if rate2 >= 0.6 else ("#FEF9C3" if rate2 >= 0.35 else "#DCFCE7")
-                            fc2 = "#DC2626" if rate2 >= 0.6 else ("#D97706" if rate2 >= 0.35 else "#16A34A")
-                            cells2 += (
-                                f'<div style="flex:1;text-align:center;background:{bg2};border-radius:8px;padding:6px 2px;">'
-                                f'<div style="font-size:0.65rem;color:{fc2};font-weight:700;">{days_tr2[d]}</div>'
-                                f'<div style="font-size:0.7rem;color:{fc2};font-weight:600;">%{int(rate2*100)}</div>'
-                                f'</div>'
-                            )
-                        if cells2:
-                            st.markdown(f"""
-                            <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
-                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Günlük Olumsuz Oran</div>
-                                <div style="display:flex;gap:4px;">{cells2}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                except Exception:
-                    pass
-
-                # ── HIZLI İSTATİSTİKLER ───────────────────────────
-                try:
-                    dated3 = [r for r in st.session_state.get("bulk_results", [])
-                              if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
-                    if dated3:
-                        import collections as _col2
-                        dates_only3 = []
-                        for r in dated3:
-                            try:
-                                dates_only3.append(pd.to_datetime(r["Tarih"]).date())
-                            except Exception:
-                                pass
-                        if dates_only3:
-                            date_counts3 = _col2.Counter(dates_only3)
-                            busiest_date3 = max(date_counts3, key=date_counts3.get)
-                            busiest_count3 = date_counts3[busiest_date3]
-                            unique_days3 = len(date_counts3)
-                            daily_avg3 = round(len(dated3) / unique_days3, 1) if unique_days3 else 0
-                            st.markdown(f"""
-                            <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
-                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Hızlı İstatistikler</div>
-                                <div style="display:flex;justify-content:space-between;gap:8px;">
-                                    <div style="text-align:center;flex:1;">
-                                        <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{daily_avg3}</div>
-                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Günlük Ort.</div>
-                                    </div>
-                                    <div style="text-align:center;flex:2;">
-                                        <div style="font-size:0.85rem;font-weight:800;color:#6366F1;">{busiest_date3.strftime('%d %b')}</div>
-                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">En Yoğun ({busiest_count3} yorum)</div>
-                                    </div>
-                                    <div style="text-align:center;flex:1;">
-                                        <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{unique_days3}</div>
-                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Aktif Gün</div>
-                                    </div>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                except Exception:
-                    pass
-
-                # ── AKSİYON LİSTESİ ──────────────────────────────
-                try:
-                    neg_yorumlar5 = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
-                                     if r.get("Baskın Duygu") == "Olumsuz"]
-                    if neg_yorumlar5:
-                        action_keywords5 = {
-                            "Giriş / şifre sorunu giderilmeli": ["giriş yapamıyorum", "şifre", "login", "giremiyorum", "can't login", "password"],
-                            "Uygulama çökmesi / donması düzeltilmeli": ["donuyor", "çöküyor", "crash", "freezing", "lag", "kapanıyor", "crashing"],
-                            "Reklam yoğunluğu azaltılmalı": ["reklam", "ads", "ad every", "too many ads", "publicidad"],
-                            "Hesap askı / ban süreci iyileştirilmeli": ["askıya", "banned", "suspended", "ban", "hesabım kapatıldı", "disabled"],
-                            "Müzik / medya sorunu çözülmeli": ["müzik", "ses yok", "music", "audio", "no sound"],
-                            "Güncelleme sonrası bozulan özellikler düzeltilmeli": ["güncelleme", "update", "son güncelleme", "after update"],
-                            "Mesaj / bildirim sorunları giderilmeli": ["mesaj", "bildirim", "messages", "notification", "dm not working"],
-                        }
-                        neg_text_all5 = " ".join(neg_yorumlar5).lower()
-                        found_actions5 = []
-                        for action5, kws5 in action_keywords5.items():
-                            if any(kw5 in neg_text_all5 for kw5 in kws5):
-                                found_actions5.append(action5)
-                            if len(found_actions5) >= 4:
-                                break
-                        if found_actions5:
-                            items_html5 = "".join(
-                                f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'
-                                f'<span style="color:#f43f5e;font-size:0.8rem;margin-top:1px;">●</span>'
-                                f'<span style="font-size:0.8rem;color:#334155;font-weight:500;">{a5}</span></div>'
-                                for a5 in found_actions5
-                            )
-                            st.markdown(f"""
-                            <div style="background:#FEF2F2;border:1px solid #FEE2E2;border-radius:12px;padding:12px 15px;margin-top:8px;">
-                                <div style="font-size:0.7rem;color:#DC2626;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⚡ Aksiyon Listesi</div>
-                                {items_html5}
-                            </div>
-                            """, unsafe_allow_html=True)
-                except Exception:
-                    pass
         
 
     
