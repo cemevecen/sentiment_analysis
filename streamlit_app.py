@@ -153,7 +153,7 @@ if ai_provider == "Google Gemini":
         st.sidebar.error("⚠️ Gemini API Key bulunamadı!")
     ai_model = st.sidebar.selectbox(
         "Model:",
-        options=["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        options=["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
         index=0,
         key="ai_model_gemini"
     )
