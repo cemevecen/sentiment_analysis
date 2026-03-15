@@ -1379,8 +1379,8 @@ if comments_to_analyze:
                 options=[0, 1],
                 format_func=lambda x: ["Genel", "Derin"][x],
                 captions=[
-                    f"~ {fmt_time(n * 1)}",
-                    f"~ {fmt_time(n * 2)}"
+                    f"~ {fmt_time(max(int((n * (1 - 0.55) / 28) * 60 + 15), 10))}",
+                    f"~ {fmt_time(max(int((n * (1 - 0.55) / 28) * 60 * 1.5 + 15), 10))}"
                 ],
                 key="analysis_mode"
             )
@@ -2234,7 +2234,16 @@ def run_bulk_analysis(data_to_process, is_append=False):
     # Hızlı Analiz'de hiçbir üst sınır yok — tüm liste işlenir
     
     total_items = len(data_to_process)
-    est_total_secs = total_items * (1 if mode_idx == 0 else 2)
+    _skip_rate    = 0.55
+    _api_calls    = total_items * (1 - _skip_rate)
+    _rpm          = 28
+    _api_secs     = (_api_calls / _rpm) * 60
+    _overhead     = 15
+    if mode_idx == 0:
+        est_total_secs = int(_api_secs + _overhead)
+    else:
+        est_total_secs = int(_api_secs * 1.5 + _overhead)
+    est_total_secs = max(est_total_secs, 10)
 
     components.html(f"""
     <script>
