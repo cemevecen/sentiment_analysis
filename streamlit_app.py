@@ -1587,44 +1587,126 @@ def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
     return h
 
 
-def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=None, provider=None):
-    if provider is None:
-        provider = st.session_state.get('current_ai_provider', 'Google Gemini')
-    if model_name is None:
-        model_name = st.session_state.get('current_ai_model', 'models/gemini-2.0-flash-lite')
-        
-    if not analysis_results: return None
-    valid_results = [r for r in analysis_results if r.get('Baskın Duygu') != "—"]
-    if not valid_results: return "Yeterli veri analiz edilemedi."
-
-    pos = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "Olumlu"]
-    neg = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "Olumsuz"]
-    neu = [r['Yorum'] for r in valid_results if r['Baskın Duygu'] == "İstek/Görüş"]
-    
-    def get_sample(texts, count=15):
-        import random
-        if len(texts) <= count: return "\n".join([f"- {t[:200]}" for t in texts])
-        return "\n".join([f"- {t[:200]}" for t in random.sample(texts, count)])
-
-    prompt = f"""Bir uygulama mağazası yorum analisti gibi davran. Aşağıdaki analiz sonuçlarını inceleyip derinlemesine bir rapor sun.
-    {get_sample(neu)}
-
-    RAPOR FORMATI:
-    1. "Kullanıcı Deneyimi Özeti": (Dinamik ve profesyonel bir başlık ve 4-5 cümlelik derin analiz)
-    2. "Öne Çıkan Güçlü Yönler": (Kullanıcıları en çok mutlu eden 2-3 madde)
-    3. "Kritik Sorunlar ve Çözüm Önerileri": (En çok şikayet edilen konular ve geliştirici ekibe öneri)
-
-    Dil: TÜRKÇE. Markdown formatında yaz. Link veya emoji kullanabilirsin.
+def generate_dynamic_summary(analysis_results, model_name=None, provider=None):
     """
-    try:
-        response = GEMINI_CLIENT.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(temperature=0.7)
-        )
-        return response.text
-    except Exception as e:
-        return f"Dinamik özet oluşturulurken bir hata oluştu: {str(e)[:100]}"
+    Analiz sonuçlarından 150-200 kelimelik Türkçe özet üretir.
+    Groq → Gemini → Mistral sırasıyla dener. Hepsi başarısız olursa
+    heuristic özet döner. Ekrana ASLA hata mesajı basmaz.
+    """
+    if not analysis_results:
+        return None
+
+    valid_results = [r for r in analysis_results if r.get("Baskın Duygu") != "—"]
+    if not valid_results:
+        return "Yeterli veri analiz edilemedi."
+
+    import random
+
+    pos = [r["Yorum"] for r in valid_results if r["Baskın Duygu"] == "Olumlu"]
+    neg = [r["Yorum"] for r in valid_results if r["Baskın Duygu"] == "Olumsuz"]
+    neu = [r["Yorum"] for r in valid_results if r["Baskın Duygu"] == "İstek/Görüş"]
+    total = len(valid_results)
+
+    def sample(lst, n=8):
+        chosen = lst[:n] if len(lst) <= n else random.sample(lst, n)
+        return "\n".join(f"- {t[:180]}" for t in chosen)
+
+    prompt = f"""Sen bir ürün analisti olarak aşağıdaki uygulama mağazası yorum analizini değerlendiriyorsun.
+
+ÖZET VERİLER:
+- Toplam analiz edilen yorum: {total}
+- Olumlu: {len(pos)} (%{int(len(pos)/total*100) if total else 0})
+- Olumsuz: {len(neg)} (%{int(len(neg)/total*100) if total else 0})
+- İstek/Görüş: {len(neu)} (%{int(len(neu)/total*100) if total else 0})
+
+ÖRNEK OLUMLU YORUMLAR:
+{sample(pos)}
+
+ÖRNEK OLUMSUZ YORUMLAR:
+{sample(neg)}
+
+ÖRNEK İSTEK/GÖRÜŞ YORUMLARI:
+{sample(neu)}
+
+GÖREV:
+Yukarıdaki verilere dayanarak profesyonel, tutarlı ve somut bir değerlendirme yaz.
+Kesinlikle 150-200 kelime arasında olmalı.
+Şu 3 bölümü sırayla ele al:
+1. Genel kullanıcı deneyimi nasıl? (2-3 cümle)
+2. En çok öne çıkan 2 olumlu yön nedir? (2-3 cümle)
+3. En kritik 2 sorun veya istek nedir, geliştirici ne yapmalı? (2-3 cümle)
+
+Dil: TÜRKÇE. Markdown kullanma. Düz paragraf yaz."""
+
+    # Provider zinciri: Groq → Gemini → Mistral
+    attempts = [
+        ("Groq AI",       GROQ_CLIENT,    "llama-3.3-70b-versatile"),
+        ("Google Gemini", GEMINI_CLIENT,  "models/gemini-2.5-flash"),
+        ("Google Gemini", GEMINI_CLIENT,  "models/gemini-1.5-flash"),
+        ("Mistral AI",    MISTRAL_CLIENT, "mistral-small-latest"),
+    ]
+
+    for prov, client, mdl in attempts:
+        if client is None:
+            continue
+        try:
+            if prov == "Groq AI":
+                resp = client.chat.completions.create(
+                    model=mdl,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.5,
+                    timeout=20,
+                )
+                text = resp.choices[0].message.content or ""
+            elif prov == "Google Gemini":
+                resp = client.models.generate_content(
+                    model=mdl,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(temperature=0.5),
+                )
+                text = getattr(resp, "text", "") or ""
+            elif prov == "Mistral AI":
+                resp = client.chat.complete(
+                    model=mdl,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                text = resp.choices[0].message.content or ""
+            else:
+                continue
+
+            text = text.strip()
+            if len(text) > 50:
+                return text
+
+        except Exception:
+            continue
+
+    # Tüm API'lar başarısız → heuristic özet
+    pos_p = int(len(pos) / total * 100) if total else 0
+    neg_p = int(len(neg) / total * 100) if total else 0
+    neu_p = int(len(neu) / total * 100) if total else 0
+
+    if pos_p >= 60:
+        tone = "Kullanıcıların büyük çoğunluğu uygulamadan memnun görünüyor."
+    elif neg_p >= 50:
+        tone = "Kullanıcıların yarısından fazlası çeşitli sorunlar yaşıyor."
+    else:
+        tone = "Kullanıcı deneyimi olumlu ve olumsuz yorumlar arasında dengeli bir dağılım gösteriyor."
+
+    neg_samples = ". ".join(t[:80] for t in neg[:2]) if neg else ""
+    pos_samples = ". ".join(t[:80] for t in pos[:2]) if pos else ""
+    neu_samples = ". ".join(t[:80] for t in neu[:2]) if neu else ""
+
+    summary = f"{tone} Analizde {total} yorumdan %{pos_p}'i olumlu, %{neg_p}'i olumsuz, %{neu_p}'i istek ve görüş olarak sınıflandırıldı."
+    if pos_samples:
+        summary += f" Kullanıcıların beğendiği öne çıkan konular şu şekilde özetlenebilir: {pos_samples}."
+    if neg_samples:
+        summary += f" Öte yandan en sık dile getirilen şikayetler şunlar: {neg_samples}."
+    if neu_samples:
+        summary += f" Kullanıcıların geliştirici ekipten talepleri arasında şunlar yer alıyor: {neu_samples}."
+    summary += " Geliştirici ekibin öncelikle teknik sorunları ve kullanıcı isteklerini ele alması, uzun vadeli memnuniyeti artıracaktır."
+
+    return summary
 
 
 def heuristic_analysis(text, rating=None):
