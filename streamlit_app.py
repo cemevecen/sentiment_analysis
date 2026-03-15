@@ -338,17 +338,28 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     threshold_date = now - timedelta(days=days_limit)
     
     
-    # Multi-language and Multi-region configuration
+    # Genişletilmiş dil/ülke listesi
     LANG_COUNTRY_PAIRS = [
         ('tr', 'tr'),
         ('en', 'us'),
         ('en', 'gb'),
+        ('en', 'au'),
+        ('en', 'ca'),
         ('ar', 'sa'),
+        ('ar', 'ae'),
         ('de', 'de'),
         ('fr', 'fr'),
         ('ru', 'ru'),
         ('nl', 'nl'),
         ('es', 'es'),
+        ('es', 'mx'),
+        ('pt', 'br'),
+        ('it', 'it'),
+        ('pl', 'pl'),
+        ('ro', 'ro'),
+        ('bg', 'bg'),
+        ('uk', 'ua'),
+        ('kk', 'kz'),
     ]
     
     sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
@@ -386,7 +397,13 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                                 r_id = r.get('reviewId', content)
                                 # Append language info to ID to avoid collisions across regions
                                 unique_id = f"{r_id}_{lang}_{country}"
-                                channel_data.append({"id": unique_id, "text": content, "date": r_at, "rating": str(score)})
+                                channel_data.append({
+                                    "id": unique_id, 
+                                    "text": content, 
+                                    "date": r_at, 
+                                    "rating": str(score),
+                                    "lang": lang
+                                })
                         else:
                             if sort_type == Sort.NEWEST: out_of_range = True
                 
@@ -396,7 +413,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
 
     total_channels = len(channels)
     completed_channels = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
         future_to_channel = {executor.submit(fetch_channel, s, sc, l, c): (s, sc, l, c) for s, sc, l, c in channels}
         for future in concurrent.futures.as_completed(future_to_channel):
             completed_channels += 1
@@ -1052,6 +1069,13 @@ with tab1:
                                     fetched_comments.append(r)
 
                     if fetched_comments:
+                        # Az yorum uyarısı
+                        if len(fetched_comments) < 50:
+                            st.warning(
+                                f"⚠️ Bu uygulama için yalnızca **{len(fetched_comments)}** yorum bulundu. "
+                                f"Doğru uygulama ID'sini kullandığınızdan emin olun. "
+                                f"Örn: Ana Instagram uygulaması için `com.instagram.android` kullanın."
+                            )
                         
                         update_fetch_progress(1.0)
                         time.sleep(0.5)
