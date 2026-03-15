@@ -3273,9 +3273,6 @@ if "bulk_results" in st.session_state:
                         {display_summary}
                     </div>
                 </div>
-                <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
-                    AI SENTIMENT INTELLIGENCE
-                </div>
             </div>
         """)
         st.markdown(card_html, unsafe_allow_html=True)
