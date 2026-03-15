@@ -90,7 +90,7 @@ def setup_mistral():
         except:
             pass
     
-    if api_key:
+    if api_key and Mistral is not None:
         try:
             client = Mistral(api_key=api_key)
             return client
@@ -108,7 +108,7 @@ def setup_groq():
         except:
             pass
     
-    if api_key:
+    if api_key and Groq is not None:
         try:
             client = Groq(api_key=api_key)
             return client
