@@ -920,64 +920,123 @@ st.markdown("""
 
     /* ── PRINT / PDF MODU ─────────────────────────────── */
     @media print {
-        /* Sidebar tamamen gizle */
-        [data-testid="stSidebar"],
-        [data-testid="stSidebarNav"],
-        section[data-testid="stSidebar"] { display: none !important; }
 
-        /* Üst toolbar ve header gizle */
+        /* === GİZLE === */
+
+        /* Sidebar */
+        [data-testid="stSidebar"],
+        section[data-testid="stSidebar"]        { display: none !important; }
+
+        /* Toolbar / header / decoration */
         [data-testid="stToolbar"],
         [data-testid="stHeader"],
-        [data-testid="stDecoration"] { display: none !important; }
+        [data-testid="stDecoration"]             { display: none !important; }
 
-        /* Tab barı gizle (Mağaza Linki / Dosya Yükle / Metin Girişi) */
-        div[data-testid="stTabList"] { display: none !important; }
+        /* Mağaza/Dosya/Metin tab barı */
+        div[data-testid="stTabList"],
+        div[data-baseweb="tab-list"],
+        div[data-baseweb="tab-highlight"]        { display: none !important; }
 
-        /* Analiz Ayarları bölümü gizle */
-        .stRadio, [data-testid="stRadio"] { display: none !important; }
+        /* Input alanları (Mağaza linki, tarih seçici, dosya yükle, metin girişi) */
+        [data-testid="stTextInput"],
+        [data-testid="stSelectbox"],
+        [data-testid="stFileUploader"],
+        [data-testid="stTextArea"]               { display: none !important; }
 
-        /* Analizini Yap butonu gizle */
-        [data-testid="stButton"] { display: none !important; }
-
-        /* Havuzda yorum kaldı / Sonraki batch butonu gizle */
-        [data-testid="stContainer"] > div > [data-testid="stButton"] { display: none !important; }
-
-        /* Paylaş bölümü başlığı, sosyal butonlar, PNG/Excel/PDF butonları gizle */
-        [data-testid="stSubheader"],
-        [data-testid="stDownloadButton"],
-        .u-tray,
-        #btn-png-download { display: none !important; }
-
-        /* "Yukarıdaki kartı kopyalayabilirsiniz" info kutusu gizle */
-        [data-testid="stAlert"] { display: none !important; }
-
-        /* Yorum listesi sekmeleri (Analizler / Olumlu / Olumsuz / İstek) gizle */
-        div[data-baseweb="tab-list"] { display: none !important; }
-
-        /* Tüm Yorumları Göster / Daha Az Göster butonları gizle */
-        button { display: none !important; }
-
-        /* Footer gizle */
-        footer, [data-testid="stFooter"] { display: none !important; }
-
-        /* st.divider gizle */
-        hr { display: none !important; }
-
-        /* Sayfa kenar boşlukları */
-        @page {
-            margin: 1.5cm;
+        /* Input container satırı (Apple açıklaması dahil) */
+        [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) {
+            display: none !important;
         }
 
-        /* Arka plan rengini koru */
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+        /* Analiz Ayarları içeriği (radio butonlar) */
+        [data-testid="stRadio"],
+        .stRadio                                  { display: none !important; }
+
+        /* Analiz Ayarları + Paylaş başlıkları (.no-print class) */
+        .no-print                                 { display: none !important; }
+
+        /* Tüm butonlar (Analizini Yap, Tüm Yorumları Göster, Sonraki batch vb.) */
+        [data-testid="stButton"]                  { display: none !important; }
+        [data-testid="stDownloadButton"]          { display: none !important; }
+
+        /* Alert/Info kutuları */
+        [data-testid="stAlert"],
+        [data-testid="stInfo"]                    { display: none !important; }
+
+        /* Sosyal paylaşım ikonları ve PNG butonu */
+        .u-tray                                   { display: none !important; }
+        #btn-png-download                         { display: none !important; }
+
+        /* iframe (PDF butonu, JS scriptler, components.html) */
+        iframe                                    { display: none !important; }
+
+        /* st.divider ve footer */
+        hr,
+        footer,
+        [data-testid="stFooter"]                  { display: none !important; }
+
+        /* Warning kutusu (Analiz süresince sayfayı kapatmayın) */
+        [data-testid="stWarning"]                 { display: none !important; }
+
+        /* === LAYOUT FİX === */
+
+        /* Metric kartlar print'te tek sütuna dönmesin */
+        .metric-container {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            margin-bottom: 20px !important;
+        }
+        .metric-card {
+            flex: 1 !important;
+            min-width: 55px !important;
+            padding: 12px 4px !important;
+        }
+        .metric-value {
+            font-size: 1.5rem !important;
+        }
+        .metric-label {
+            font-size: 0.55rem !important;
         }
 
-        /* Ana içerik tam genişlik */
+        /* Streamlit columns print'te yan yana kalsın */
+        [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 16px !important;
+        }
+        [data-testid="column"] {
+            flex: 1 !important;
+            width: auto !important;
+            min-width: 0 !important;
+        }
+
+        /* Ana container tam genişlik */
         [data-testid="stAppViewBlockContainer"] {
             max-width: 100% !important;
-            padding: 0 !important;
+            padding: 0 0.5cm !important;
+        }
+
+        /* Renk koruması — SVG ve arka planlar dahil */
+        *,
+        svg,
+        svg * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
+        /* Rapor kartı SVG pie chart fix */
+        #nlp-report-card svg path {
+            display: block !important;
+            visibility: visible !important;
+        }
+
+        /* Sayfa ayarları */
+        @page {
+            margin: 1.2cm;
+            size: A4 portrait;
         }
     }
 </style>
@@ -1417,7 +1476,7 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("## Analiz Ayarları")
+    st.markdown('<div class="no-print" style="margin-bottom:5px;"><h2 style="font-size:2rem;font-weight:700;color:#1E293B;">Analiz Ayarları</h2></div>', unsafe_allow_html=True)
     
     n = len(comments_to_analyze)
 
@@ -3210,7 +3269,7 @@ if "bulk_results" in st.session_state:
         
         
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        st.subheader("Analiz Raporunu Paylaş")
+        st.markdown('<div class="no-print"><h3 style="font-size:1.5rem;font-weight:700;color:#1E293B;margin-bottom:10px;">Analiz Raporunu Paylaş</h3></div>', unsafe_allow_html=True)
         
         
         total_q = len(df)
