@@ -2544,39 +2544,6 @@ if "bulk_results" in st.session_state:
             </div>
             """, unsafe_allow_html=True)
             
-            # 1. En Kritik Kelimeler
-            import collections
-            import re
-            
-            stop_words = set([
-                "ve", "bir", "cok", "çok", "icin", "için", "bu", "da", "de", "ile", "ama", "fakat", "gibi", "kadar", "olan", "olarak", "daha", "en", "ki", "ise", "mi", "mu", "hem", "ne", "var", "yok", "sonra", "önce", "böyle", "şöyle", "her", "hic", "hiç", "sadece", "artık", "zaten", "çünkü", "nasıl", "neden", "niye", "bana", "beni", "benim", "sana", "seni", "senin", "ona", "onu", "onun", "bizi", "bize", "bizim", "sizi", "size", "sizin", "onlari", "onlara", "onlarin", "uygulama", "uygulaması", "uygulamada", "program", "iyi", "güzel", "kötü", "berbat", "harika", "mükemmel", "teşekkürler", "teşekkür", "ederim", "oldu", "olur", "olacak", "olmalı", "yapın", "yap", "yaptı", "yapıyor", "yapıldı", "ediyor", "edin", "ettim", "edildi", "geldi", "geliyor", "gitti", "gider", "gidin", "aldı", "alıyor", "alın", "aldım", "verdi", "veriyor", "verin", "verdim", "istiyorum", "istemiyorum", "istiyoruz", "lütfen", "merhaba", "slm", "selam", "gün", "saat", "dakika", "ay", "yıl", "hafta", "kere", "defa", "zaman", "şimdi", "hemen", "göre", "birlikte", "beraber", "ayrıca", "bazen", "bazı", "çoğu", "tüm", "bütün", "hiçbir", "başka", "diğer", "aynı", "kendi", "biri", "biraz", "birkaç", "fazla", "az", "hiçbiri", "öyle", "böylece", "şöylece", "tam", "sanki", "belki", "mutlaka", "kesinlikle", "tabii", "elbette", "aslında", "gerçekten", "sürekli", "tavsiye", "ederiz", "bunu", "şunu", "içinde"
-            ])
-            
-            words = []
-            kritik_df = analysis_df[analysis_df["Baskın Duygu"].isin(["Olumsuz", "İstek/Görüş"])]
-            for text in kritik_df["Yorum"].astype(str):
-                clean_text = re.sub(r'[^\w\s]', ' ', text.lower())
-                clean_text = re.sub(r'\d+', ' ', clean_text)
-                tokens = clean_text.split()
-                filtered = [w for w in tokens if len(w) > 3 and w not in stop_words]
-                words.extend(filtered)
-            
-            if len(words) >= 5:
-                counter = collections.Counter(words)
-                top_words = counter.most_common(5)
-                
-                tags_html = ""
-                for word, count in top_words:
-                    tags_html += f'<span style="display: inline-block; background-color: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; padding: 4px 10px; margin: 3px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">#{word}</span>'
-                
-                st.markdown(f"""
-                <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; margin-top: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <div style="font-size: 0.85rem; color: #64748B; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">En Kritik Kelimeler</div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 2px;">
-                        {tags_html}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
 
             # ── TREND GÖSTERGESİ ─────────────────────────────
             try:
