@@ -3442,85 +3442,183 @@ if "bulk_results" in st.session_state:
         components.html(f"""
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <script>
+            (function() {{
+
+                // ── Bildirim kutusu ──────────────────────────────
                 if (!window.parent.document.getElementById('uNotif')) {{
                     const div = window.parent.document.createElement('div');
                     div.id = 'uNotif';
                     div.innerHTML = '<span id="uMsg">Hazırlanıyor...</span>';
                     Object.assign(div.style, {{
-                        position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%) translateY(-20px) scale(0.9)',
-                        background: '#10B981', color: 'white', padding: '14px 28px', borderRadius: '12px', fontWeight: '700',
-                        opacity: '0', transition: 'all 0.4s cubic-bezier(0.19, 1, 0.22, 1)', zIndex: '9999999',
-                        boxShadow: '0 15px 30px rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', gap: '10px',
-                        pointerEvents: 'none', fontFamily: '"Poppins", sans-serif', whiteSpace: 'nowrap'
+                        position:'fixed', top:'20px', left:'50%',
+                        transform:'translateX(-50%) translateY(-20px) scale(0.9)',
+                        background:'#10B981', color:'white',
+                        padding:'14px 28px', borderRadius:'12px', fontWeight:'700',
+                        opacity:'0', transition:'all 0.4s cubic-bezier(0.19,1,0.22,1)',
+                        zIndex:'9999999', boxShadow:'0 15px 30px rgba(16,185,129,0.4)',
+                        display:'flex', alignItems:'center', gap:'10px',
+                        pointerEvents:'none', fontFamily:'"Poppins",sans-serif',
+                        whiteSpace:'nowrap'
                     }});
                     window.parent.document.body.appendChild(div);
                 }}
 
-                window.notifyBridge = function(msg, duration = 3000) {{
+                window.notifyBridge = function(msg, duration=3000) {{
                     const n = window.parent.document.getElementById('uNotif');
                     const m = window.parent.document.getElementById('uMsg');
-                    if(n && m) {{
-                        m.innerText = msg; n.style.opacity = '1';
+                    if (n && m) {{
+                        m.innerText = msg;
+                        n.style.opacity = '1';
                         n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                        setTimeout(() => {{ 
+                        setTimeout(() => {{
                             n.style.opacity = '0';
                             n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
                         }}, duration);
                     }}
                 }};
-                
-                setInterval(function() {{
-                    const btn = window.parent.document.getElementById('btn-png-download');
-                    if (btn && !btn.hasAttribute('data-bound')) {{
-                        btn.setAttribute('data-bound', 'true');
-                        btn.addEventListener('click', function() {{
-                            const target = window.parent.document.getElementById('nlp-report-card');
-                            if(!target) return;
-                            
-                            window.notifyBridge("Görsel Hazırlanıyor... ⏳", 5000);
-                            
-                            window.html2canvas(target, {{ 
-                                scale: 2, 
-                                useCORS: true, 
-                                backgroundColor: '#FFFFFF', 
-                                logging: false,
-                                allowTaint: true
-                            }}).then(canvas => {{
-                                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                                const dataUrl = canvas.toDataURL('image/png');
 
-                                if (isIOS) {{
-                                    const newTab = window.open();
-                                    if (newTab) {{
-                                        newTab.document.write('<img src="' + dataUrl + '" style="width:100%; height:auto;">');
-                                        newTab.document.title = "Analiz Raporu - Kaydetmek icin Basılı Tut";
-                                        window.notifyBridge("Görsel açıldı! Kaydetmek için üzerine basılı tutun. ⬇️");
-                                    }} else {{
-                                        const link = document.createElement('a');
-                                        link.href = dataUrl;
-                                        link.download = "{image_name}";
-                                        link.click();
-                                        window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                // ── html2canvas'ı parent'a yükle ─────────────────
+                function injectHtml2Canvas(cb) {{
+                    if (window.parent.html2canvas) {{ cb(); return; }}
+                    const s = window.parent.document.createElement('script');
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    s.onload = cb;
+                    window.parent.document.head.appendChild(s);
+                }}
+
+                // ── Kart → canvas → blob ──────────────────────────
+                async function captureCard() {{
+                    const target = window.parent.document.getElementById('nlp-report-card');
+                    if (!target) throw new Error('Kart bulunamadı');
+                    return await window.parent.html2canvas(target, {{
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#FFFFFF',
+                        logging: false,
+                        allowTaint: true
+                    }});
+                }}
+
+                // ── PNG indir butonu (#btn-png-download) ──────────
+                function bindPngBtn() {{
+                    const btn = window.parent.document.getElementById('btn-png-download');
+                    if (!btn || btn.hasAttribute('data-bound')) return;
+                    btn.setAttribute('data-bound', 'true');
+                    btn.addEventListener('click', async function() {{
+                        window.notifyBridge('Görsel Hazırlanıyor... ⏳', 5000);
+                        try {{
+                            const canvas = await captureCard();
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                            const dataUrl = canvas.toDataURL('image/png');
+                            if (isIOS) {{
+                                const t = window.open();
+                                if (t) {{
+                                    t.document.write('<img src="' + dataUrl + '" style="width:100%;height:auto;">');
+                                    t.document.title = 'Analiz Raporu';
+                                    window.notifyBridge('Görseli basılı tutarak kaydedin ⬇️');
+                                }}
+                            }} else {{
+                                const a = document.createElement('a');
+                                a.href = dataUrl;
+                                a.download = '{image_name}';
+                                a.click();
+                                window.notifyBridge('İndirme Başlatıldı! ⬇️');
+                            }}
+                        }} catch(e) {{
+                            window.notifyBridge('Hata oluştu! ❌');
+                        }}
+                    }});
+                }}
+
+                // ── Paylaş butonu (#btn-share-image) ─────────────
+                function bindShareBtn() {{
+                    const btn = window.parent.document.getElementById('btn-share-image');
+                    if (!btn || btn.hasAttribute('data-sbound')) return;
+                    btn.setAttribute('data-sbound', 'true');
+
+                    btn.addEventListener('click', async function() {{
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '⏳ Hazırlanıyor...';
+                        btn.disabled = true;
+
+                        try {{
+                            const canvas = await captureCard();
+                            canvas.toBlob(async function(blob) {{
+                                const file = new File([blob], '{image_name}', {{type:'image/png'}});
+
+                                if (navigator.share && navigator.canShare &&
+                                    navigator.canShare({{files:[file]}})) {{
+                                    try {{
+                                        await navigator.share({{
+                                            files: [file],
+                                            title: 'AI Yorum Analiz Raporu'
+                                        }});
+                                        btn.innerHTML = '✅ Paylaşıldı!';
+                                        setTimeout(() => {{
+                                            btn.innerHTML = orig;
+                                            btn.disabled = false;
+                                        }}, 2000);
+                                    }} catch(e) {{
+                                        btn.innerHTML = orig;
+                                        btn.disabled = false;
+                                        if (e.name !== 'AbortError') fallback(blob);
                                     }}
                                 }} else {{
-                                    const link = document.createElement('a');
-                                    link.href = dataUrl;
-                                    link.download = "{image_name}";
-                                    link.click();
-                                    window.notifyBridge("İndirme Başlatıldı! ⬇️");
+                                    fallback(blob);
+                                    btn.innerHTML = orig;
+                                    btn.disabled = false;
                                 }}
-                            }}).catch(e => {{
-                                console.error(e);
-                                window.notifyBridge("Hata oluştu! ❌");
-                            }});
-                        }});
+                            }}, 'image/png');
+
+                        }} catch(e) {{
+                            btn.innerHTML = '❌ Hata';
+                            setTimeout(() => {{ btn.innerHTML = orig; btn.disabled = false; }}, 2000);
+                        }}
+                    }});
+                }}
+
+                function fallback(blob) {{
+                    const url = URL.createObjectURL(blob);
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    if (isIOS) {{
+                        const t = window.open();
+                        if (t) {{
+                            t.document.write(
+                                '<img src="' + url + '" style="width:100%;height:auto;">' +
+                                '<p style="text-align:center;font-family:sans-serif;color:#64748B;">Kaydetmek için görsele basılı tutun.</p>'
+                            );
+                        }}
+                    }} else {{
+                        const a = window.parent.document.createElement('a');
+                        a.href = url;
+                        a.download = '{image_name}';
+                        a.click();
                     }}
-                }}, 1000);
+                    const row = window.parent.document.getElementById('fallback-share-row');
+                    if (row) row.style.display = 'flex';
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                }}
+
+                // ── Butonları bul ve bind et ───────────────────────
+                injectHtml2Canvas(function() {{
+                    bindPngBtn();
+                    bindShareBtn();
+                    // Henüz DOM'da değilse bekle
+                    const timer = setInterval(function() {{
+                        bindPngBtn();
+                        bindShareBtn();
+                    }}, 800);
+                    setTimeout(() => clearInterval(timer), 15000);
+                }});
+
+            }})();
             </script>
         """, height=0)
 
         
         share_ui = textwrap.dedent(f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <style>
                 .share-btn-row {{
                     display: flex;
@@ -3554,24 +3652,22 @@ if "bulk_results" in st.session_state:
                 }}
                 .share-btn-primary {{
                     background: #6366F1;
-                    color: white;
+                    color: white !important;
                     border-color: #6366F1;
                     font-size: 1rem;
                     padding: 14px 28px;
+                    width: 100%;
+                    max-width: 300px;
+                    margin: 0 auto;
                 }}
                 .share-btn-primary:hover {{
-                    background: #4F46E5;
-                    border-color: #4F46E5;
-                    color: white;
+                    background: #4F46E5 !important;
+                    border-color: #4F46E5 !important;
                 }}
             </style>
 
             <div class="share-btn-row">
-                <button
-                    class="share-btn share-btn-primary"
-                    onclick="shareImage()"
-                    id="btn-share-image"
-                >
+                <button class="share-btn share-btn-primary" id="btn-share-image">
                     📤 Görseli Paylaş
                 </button>
             </div>
@@ -3590,101 +3686,6 @@ if "bulk_results" in st.session_state:
                     <i class="fa-brands fa-telegram"></i>
                 </a>
             </div>
-
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-
-            <script>
-            async function shareImage() {{
-                const btn = document.getElementById('btn-share-image');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '⏳ Hazırlanıyor...';
-                btn.disabled = true;
-
-                try {{
-                    const target = window.parent.document.getElementById('nlp-report-card');
-                    if (!target) throw new Error('Kart bulunamadı');
-
-                    const canvas = await window.parent.html2canvas(target, {{
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#FFFFFF',
-                        logging: false,
-                        allowTaint: true
-                    }});
-
-                    canvas.toBlob(async function(blob) {{
-                        const fileName = '{image_name}';
-                        const file = new File([blob], fileName, {{ type: 'image/png' }});
-
-                        // Web Share API — mobilde tüm uygulamalara paylaş
-                        if (navigator.share && navigator.canShare && navigator.canShare({{ files: [file] }})) {{
-                            try {{
-                                await navigator.share({{
-                                    files: [file],
-                                    title: 'AI Yorum Analiz Raporu',
-                                }});
-                                btn.innerHTML = '✅ Paylaşıldı!';
-                                setTimeout(() => {{
-                                    btn.innerHTML = originalText;
-                                    btn.disabled = false;
-                                }}, 2000);
-                            }} catch(e) {{
-                                if (e.name !== 'AbortError') {{
-                                    // Paylaşım iptal edilmedi, başka hata
-                                    fallbackShare(blob, fileName, btn, originalText);
-                                }} else {{
-                                    btn.innerHTML = originalText;
-                                    btn.disabled = false;
-                                }}
-                            }}
-                        }} else {{
-                            // Web Share API yok → fallback
-                            fallbackShare(blob, fileName, btn, originalText);
-                        }}
-                    }}, 'image/png');
-
-                }} catch(err) {{
-                    console.error(err);
-                    btn.innerHTML = '❌ Hata';
-                    setTimeout(() => {{
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }}, 2000);
-                }}
-            }}
-
-            function fallbackShare(blob, fileName, btn, originalText) {{
-                // Yeni sekmede göster (mobil: basılı tut > kaydet/paylaş)
-                const url = URL.createObjectURL(blob);
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                
-                if (isIOS) {{
-                    const newTab = window.open();
-                    if (newTab) {{
-                        newTab.document.write(
-                            '<img src="' + url + '" style="width:100%;height:auto;">' +
-                            '<p style="text-align:center;font-family:sans-serif;color:#64748B;font-size:14px;">Kaydetmek veya paylaşmak için görsele basılı tutun.</p>'
-                        );
-                        newTab.document.title = 'Analiz Raporu';
-                    }}
-                }} else {{
-                    // Desktop — indir
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    a.click();
-                }}
-
-                // Fallback satır sosyal linkleri göster
-                const row = document.getElementById('fallback-share-row');
-                if (row) row.style.display = 'flex';
-
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                URL.revokeObjectURL(url);
-            }}
-            </script>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
 
