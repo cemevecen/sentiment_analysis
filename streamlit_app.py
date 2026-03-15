@@ -43,7 +43,8 @@ if os.path.exists(".env"):
 
 st.set_page_config(
     page_title="AI Duygu Analizi",
-    layout="centered"
+    layout="wide", # 'centered' yerine 'wide' yapıp CSS ile içeriden kısıtlayacağız, mobilde daha esnek olur.
+    initial_sidebar_state="collapsed" # Mobilde ekranı kaplamaması için
 )
 
 
@@ -440,25 +441,26 @@ st.markdown("""
         background-color: #F0F9FF !important;
     }
     
-    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stButton, .stTextInput, .stTextArea {
+    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
         font-family: 'Poppins', sans-serif !important;
         color: #1E293B !important;
     }
     
-    /* Responsive Container Control */
+    /* 1. Reset & Full Responsive Container */
     [data-testid="stAppViewBlockContainer"] {
-        max-width: 707.2px !important;
+        max-width: 800px !important; /* Masaüstünde odaklı, mobilde 100% */
+        padding-top: 1rem !important;
+        padding-bottom: 5rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        width: 100% !important;
     }
 
-    /* Mobile Specific Adjustments */
+    /* Mobil için padding ayarı */
     @media (max-width: 768px) {
         [data-testid="stAppViewBlockContainer"] {
-            max-width: 100% !important;
             padding-left: 0.5rem !important;
             padding-right: 0.5rem !important;
+            padding-top: 0.5rem !important;
         }
         
         .header-title {
@@ -3375,7 +3377,7 @@ if "bulk_results" in st.session_state:
         display_summary = display_summary.replace('\n', '<br>')
 
         card_html = clean_html(f"""
-            <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
+            <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: clamp(15px, 5vw, 35px); margin: 10px auto; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 100%; position: relative; overflow: hidden;">
                 <style>
                     @media (max-width: 480px) {{
                         #nlp-report-card {{ padding: 20px !important; margin: 10px auto !important; }}
@@ -3389,20 +3391,20 @@ if "bulk_results" in st.session_state:
                     <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
                 </div>
                 
-                <div class="metric-row" style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
-                    <div class="metric-box" style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+                <div class="metric-row" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 35px; gap: 8px;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #F8FAFC; padding: 12px; border-radius: 12px;">
                         <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
                     </div>
-                    <div class="metric-box" style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
                         <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
                     </div>
-                    <div class="metric-box" style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
                         <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
                     </div>
-                    <div class="metric-box" style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
                         <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
                         <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
                     </div>
