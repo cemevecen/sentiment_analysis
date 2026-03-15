@@ -1599,458 +1599,478 @@ def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=
         return f"Dinamik özet oluşturulurken bir hata oluştu: {str(e)[:100]}"
 
 
-
-
 def heuristic_analysis(text, rating=None):
     """
-    Heuristic Engine v2.2 — 1750+ Instagram yorumu üzerinde eğitildi.
-    Rating-Content uyumsuzluğu, Pivot Analizi ve Sarkasm tespiti ile.
+    Heuristic Engine v3.0
+    - 1750+ Instagram/App Store yorumuyla eğitildi
+    - TR / EN / AR / RU / FR / DE / ES / NL / RO / BG destekli
+    - Rating-aware: puan ile içerik çelişirse içeriği önce denetler
+    - Sarkasm, pivot (ama/but), "öne çıksın" tuzağı tespiti
     """
-    t = text.lower().strip()
+    t = str(text).lower().strip()
+    if not t or len(t) < 2:
+        return {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33, "method": "Heuristic+"}
 
-    # ── RATING vs CONTENT UYUMSUZLUĞU KONTROLÜ (Fix 2) ───────────────────────────
+    # ── 1. PUAN BAZLI HIZLI SINYALLER ────────────────────────────────────────
+    # Rating parametresi varsa güçlü sinyal olarak kullan
+    _rating = None
     if rating is not None:
         try:
-            # Puanı integer'a çevir
-            r = int(float(str(rating).strip()))
-            if r == 1:
-                # Eğer metin çok kısaysa ve bariz pozitif keyword varsa nötr bırak (belki sarkasm değildir)
-                # Ama genellikle 1 yıldız kesin negatiftir.
-                if len(t) < 15 and any(w in t for w in ["harika", "süper", "başarılı", "iyi", "good"]):
-                    pass 
-                else:
-                    return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic+"}
-            elif r == 5:
-                # 5 yıldız verilmiş ama içerikte negatif var mı kontrolü aşağıda yapılacak
-                pass
+            _rating = int(str(rating).strip().split('.')[0])
         except:
             pass
 
-    # ── TÜRKÇE PUAN MANIPÜLASYON TUZAĞI (Fix 3) ──────────────────────────────────
-    one_ciksın_patterns = [
-        "öne çıksın diye", "üste çıksın diye", "görülsün diye yüksek",
-        "gözüksün diye", "fark edilsin diye", "dikkat çeksin diye",
+    # ── 2. PUAN MANİPÜLASYON TUZAĞI ("öne çıksın diye 5 yıldız") ────────────
+    manipulation_patterns = [
+        "öne çıksın diye", "üste çıksın diye", "en üste çıksın",
+        "görülsün diye yüksek", "fark edilsin diye", "dikkat çeksin diye",
         "yüksek puan verdim ama", "5 yıldız verdim ama", "beş yıldız verdim ama",
-        "puan verdim ama aslında", "en üste çıksın",
+        "puan verdim ama aslında", "5 puan ama",
     ]
-    if any(p in t for p in one_ciksın_patterns):
+    if any(p in t for p in manipulation_patterns):
         return {"olumlu": 0.05, "olumsuz": 0.88, "istek_gorus": 0.07, "method": "Heuristic+"}
 
-    # ── PUAN BAZLI HIZLI KARAR (METİN İÇİNDE) ───────────────────────────
-    if any(x in t for x in ["1 yıldız", "bir yıldız", "1 stern", "1 star", "1 étoile"]):
-        return {"olumlu": 0.02, "olumsuz": 0.96, "istek_gorus": 0.02, "method": "Heuristic+"}
-    if any(x in t for x in ["5 yıldız", "beş yıldız", "5 étoiles", "5 stars", "fünf sterne"]):
-        return {"olumlu": 0.96, "olumsuz": 0.02, "istek_gorus": 0.02, "method": "Heuristic+"}
+    # ── 3. YILDIZ İFADESİ METİN İÇİNDE ──────────────────────────────────────
+    if any(x in t for x in ["1 yıldız", "bir yıldız", "1 stern", "1 star", "1 étoile", "1/5", "one star"]):
+        return {"olumlu": 0.03, "olumsuz": 0.94, "istek_gorus": 0.03, "method": "Heuristic+"}
+    if any(x in t for x in ["5 yıldız", "beş yıldız", "5 stars", "5 étoiles", "5/5", "five stars", "5 stern"]):
+        return {"olumlu": 0.94, "olumsuz": 0.03, "istek_gorus": 0.03, "method": "Heuristic+"}
 
-    # ── TEK KELİME / ÇOK KISA TAM EŞLEŞMELERİ ─────────────────────────────
-    exact_pos = {
-        "harika", "mükemmel", "süper", "güzel", "iyi", "başarılı",
-        "teşekkürler", "sağolun", "best", "great", "amazing", "perfect",
-        "love", "excellent", "good", "top", "super", "schnell", "toll",
-        "nice", "parfait", "genial", "wunderbar", "outstanding", "cool",
-        "ممتاز", "احبه", "رائع", "افضل", "جميل", "الافضل",
+    # ── 4. TAM EŞLEŞMELİ KISA METİNLER (exact match) ─────────────────────────
+    EXACT_POS = {
+        # TR
+        "harika", "mükemmel", "süper", "güzel", "iyi", "başarılı", "şahane",
+        "teşekkürler", "sağolun", "bayıldım", "muhteşem", "muq", "müq", "çok iyi",
+        "çok güzel", "on numara", "bravo", "aferin", "efsane", "müthiş",
+        # EN
+        "best", "great", "amazing", "perfect", "love", "excellent", "wonderful",
+        "fantastic", "awesome", "brilliant", "superb", "outstanding", "good",
+        "nice", "top", "cool", "super",
+        # AR
+        "ممتاز", "احبه", "رائع", "جميل", "افضل", "الافضل", "تمام", "مبدع",
+        # RU
         "отлично", "супер", "топ", "хорошо", "нравится", "класс",
-        "génial", "magnifique", "fantastique", "incroyable",
-        "niezawodny", "świetne", "ótimo", "excelente", "fantástico"
+        "великолепно", "замечательно", "прекрасно",
+        # FR
+        "génial", "magnifique", "parfait", "incroyable", "bravo",
+        "top", "bien", "excellent",
+        # DE
+        "toll", "super", "ausgezeichnet", "wunderbar", "prima", "klasse", "perfekt",
+        # ES/PT
+        "excelente", "genial", "fantástico", "ótimo", "maravilhoso", "buenísimo",
+        # PL/RO/Other
+        "świetne", "niezawodny", "foarte bună", "super",
     }
-    if t in exact_pos:
-        return {"olumlu": 0.97, "olumsuz": 0.01, "istek_gorus": 0.02, "method": "Heuristic+"}
+    if t in EXACT_POS:
+        return {"olumlu": 0.95, "olumsuz": 0.02, "istek_gorus": 0.03, "method": "Heuristic+"}
 
-    exact_neg = {
-        "slab", "slimy", "bug", "bugs", "trash", "scam", "fraud",
-        "worst", "terrible", "horrible", "awful", "disgusting",
-        "sıkıldım", "bıktım", "rezalet", "saçma", "çöp",
+    EXACT_NEG = {
+        # TR
+        "çöp", "berbat", "rezalet", "rezil", "saçma", "iğrenç", "kötü",
+        "berbatsin", "berbattın", "bk gibi", "çöp gibi",
+        # EN
+        "trash", "scam", "worst", "terrible", "horrible", "awful",
+        "disgusting", "garbage", "pathetic", "useless", "rubbish",
+        "bad", "broken",
+        # AR
         "سيء", "أسوأ", "مروع", "فاشل",
+        # RU
         "ужасно", "отстой", "мусор", "кошмар",
-        "nul", "nein", "zéro", "schlecht", "schrecklich", "fos"
+        # DE
+        "schrecklich", "schlecht", "furchtbar", "mist",
+        # FR
+        "nul", "catastrophique", "horrible",
+        # TR kısa
+        "kötü", "çöp", "saçma",
     }
-    if t in exact_neg:
-        return {"olumlu": 0.02, "olumsuz": 0.96, "istek_gorus": 0.02, "method": "Heuristic+"}
+    if t in EXACT_NEG:
+        return {"olumlu": 0.03, "olumsuz": 0.94, "istek_gorus": 0.03, "method": "Heuristic+"}
 
-    # ── OLUMSUZ AĞIRLIKLI KEYWORD DATABASE (yorumlardan çıkarıldı) ──────────
-    neg_words = [
-        # TR — Hesap sorunları (EN ÇOK şikayet: ban/askıya alma)
-        "askıya", "askıya alındı", "askıya alınmış", "hesabım kapatıldı",
-        "hesabım kapatılmış", "hesabımı kapattılar", "kapandı", "kapatıldı",
-        "kapatılmış", "itiraz", "engellendi", "engelleniyor",
-        "giriş yapamıyorum", "giremiyorum", "şifre yanlış",
+    # ── 5. SARKASM / İRONİ TESPİTİ ───────────────────────────────────────────
+    SARKASM = [
+        "ne indirin ne de indirin", "ne indirin nede",
+        "aferin size", "aferin sizlere",
+        "tebrikler size", "tebrikler size gerçekten",
+        "çok faydalı olacaktır",  # "böyle yapmaya devam edin, meta'ya çok faydalı olacaktır"
+        "böyle yapmaya devam edin",
+        "sizi bildiği gibi yapsın", "allah belanızı versin", "başınıza taş yağsın",
+        "bravo size", "helal olsun yine",  # "helal olsun yine çöktü" → negatif
+        "indirdim ve bağımlı", "indirdim ve bir otist",
+        "indirmeden önce çok normaldim",
+    ]
+    sarkasm_hit = any(p in t for p in SARKASM)
+
+    # ── 6. KEYWORD LİSTELERİ ─────────────────────────────────────────────────
+
+    NEG_WORDS = [
+        # TR — Hesap sorunları (EN ÇOK şikayet)
+        "askıya", "askıya alındı", "askıya alınmış", "askıya alınıyor",
+        "hesabım kapatıldı", "hesabımı kapattılar", "hesaplarım kapandı",
+        "hesabım kapandı", "kapatılmış", "kapatıldı",
+        "itiraz", "itiraz ettim",
+        "giriş yapamıyorum", "giremiyorum", "giriş yapamıyorum",
         "hesabıma giremiyorum", "hesabıma girilmiyor",
-        "askıya almayın", "hesabımı açın", "hesabım askıda",
-        "durduruldu", "açılmıyor", "açılmıyor hesabım",
+        "şifre yanlış", "şifremi doğru girdiğim halde",
+        "şifre doğru ama yanlış", "şifre doğru olmasına rağmen",
+        "durduruldu", "askıda",
+        "ip ban", "cihaz ban", "cihaz banı", "ip banı",
+        "yeni hesap açınca da kapanıyor", "açtığım her hesap",
+        "her hesap kapatılıyor", "her hesabım kapanıyor",
+        "20 hesap", "10 hesap", "5 hesap",  # "10 hesap açtım hepsi kapandı"
 
         # TR — Uygulama sorunları
-        "donuyor", "dondu", "kasıyor", "kasıldı", "çöküyor", "çöktü",
-        "kapanıyor", "kapandı", "çalışmıyor", "yavaş", "hata veriyor",
+        "donuyor", "kasıyor", "çöküyor", "çöktü", "kapanıyor",
+        "çalışmıyor", "yavaş", "hata veriyor", "hata var",
         "bozuk", "bozuldu", "berbat", "kötü", "rezil", "rezalet",
-        "sorun", "problem", "mahvoldu", "çöp", "saçma", "yaramaz",
-        "iğrenç", "rahatsız edici", "sıkıntı", "sildim", "siliyorum",
-        "kaldırdım", "kaldırıyorum", "vazgeçtim", "silinmiş",
+        "sorun", "problem", "çöp", "saçma", "yaramaz", "iğrenç",
+        "durduruldu", "sildim", "siliyorum", "kaldırdım", "kaldırıyorum",
         "yüklenmiyor", "açılmıyor", "gözükmüyor", "görünmüyor",
-        "boş ekran", "hata", "tekrar dene", "mahvoldu",
-        "tema gitti", "temalar gitti", "temalar kaldırıldı",
-        "tema yok", "temam gitti", "temalara ihtiyacım var",
-        "mesajlar gitmiyor", "mesaj gitmiyor", "mesaj gelmiyor",
-        "mesajlar gelmiyor", "mesajlara giremiyorum", "dm sorunu",
-        "reklam çok", "her yerden reklam", "aşırı reklam",
-        "müzik yok", "müzik çalışmıyor", "müzik kaldırıldı",
-        "repost yok", "repost özelliği yok", "repost gelsin",
-        "hikaye sorunu", "hikayeler görünmüyor", "arşiv yok",
-        "bildirim gelmiyor", "bildirimler çalışmıyor",
-        "ses gitmiyor", "ses yok", "video yüklenmiyor",
-        "güncelleme kötü", "güncelleme bozdu", "güncelleme sonrası",
-        "algoritma bozuk", "algoritma saçma", "algoritmadan nefret",
-        "takipçilerim azaldı", "görünüm azaldı", "erişim yok",
-        "param gitti", "dolandırıcı", "dolandırıcılık", "kazık",
-        "haksız", "haksız yere", "sebepsiz", "sebepsiz yere",
-        "mağdur", "mağdurum", "çok sinir", "sinir bozucu",
-        "yeter artık", "bıktım artık", "yoruldum", "geri getirin",
+        "boş ekran", "lag", "atıyor", "uygulama atıyor",
+        "uygulama çöküyor", "uygulama donuyor",
 
-        # EN — Account/ban (very frequent)
+        # TR — Chat/mesaj sorunları
+        "mesaj gitmiyor", "mesajlar gitmiyor", "mesaj gelmiyor",
+        "mesajlara giremiyorum", "dm sorunu", "mesaj yüklenmiyor",
+        "sohbet açılmıyor", "mesaj düşmüyor",
+
+        # TR — Reklam
+        "reklam çok", "aşırı reklam", "her yerden reklam",
+        "full reklam", "çok reklam", "reklam dolu",
+        "her reels reklam", "2 reels 1 reklam", "1 reklam 1 reels",
+        "34 reels 19 reklam",  # spesifik sayım
+        "reklam sayfasına atıyor", "reklam geçilmiyor",
+        "reklam donuyor",
+
+        # TR — İçerik/feed sorunları
+        "eski gönderiler", "4 günlük", "günler önceki",
+        "feed yenilenmiyor", "akış yenilenmiyor",
+        "takip etmediğim", "alakasız videolar", "alakasız içerik",
+        "yabancı dil videoları",
+
+        # TR — Müzik
+        "müzik yok", "müzik çalışmıyor", "müzik kaldırıldı",
+        "ses yok", "ses gitmiyor", "ses çalışmıyor",
+        "audio çalışmıyor",
+
+        # TR — Tema/filtre
+        "tema gitti", "temalar gitti", "temalar kaldırıldı", "tema yok",
+        "filtreler gitti", "eski filtreler", "efektler kaldırıldı",
+
+        # TR — Fotoğraf/galeri
+        "fotoğraflar karışık", "galeri karışık", "fotoğraf seçemiyorum",
+        "fotoğraf açılmıyor", "foto açılamadı", "resim yüklenmiyor",
+        "fotoğraf yüklenmiyor", "profil fotoğrafı değişmiyor",
+        "profil resmi yüklenmiyor",
+
+        # TR — Arşiv/anı
+        "anılar yok", "arşiv yok", "geçmiş hikayeler gözükmüyor",
+        "eski hikayeler yok", "anılar çıkmıyor", "anım çıkmıyor",
+
+        # TR — Kayıtlar
+        "kaydedilenlerden silince başa dönüyor",
+        "kaydedilenler başa atıyor", "kaydettiklerim karışık",
+
+        # TR — Güncelleme
+        "güncelleme kötü", "güncelleme bozdu", "yeni güncelleme kötü",
+        "son güncelleme berbat", "güncelleme sonrası bozuldu",
+
+        # TR — Reel/video
+        "reels açılmıyor", "video açılmıyor", "reels izleyemiyorum",
+        "video yüklenmiyor", "siyah ekran", "kara ekran",
+        "videolar görünmüyor", "reels çalışmıyor",
+
+        # TR — Genel kötü deneyim
+        "mahvoldu", "batık", "mağdur", "mağdurum",
+        "yeter artık", "bıktım artık", "artık bıktım",
+        "gına geldi", "sinir bozucu", "can sıkıcı",
+        "berbatlaştı", "kötüleşti", "giderek kötü",
+        "eskiden iyiydi", "eskisi daha iyiydi",
+        "eski haline getirin", "eski haline dönün",
+        "eski instagram", "eski versiyonu",
+
+        # TR — Safariden giriyor ama uygulamadan girmiyor
+        "safariden giriyor ama uygulamadan",
+        "google chrome giriyor ama uygulama",
+        "telefonumdan giremiyorum",
+        "kendi telefonumdan giremiyorum",
+        "başka cihazdan giriyor ama",
+
+        # TR — Özellik gelmiyor
+        "bana gelmiyor", "hesabıma gelmiyor",
+        "güncelleme gelmiyor", "özellik gelmiyor",
+        "herkeste var bende yok",
+
+        # TR — Moderasyon
+        "haksız", "haksız yere", "sebepsiz", "sebepsiz yere",
+        "hiçbir şey yapmadığım halde", "suçum yok ama",
+        "topluluk kuralları ihlali yok ama",
+
+        # EN — Account/ban
         "suspended", "suspension", "banned", "ban", "disabled",
         "account disabled", "account suspended", "account banned",
-        "no reason", "false ban", "wrongly banned", "cant login",
-        "can't login", "login loop", "login issue", "won't let me in",
+        "no reason", "false ban", "wrongly banned",
+        "cant login", "can't login", "login loop", "login issue",
         "permanently banned", "permanently disabled", "permanently suspended",
         "lost my account", "lost access",
+        "falsely banned for cse", "cse ban", "false cse",
+        "wrongfully banned cse", "accused of cse",
 
         # EN — App issues
         "crashing", "crashes", "keeps crashing", "crash",
         "freezing", "freeze", "lag", "lagging", "laggy",
         "not working", "doesn't work", "won't work", "stopped working",
-        "bug", "bugs", "glitch", "glitching", "broken",
+        "bug", "glitch", "glitching", "broken",
         "terrible", "horrible", "awful", "disgusting", "garbage",
         "worst app", "worst update", "hate this", "ruined",
-        "too many ads", "ads everywhere", "all ads", "ad every",
-        "music not working", "no music", "music removed", "music banned",
-        "themes gone", "themes removed", "themes disappeared",
-        "messages not loading", "cant send messages", "messages not working",
-        "messages not sending", "messages failed", "dm not working",
-        "not loading", "loading issue", "wont load", "error",
-        "something went wrong", "try again", "fix this", "fix your app",
-        "reels not loading", "video not loading", "stories not working",
-        "notifications not working", "not receiving notifications",
-        "privacy violation", "data tracking", "spying", "censorship",
-        "ai moderation", "false flagging", "wrongly flagged",
-        "scam", "fraud", "stealing", "lawsuit",
 
-        # RU — Аккаунт/бан
+        # EN — Ads
+        "too many ads", "ads everywhere", "all ads", "ad every",
+        "non stop ads", "constant ads", "flooded with ads",
+        "ad breaks", "mid video ads",
+
+        # EN — Photos out of order
+        "photos out of order", "pictures out of order",
+        "not in chronological order", "photos jumbled",
+        "photos all mixed up", "gallery mixed up",
+
+        # EN — Login via browser not app
+        "can login on safari but not app",
+        "works on browser not app",
+        "can log in on computer but not app",
+
+        # EN — No human support
+        "no human support", "no human review", "no real person",
+        "can't reach anyone", "no way to contact",
+        "zero support", "no support contact",
+        "appeal ignored", "appeal rejected instantly",
+
+        # EN — Music
+        "no music", "music not working", "music removed", "music banned",
+        "audio unavailable", "no audio",
+
+        # EN — Themes
+        "themes gone", "themes removed", "themes disappeared",
+
+        # EN — Messages
+        "messages not loading", "cant send messages",
+        "messages not working", "messages not sending",
+        "messages failed", "dm not working",
+
+        # EN — General
+        "scam", "fraud",
+        "fix this", "fix your app", "fix it",
+        "something went wrong",
+        "error", "not loading",
+
+        # RU
         "заблокировали", "блокировка", "аккаунт заблокирован",
-        "бан", "забанили", "заморозили", "не работает",
+        "бан", "забанили", "не работает",
         "удалили", "пропало", "исчезло", "убрали",
         "не грузится", "не загружается", "глючит", "виснет",
-        "зависает", "не открывается", "ошибка", "баг",
-        "ужасно", "отвратительно", "ненавижу", "верните",
+        "зависает", "не открывается", "ошибка",
+        "ужасно", "отвратительно", "верните",
         "перестало работать", "сломали", "испортили",
-        "не приходят сообщения", "сообщения не отправляются",
-        "темы пропали", "темы удалили", "музыка не работает",
-        "музыку убрали", "нет музыки",
+        "не приходят сообщения", "темы пропали",
+        "музыка не работает", "музыку убрали",
+        "фото не по порядку", "галерея перемешана",
+        "не могу загрузить фото",
 
-        # FR — Compte/ban
+        # FR
         "suspendu", "banni", "compte supprimé", "compte suspendu",
-        "ne fonctionne plus", "ne fonctionne pas", "bug", "bugs",
+        "ne fonctionne plus", "ne fonctionne pas",
         "plante", "bloqué", "erreur", "problème", "nul",
         "horrible", "catastrophique", "trop de pubs",
-        "thèmes disparus", "thèmes supprimés", "musiques supprimées",
-        "messages ne chargent pas", "messages ne s'envoient pas",
+        "thèmes disparus", "messages ne chargent pas",
+        "photos mélangées", "photos dans le désordre",
 
-        # DE — Konto/Ban
+        # DE
         "gesperrt", "konto gesperrt", "account gesperrt",
-        "funktioniert nicht", "läuft nicht", "abstürzt", "absturz",
-        "fehler", "bug", "bugs", "schlecht", "schrecklich",
-        "zu viell werbung", "themen weg", "themen entfernt",
-        "nachrichten laden nicht", "musik weg",
+        "funktioniert nicht", "abstürzt", "fehler",
+        "schlecht", "schrecklich", "zu viel werbung",
+        "themen weg", "nachrichten laden nicht",
+        "fotos durcheinander", "bilder durcheinander",
+        "grundlos gesperrt",
 
-        # AR — حساب/حظر
+        # AR
         "حظر", "محظور", "تم حظر", "تعطيل", "معطل",
         "لا يعمل", "لا تعمل", "مشكلة", "خطأ",
-        "سيء", "أسوأ", "مروع", "فشل", "سلبي",
+        "سيء", "أسوأ", "مروع", "فشل",
         "الرسائل لا تصل", "لا يوجد موسيقى",
 
+        # ES
+        "suspendido", "baneado", "no funciona", "error",
+        "terrible", "horrible", "demasiada publicidad",
+        "fotos desordenadas", "fotos mezcladas",
+
         # RO/BG/Other
-        "temele", "temele dispărut", "temele au dispărut",
-        "nu funcționează", "blocat", "suspendat",
+        "temele dispărut", "nu funcționează", "blocat", "suspendat",
         "темите изчезнаха", "не работи", "забранен",
-        "bugs", "problem", "defect",
     ]
 
-    # ── OLUMLU AĞIRLIKLI KEYWORD DATABASE ───────────────────────────────────
-    pos_words = [
+    POS_WORDS = [
         # TR
         "teşekkür", "harika", "mükemmel", "güzel", "süper", "başarılı",
-        "memnun", "sev", "bayıl", "efsane", "müthiş", "kusursuz",
-        "pratik", "hızlı", "kaliteli", "faydalı", "yararlı",
-        "en iyi", "çok iyi", "beğendim", "beğeniyorum", "tavsiye",
-        "ideal", "şahane", "keyifli", "harikasınız", "sağolun",
+        "memnun", "seviyorum", "bayıldım", "efsane", "müthiş", "kusursuz",
+        "pratik", "hızlı", "kaliteli", "faydalı", "yararlı", "şahane",
+        "en iyi", "çok iyi", "beğendim", "beğeniyorum", "tavsiye ederim",
+        "ideal", "keyifli", "harikasınız", "sağolun", "tebrikler",
         "iyiki", "çok güzel", "çok seviyorum", "seviyorum",
-        "bravo", "helal", "aferin",
+        "on numara", "muhteşem",
 
         # EN
         "love", "amazing", "great", "excellent", "perfect", "wonderful",
         "fantastic", "awesome", "best", "brilliant", "superb",
         "outstanding", "helpful", "useful", "recommend", "enjoy",
         "enjoying", "happy", "pleased", "satisfied", "good job",
-        "well done", "keep it up", "love it", "like it",
+        "well done", "keep it up",
 
         # AR
         "ممتاز", "احبه", "رائع", "جميل", "افضل", "الافضل",
-        "احب", "رائعة", "مميز", "عالي", "تمام", "شكرا",
-        "مبدع", "جيد", "ممتازة",
+        "احب", "رائعة", "مميز", "شكرا", "مبدع",
 
         # RU
-        "отлично", "супер", "топ", "хорошо", "нравится", "класс",
+        "отлично", "супер", "топ", "нравится", "класс",
         "великолепно", "замечательно", "лучшее", "люблю", "обожаю",
         "молодцы", "спасибо", "прекрасно",
 
         # FR
         "adore", "j'adore", "génial", "magnifique", "fantastique",
-        "incroyable", "parfait", "super", "excellent", "bravo",
-        "merci", "top", "bien",
+        "parfait", "excellent", "bravo", "merci",
 
         # DE
-        "toll", "super", "ausgezeichnet", "fantastisch", "wunderbar",
-        "hervorragend", "prima", "klasse", "danke", "perfekt",
+        "toll", "ausgezeichnet", "fantastisch", "wunderbar",
+        "hervorragend", "prima", "danke", "perfekt",
+
+        # ES/PT
+        "ótimo", "excelente", "fantástico", "maravilhoso",
+        "buenísimo", "genial",
 
         # Other
-        "ótimo", "excelente", "fantástico", "maravilhoso",
-        "świetne", "niezawodny", "doskonały",
-        "buenisima", "excelente", "genial",
+        "świetne", "niezawodny", "très bien", "très bonne",
     ]
 
-    # ── İSTEK/GÖRÜŞ KEYWORD DATABASE (yorumlardan çıkarıldı) ─────────────────
-    neu_words = [
-        # TR
+    NEU_WORDS = [
+        # TR — İstek
         "keşke", "gelse", "olsa", "olurdu", "ekleyin", "ekleseniz",
-        "geri getirin", "geri getirilsin", "ne zaman", "neden",
-        "yapın", "istiyoruz", "öneri", "görüşüm", "eksik",
+        "geri getirin", "geri getirilsin", "ne zaman", "neden gelmiyor",
+        "yapın", "istiyoruz", "öneri", "eksik",
         "daha iyi olabilir", "bi baksanız", "eklense", "gelsin",
-        "düzeltilsin", "düzeltin", "lütfen ekle", "lütfen düzelt",
-        "fikrim", "önerim", "bekliyoruz", "özellik ekleyin",
-        "güncelleme gelsin", "yenilik", "özellik istiyorum",
+        "düzeltilsin", "düzeltin lütfen", "lütfen ekle",
+        "fikrim", "önerim", "bekliyoruz", "özellik istiyorum",
+        "ekleyebilirler", "ekleseler",
+
+        # TR — Yeni özellik talepleri (bu veriden)
+        "repost özelliği gelsin", "repost geri gelsin",
+        "profil görüntüleme gelsin", "takipten çıkanları görelim",
+        "hikaye yorumları gelsin", "canlı yayın herkese",
+        "çoklu profil fotoğrafı gelsin", "eski filtreleri geri getir",
+        "kronolojik sıra", "tarih sırasına göre sıralasın",
 
         # EN
         "please add", "please fix", "please bring back", "when will",
         "would be nice", "i wish", "suggestion", "request",
         "feature request", "bring back", "need this", "want this",
         "could you add", "consider adding", "hope you add",
-        "why not add", "it would be great if",
 
         # AR
-        "أتمنى", "أريد", "يرجى", "من فضلكم", "اقتراح",
-        "متى", "لماذا لا", "يمكنكم",
+        "أتمنى", "أريد", "يرجى", "من فضلكم", "اقتراح", "متى",
 
         # RU
         "хотелось бы", "было бы хорошо", "добавьте", "верните",
-        "пожалуйста", "просьба", "предлагаю", "когда",
+        "просьба", "предлагаю", "когда добавят",
 
         # FR
-        "j'aimerais", "serait bien", "pourriez vous", "s'il vous plaît",
-        "suggestion", "proposition", "quand est-ce",
+        "j'aimerais", "serait bien", "s'il vous plaît", "suggestion",
+        "quand est-ce",
 
         # DE
         "wäre schön", "bitte fügt", "wünsche mir", "vorschlag",
-        "könntet ihr", "wann kommt",
     ]
 
-    # ── YENİ NEGATİF KEYWORDLER (751-1750 yorumlardan) ──────────────────────────
-    neg_words_new = [
-        # TR — Fotoğraf/galeri karışıklığı (ÇOK SIK yeni sorun)
-        "fotoğraflar karışık", "sıralanmıyor", "tarih sırasına göre değil",
-        "galeri karışık", "fotoğraf seçemiyorum", "fotoğraf açılmıyor",
-        "foto açılamadı", "resim yüklenmiyor", "fotoğraf yüklenmiyor",
-        "albüm karışık", "sonraki fotoğraflar gelmiyor",
+    # ── 7. KEYWORD SCORING ────────────────────────────────────────────────────
+    neg_score = sum(1 for w in NEG_WORDS if w in t)
+    pos_score = sum(1 for w in POS_WORDS if w in t)
+    neu_score = sum(1 for w in NEU_WORDS if w in t)
 
-        # TR — Ses sorunları
-        "ses yok", "ses gitmiyor", "ses çalışmıyor", "ses oynatılamıyor",
-        "audio çalışmıyor", "sessize alma çalışmıyor",
+    # Negatif kelimeler biraz daha ağır
+    neg_score_w = neg_score * 1.25
 
-        # TR — Cihaz/giriş sorunları
-        "telefonumdan giremiyorum", "uygulamadan giremiyorum",
-        "safariden giriyor ama uygulamadan girmiyor",
-        "şifre doğru ama yanlış diyor", "şifre yanlış hatası",
-        "başka cihazdan giriyor ama bu telefondan girmiyor",
-        "güncelledim ama giremiyorum", "bilinmeyen bir hata",
-        "bir sorun oluştu", "sürekli hata veriyor",
+    # Sarkasm bulunmuşsa → içeriği negatif say
+    # (ne indirin ne de indirin → keyword yok ama sarkasm var)
+    if sarkasm_hit:
+        # Eğer açıkça pozitif keyword baskın değilse → olumsuz
+        if pos_score <= neg_score or pos_score == 0:
+            return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic+"}
 
-        # TR — IP/cihaz ban
-        "ip ban", "cihaz ban", "cihaz banı", "ip banı",
-        "yeni hesap açınca da kapanıyor", "açtığım her hesap kapanıyor",
-        "10 hesap açtım hepsi kapandı", "her hesap kapatılıyor",
+    # ── 8. "AMA/BUT" PIVOT KURALI ─────────────────────────────────────────────
+    PIVOT_TR = [" ama ", " fakat ", " lakin ", " ancak ", " ne var ki "]
+    PIVOT_EN = [" but ", " however ", " although ", " though "]
+    ALL_PIVOTS = PIVOT_TR + PIVOT_EN
 
-        # TR — Özellik gelmiyor
-        "bana gelmiyor", "hesabıma gelmiyor", "özellik gelmiyor",
-        "çoklu profil gelmiyor", "repost gelmiyor", "tekrar paylaşım yok",
-        "güncelleme gelmiyor", "yeni özellikler gelmiyor",
-        "herkeste var bende yok",
+    for pivot in ALL_PIVOTS:
+        if pivot in t:
+            parts = t.split(pivot, 1)
+            after = parts[1] if len(parts) > 1 else ""
 
-        # EN — Photos out of order (very frequent new bug)
-        "photos out of order", "pictures out of order", "not in chronological order",
-        "photos not sorted", "photos jumbled", "can't find recent photos",
-        "photos all mixed up", "gallery mixed up", "photos by date",
-        "scroll through all photos", "latest photos not showing",
-        "photos from years ago mixed",
+            after_neg = sum(1 for w in NEG_WORDS if w in after)
+            after_pos = sum(1 for w in POS_WORDS if w in after)
 
-        # EN — Login via browser but not app
-        "can login on safari but not app", "works on browser not app",
-        "can log in on computer but not app", "login works on web not app",
-        "app won't let me login but website does",
+            if after_neg > after_pos and after_neg > 0:
+                conf = min(0.88, 0.70 + after_neg * 0.04)
+                return {"olumlu": 0.06, "olumsuz": round(conf, 3),
+                        "istek_gorus": round(1-conf-0.06, 3), "method": "Heuristic+"}
+            if after_pos > after_neg and after_pos > 0:
+                conf = min(0.88, 0.70 + after_pos * 0.04)
+                return {"olumlu": round(conf, 3), "olumsuz": 0.06,
+                        "istek_gorus": round(1-conf-0.06, 3), "method": "Heuristic+"}
+            # pivot var ama net karar yok → genel keyword scoring devam etsin
+            break
 
-        # EN — CSE false ban (very high frequency)
-        "falsely banned for cse", "cse ban", "false cse", "wrongfully banned cse",
-        "child exploitation false", "falsely accused cse", "accused of cse",
-        "banned for cse", "cse false positive", "wrongful cse",
+    # ── 9. RATING OVERRIDE (son adım) ────────────────────────────────────────
+    # İçerik keyword'lerden karar veremediyse rating'e bak
+    total_kw = pos_score + neg_score + neu_score
 
-        # EN — No human support
-        "no human support", "no human review", "ai no human",
-        "automated system", "no real person", "can't reach anyone",
-        "no way to contact", "zero support", "no support contact",
-        "appeal ignored", "appeal rejected instantly", "appeal in seconds",
-        "months without response", "no response to appeal",
+    if total_kw == 0:
+        # Hiç keyword yok → rating'e bak
+        if _rating == 1:
+            return {"olumlu": 0.05, "olumsuz": 0.88, "istek_gorus": 0.07, "method": "Heuristic+"}
+        if _rating == 2:
+            return {"olumlu": 0.15, "olumsuz": 0.72, "istek_gorus": 0.13, "method": "Heuristic+"}
+        if _rating == 4:
+            return {"olumlu": 0.72, "olumsuz": 0.15, "istek_gorus": 0.13, "method": "Heuristic+"}
+        if _rating == 5:
+            return {"olumlu": 0.85, "olumsuz": 0.08, "istek_gorus": 0.07, "method": "Heuristic+"}
+        # rating 3 veya bilinmiyor → nötr
+        return {"olumlu": 0.35, "olumsuz": 0.33, "istek_gorus": 0.32, "method": "Heuristic+"}
 
-        # EN — Account hacked then banned
-        "account hacked then banned", "hacked and suspended",
-        "banned after hack", "suspended due to hacker",
+    # Rating 1 + negatif keyword varsa → çok güçlü negatif sinyal
+    if _rating == 1 and neg_score > 0:
+        conf = min(0.96, 0.80 + neg_score * 0.04)
+        return {"olumlu": round((1-conf)/2, 3), "olumsuz": round(conf, 3),
+                "istek_gorus": round((1-conf)/2, 3), "method": "Heuristic+"}
 
-        # EN — Microphone not working
-        "microphone not working", "mic not working", "can't send voice notes",
-        "voice notes not working", "no one can hear me",
+    # Rating 5 ama içerikte net negatif var → content wins
+    if _rating == 5 and neg_score > pos_score and neg_score >= 2:
+        conf = min(0.88, 0.65 + neg_score * 0.05)
+        return {"olumlu": 0.06, "olumsuz": round(conf, 3),
+                "istek_gorus": round(1-conf-0.06, 3), "method": "Heuristic+"}
 
-        # EN — Ads every 2 posts
-        "ad every", "every 2 posts ad", "every other post ad",
-        "ads between every", "non stop ads", "constant ads",
-        "too many ads", "flooded with ads", "full of ads", "too much ads", "too much",
-        "ad breaks", "pause ads", "mid video ads",
+    # ── 10. NORMAL KARAR ──────────────────────────────────────────────────────
+    if neg_score_w > pos_score and neg_score_w >= neu_score:
+        conf = min(0.95, 0.68 + (neg_score_w / (pos_score + neg_score_w + neu_score)) * 0.27)
+        return {"olumlu": round((1-conf)/2, 3), "olumsuz": round(conf, 3),
+                "istek_gorus": round((1-conf)/2, 3), "method": "Heuristic+"}
 
-        # EN — Photos not uploading after update
-        "can't upload photos", "photos won't upload", "upload photos broken",
-        "can't post pictures", "photos not appearing", "can't select photos",
+    if pos_score > neg_score and pos_score >= neu_score:
+        conf = min(0.95, 0.68 + (pos_score / (pos_score + neg_score_w + neu_score)) * 0.27)
+        return {"olumlu": round(conf, 3), "olumsuz": round((1-conf)/2, 3),
+                "istek_gorus": round((1-conf)/2, 3), "method": "Heuristic+"}
 
-        # EN — Saved posts bug
-        "saved posts jumping to top", "saved posts going back to start",
-        "unsave sends to top", "saved collection bug", "saved reels limit",
+    if neu_score >= pos_score and neu_score >= neg_score:
+        return {"olumlu": 0.08, "olumsuz": 0.07, "istek_gorus": 0.85, "method": "Heuristic+"}
 
-        # EN — Story bug
-        "story comments not working", "can't comment on stories",
-        "story not loading", "stories not showing",
-
-        # EN — Sound blasting in stories
-        "sound blasts", "sound loud in stories", "volume increases",
-
-        # RU — Фото не по порядку
-        "фото не по порядку", "галерея перемешана", "фотографии перемешались",
-        "не сортируются", "вперемешку", "не по дате",
-        "не могу загрузить foto", "фото не загружается",
-
-        # RU — IP/устройство заблокировано
-        "блокируют все аккаунты", "каждый аккаунт блокируют",
-        "не дают создать аккаунт", "каждый новый аккаунт",
-
-        # FR — Photos mélangées
-        "photos mélangées", "pas dans l'ordre", "photos dans le désordre",
-        "photos chronologiques", "photos triées par date",
-        "photos en vrac", "impossible de trouver",
-
-        # FR — Bannissement faux
-        "banni sans raison", "compte supprimé sans raison",
-        "comptes suspendus", "suspension sans raison",
-        "faux bannissement", "intelligence artificielle banni",
-
-        # DE — Fotos durcheinander (sehr häufig)
-        "fotos durcheinander", "fotos nicht nach datum", "bilder durcheinander",
-        "bilder nicht sortiert", "fotos chronologisch", "neueste fotos nicht",
-        "fotos gemischt", "galerie durcheinander",
-
-        # DE — KI-Sperre
-        "konto gesperrt ki", "ki sperrt", "grundlos gesperrt",
-        "ohne grund gesperrt", "falscher ban",
-
-        # ES — Fotos desordenadas
-        "fotos desordenadas", "fotos mezcladas", "no están ordenadas",
-        "fotos por fecha", "fotos no orden cronológico",
-        "fotos antiguas mezcladas",
-
-        # IT/PT — 
-        "foto disordinate", "foto mescolate",
-        "fotos desordenadas", "fotos embaralhadas",
-
-        # TR/EN — Reklam aralarında duraklatma
-        "reklam duraklatma", "pause publicitaire", "pausa publicitaria",
-        "werbepause", "ad pause", "ad break mid video",
-
-        # TR/EN — Kayıtlar başa dönüyor
-        "kaydedilenlerden silince başa dönüyor",
-        "saved posts back to top", "jumps to top",
-        "goes back to beginning", "scroll back to start",
-
-        # TR — Arşiv/anı yok
-        "anılar yok", "arşiv yok", "geçmiş hikayeler gözükmüyor",
-        "eski hikayeler yok", "anılar çıkmıyor",
-
-        # TR — Sticker/filtre sorunu
-        "sticker yok", "filtre yok", "eski filtreler gitti",
-        "efektler kaldırıldı", "filtreler kötü",
-
-        # EN — Flicker/black screen reels
-        "reels flickering", "screen flickers", "black screen reels",
-        "reel goes black", "video goes black",
-    ]
-
-    # ── YENİ OLUMLU KEYWORDLER ──────────────────────────────────────────────────
-    pos_words_new = [
-        # Çok kısa ama net olumlu
-        "megaa", "mega", "muhteşem", "şahane", "bayıldım",
-        "keremett", "kermet", "мощь", "огонь", "нравится",
-        "très bien", "très bonne", "très pratique", "très utile",
-        "muy buena", "muy bien", "muy útil", "excelente app",
-        "aplicação ótima", "ótima aplicação",
-        "bellissima", "ottima", "bravissimi",
-        "świetna", "super aplikacja",
-        "çok iyi uygulama", "çok beğendim", "çok güzel uygulama",
-        "harika uygulama", "mükemmel uygulama",
-    ]
-
-    # ── YENİ İSTEK/GÖRÜŞ KEYWORDLER ─────────────────────────────────────────────
-    neu_words_new = [
-        # Fotoğraf sıralama isteği
-        "kronolojik sıra", "tarih sırasına göre sıralasın",
-        "fotoğrafları sıralayın", "date order please",
-        "chronological order please", "sort by date",
-
-        # Özellik isteği — yeni
-        "repost özelliği gelsin", "repost geri gelsin",
-        "bring back repost", "add repost", "repost feature",
-        "profile views please", "profil görüntüleme gelsin",
-        "takipten çıkanları görelim", "unfollow tracker",
-        "story comments please", "hikaye yorumları gelsin",
-        "live for everyone", "canlı yayın herkese",
-        "remove follower limit live", "live without followers",
-        "dark mode please", "dark mode gelsin",
-        "offline mode", "çevrimdışı mod",
-        "multiple profile photos", "çoklu profil fotoğrafı gelsin",
-        "bring back filters", "eski filtreleri geri getir",
-        "lagos filter back", "abu dhabi filter",
-        "bring back stories acceleration", "hikaye hızlandırma gelsin",
-        "add music to posted photo", "atılmış gönderiye müzik",
-        "change music on post", "posted photo music change",
-        "reorganize posts", "gönderi sırasını değiştir",
-        "add photos to existing post", "mevcut gönderiye fotoğraf ekle",
-        "close friends multiple lists", "yakın arkadaş birden fazla",
-        "hide followers list", "takipçi listesi gizle",
-        "remove friends tab", "arkadaşlar sekmesi kaldır",
-        "more hashtags", "daha fazla hashtag",
-        "search in saved", "kaydedilenlerda ara",
-        "delete all likes", "tüm beğenileri sil",
-        "select all delete messages", "toplu mesaj sil",
-        "stop story notifications", "hikaye bildirimleri kapat",
-        "disable notes expiry notification", "not süresi bildirimi kapat",
-        "allow 1 minute stories", "1 dakika hikaye",
-        "disable reels", "reels kapat",
-        "remove reel from homepage", "anasayfada reel olmasın",
-    ]
-
-    # 750-1750 yorumlardan öğrenilen yeni pattern'lar
-    neg_words.extend(neg_words_new)
-    pos_words.extend(pos_words_new)
-    neu_words.extend(neu_words_new)
+    return {"olumlu": 0.35, "olumsuz": 0.33, "istek_gorus": 0.32, "method": "Heuristic+"}
+ords_new)
 
     # ── TÜRKÇE "AMA/FAKAT" PIVOT KURALI (Fix 4) ─────────────────────────────────
     # Başta olumlu, "ama/fakat/lakin" sonrası negatif → olumsuz
