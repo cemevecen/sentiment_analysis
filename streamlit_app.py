@@ -1379,8 +1379,8 @@ if comments_to_analyze:
                 options=[0, 1],
                 format_func=lambda x: ["Genel", "Derin"][x],
                 captions=[
-                    f"~ {fmt_time(max(int((n * (1 - 0.55) / 28) * 60 + 15), 10))}",
-                    f"~ {fmt_time(max(int((n * (1 - 0.55) / 28) * 60 * 1.5 + 15), 10))}"
+                    f"~ {fmt_time(max(int((n * (1 - 0.82) * 0.7 / 28) * 60 / min(10, 28/60*3) + 10), 8))}",
+                    f"~ {fmt_time(max(int((n * (1 - 0.65) * 0.7 / 28) * 60 / min(10, 3) * 1.4 + 15), 15))}"
                 ],
                 key="analysis_mode"
             )
@@ -1400,7 +1400,8 @@ import threading as _threading
 _rate_state = {"Groq AI": [], "Google Gemini": [], "Mistral AI": []}
 _rate_lock  = _threading.Lock()
 RPM_LIMITS  = {"Groq AI": 28, "Google Gemini": 28, "Mistral AI": 4}
-CONFIDENCE_THRESHOLD = 0.82
+CONFIDENCE_THRESHOLD_FAST = 0.82   # Hızlı Analiz — heuristic yeterli
+CONFIDENCE_THRESHOLD_RICH = 0.65   # Zengin Analiz — belirsiz yorumlar AI'ya gider
 COST_LIMIT_TL = 150.0
 
 _MODEL_MAP = {
@@ -1548,7 +1549,9 @@ def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
 
     # Heuristic önfiltre
     h = heuristic_analysis(text, rating=rating)
-    if max(h["olumlu"], h["olumsuz"], h["istek_gorus"]) >= CONFIDENCE_THRESHOLD:
+    _analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
+    _threshold = CONFIDENCE_THRESHOLD_FAST if _analysis_type == "Hızlı Analiz" else CONFIDENCE_THRESHOLD_RICH
+    if max(h["olumlu"], h["olumsuz"], h["istek_gorus"]) >= _threshold:
         h["method"] = "Heuristic+Skip"
         return h
 
@@ -2234,16 +2237,16 @@ def run_bulk_analysis(data_to_process, is_append=False):
     # Hızlı Analiz'de hiçbir üst sınır yok — tüm liste işlenir
     
     total_items = len(data_to_process)
-    _skip_rate    = 0.55
-    _api_calls    = total_items * (1 - _skip_rate)
-    _rpm          = 28
-    _api_secs     = (_api_calls / _rpm) * 60
-    _overhead     = 15
-    if mode_idx == 0:
-        est_total_secs = int(_api_secs + _overhead)
+    _analysis_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+    if _analysis_now == "Hızlı Analiz":
+        est_total_secs = max(int(total_items * 0.015), 5)  # Hızlı: ~15ms/yorum
     else:
-        est_total_secs = int(_api_secs * 1.5 + _overhead)
-    est_total_secs = max(est_total_secs, 10)
+        _api_ratio = 0.13 if mode_idx == 0 else 0.25      # Genel: %13, Derin: %25 API'ya gider
+        _api_calls = total_items * _api_ratio
+        _rpm       = 28
+        _workers   = 10
+        _factor    = 1.0 if mode_idx == 0 else 1.4
+        est_total_secs = max(int((_api_calls / _rpm) * 60 / min(_workers, 3) * _factor + 15), 20)
 
     components.html(f"""
     <script>
