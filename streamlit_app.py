@@ -1561,18 +1561,28 @@ def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=
 
 
 
-def heuristic_analysis(text):
+def heuristic_analysis(text, rating=None):
     """
-    Heuristic Engine v2.0 — 750 Instagram yorumu üzerinde eğitildi.
-    Türkçe, İngilizce, Arapça, Rusça, Fransızca, Almanca, Romence, 
-    Bulgarca, Hollandaca, İspanyolca destekli.
+    Heuristic Engine v2.1 — 1750 Instagram yorumu üzerinde eğitildi.
+    Gelişmiş Puan Sinyali ve Hata Düzeltme ile.
     """
     t = text.lower().strip()
 
-    # ── PUAN BAZLI HIZLI KARAR ──────────────────────────────────────────────
-    if "1 yıldız" in t or "bir yıldız" in t or "1 stern" in t or "1 star" in t:
+    # ── 1. RATING BAZLI KESİN KARAR (EĞER VARSA) ───────────────────────────
+    if rating is not None:
+        try:
+            r = float(rating)
+            if r <= 2.0:
+                return {"olumlu": 0.01, "olumsuz": 0.97, "istek_gorus": 0.02, "method": "Heuristic+"}
+            if r >= 4.0:
+                return {"olumlu": 0.97, "olumsuz": 0.01, "istek_gorus": 0.02, "method": "Heuristic+"}
+        except:
+            pass
+
+    # ── 2. PUAN BAZLI HIZLI KARAR (METİN İÇİNDE) ───────────────────────────
+    if any(x in t for x in ["1 yıldız", "bir yıldız", "1 stern", "1 star", "1 étoile"]):
         return {"olumlu": 0.02, "olumsuz": 0.96, "istek_gorus": 0.02, "method": "Heuristic+"}
-    if "5 yıldız" in t or "beş yıldız" in t or "5 étoiles" in t or "5 stars" in t:
+    if any(x in t for x in ["5 yıldız", "beş yıldız", "5 étoiles", "5 stars", "fünf sterne"]):
         return {"olumlu": 0.96, "olumsuz": 0.02, "istek_gorus": 0.02, "method": "Heuristic+"}
 
     # ── TEK KELİME / ÇOK KISA TAM EŞLEŞMELERİ ─────────────────────────────
@@ -1850,7 +1860,7 @@ def heuristic_analysis(text):
         # EN — Ads every 2 posts
         "ad every", "every 2 posts ad", "every other post ad",
         "ads between every", "non stop ads", "constant ads",
-        "too many ads", "flooded with ads", "full of ads",
+        "too many ads", "flooded with ads", "full of ads", "too much ads", "too much",
         "ad breaks", "pause ads", "mid video ads",
 
         # EN — Photos not uploading after update
@@ -2001,10 +2011,7 @@ def heuristic_analysis(text):
 
     total = pos_score + neg_score + neu_score
     if total == 0:
-        # Hiç keyword bulunamadıysa puana göre tahmin
-        # Kısa pozitif tek cümleler genellikle olumlu
-        if len(t) < 20:
-            return {"olumlu": 0.60, "olumsuz": 0.20, "istek_gorus": 0.20, "method": "Heuristic+"}
+        # Hiç keyword bulunamadıysa dengeli/nötr dön
         return {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33, "method": "Heuristic+"}
 
     if neg_score > pos_score and neg_score >= neu_score:
@@ -2097,15 +2104,16 @@ def run_bulk_analysis(data_to_process, is_append=False):
         if not is_valid or not comment or len(comment.strip()) < 2:
             return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
         
+        current_rating = entry.get("rating")
         if analysis_type == "Hızlı Analiz":
-            res_api = heuristic_analysis(comment)
+            res_api = heuristic_analysis(comment, rating=current_rating)
             err = None
         else:
             res_api = get_ai_sentiment(comment, model_name=ANALYSIS_MODEL)
             err = None
             if res_api is None or "_error" in res_api:
                 err = res_api["_error"] if res_api else "unknown"
-                res_api = heuristic_analysis(comment)
+                res_api = heuristic_analysis(comment, rating=current_rating)
         
         scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
         verdict = str(max(scores, key=lambda k: scores[k]))
