@@ -1074,7 +1074,6 @@ with tab1:
                             st.warning(
                                 f"⚠️ Bu uygulama için yalnızca **{len(fetched_comments)}** yorum bulundu. "
                                 f"Doğru uygulama ID'sini kullandığınızdan emin olun. "
-                                f"Örn: Ana Instagram uygulaması için `com.instagram.android` kullanın."
                             )
                         
                         update_fetch_progress(1.0)
