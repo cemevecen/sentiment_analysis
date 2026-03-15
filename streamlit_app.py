@@ -1579,23 +1579,40 @@ def generate_dynamic_summary(analysis_results: List[Dict[str, Any]], model_name=
 
 def heuristic_analysis(text, rating=None):
     """
-    Heuristic Engine v2.1 — 1750 Instagram yorumu üzerinde eğitildi.
-    Gelişmiş Puan Sinyali ve Hata Düzeltme ile.
+    Heuristic Engine v2.2 — 1750+ Instagram yorumu üzerinde eğitildi.
+    Rating-Content uyumsuzluğu, Pivot Analizi ve Sarkasm tespiti ile.
     """
     t = text.lower().strip()
 
-    # ── 1. RATING BAZLI KESİN KARAR (EĞER VARSA) ───────────────────────────
+    # ── RATING vs CONTENT UYUMSUZLUĞU KONTROLÜ (Fix 2) ───────────────────────────
     if rating is not None:
         try:
-            r = float(rating)
-            if r <= 2.0:
-                return {"olumlu": 0.01, "olumsuz": 0.97, "istek_gorus": 0.02, "method": "Heuristic+"}
-            if r >= 4.0:
-                return {"olumlu": 0.97, "olumsuz": 0.01, "istek_gorus": 0.02, "method": "Heuristic+"}
+            # Puanı integer'a çevir
+            r = int(float(str(rating).strip()))
+            if r == 1:
+                # Eğer metin çok kısaysa ve bariz pozitif keyword varsa nötr bırak (belki sarkasm değildir)
+                # Ama genellikle 1 yıldız kesin negatiftir.
+                if len(t) < 15 and any(w in t for w in ["harika", "süper", "başarılı", "iyi", "good"]):
+                    pass 
+                else:
+                    return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic+"}
+            elif r == 5:
+                # 5 yıldız verilmiş ama içerikte negatif var mı kontrolü aşağıda yapılacak
+                pass
         except:
             pass
 
-    # ── 2. PUAN BAZLI HIZLI KARAR (METİN İÇİNDE) ───────────────────────────
+    # ── TÜRKÇE PUAN MANIPÜLASYON TUZAĞI (Fix 3) ──────────────────────────────────
+    one_ciksın_patterns = [
+        "öne çıksın diye", "üste çıksın diye", "görülsün diye yüksek",
+        "gözüksün diye", "fark edilsin diye", "dikkat çeksin diye",
+        "yüksek puan verdim ama", "5 yıldız verdim ama", "beş yıldız verdim ama",
+        "puan verdim ama aslında", "en üste çıksın",
+    ]
+    if any(p in t for p in one_ciksın_patterns):
+        return {"olumlu": 0.05, "olumsuz": 0.88, "istek_gorus": 0.07, "method": "Heuristic+"}
+
+    # ── PUAN BAZLI HIZLI KARAR (METİN İÇİNDE) ───────────────────────────
     if any(x in t for x in ["1 yıldız", "bir yıldız", "1 stern", "1 star", "1 étoile"]):
         return {"olumlu": 0.02, "olumsuz": 0.96, "istek_gorus": 0.02, "method": "Heuristic+"}
     if any(x in t for x in ["5 yıldız", "beş yıldız", "5 étoiles", "5 stars", "fünf sterne"]):
@@ -2011,11 +2028,43 @@ def heuristic_analysis(text, rating=None):
     pos_words.extend(pos_words_new)
     neu_words.extend(neu_words_new)
 
-    # ── PUAN BAZLI GÜÇLÜ SİNYALLER (yorum içinde geçen puan ifadeleri) ──────
-    if any(x in t for x in ["puan: 1", "1/5", "one star", "ein stern", "1 étoile"]):
-        neg_words.append("___FORCE_NEG___")
-    if any(x in t for x in ["puan: 5", "5/5", "five stars", "fünf sterne", "5 étoiles"]):
-        pos_words.append("___FORCE_POS___")
+    # ── TÜRKÇE "AMA/FAKAT" PIVOT KURALI (Fix 4) ─────────────────────────────────
+    # Başta olumlu, "ama/fakat/lakin" sonrası negatif → olumsuz
+    pivot_words = [" ama ", " fakat ", " lakin ", " ancak ", " ne var ki ", " yalnız "]
+    for pivot in pivot_words:
+        if pivot in t:
+            parts = t.split(pivot, 1)
+            before = parts[0]
+            after = parts[1] if len(parts) > 1 else ""
+            
+            before_neg = sum(1 for w in neg_words if w in before)
+            after_neg  = sum(1 for w in neg_words if w in after)
+            before_pos = sum(1 for w in pos_words if w in before)
+            after_pos  = sum(1 for w in pos_words if w in after)
+            
+            # Son kısım negatifse → olumsuz ağırlıklı
+            if after_neg > after_pos and after_neg > 0:
+                return {"olumlu": 0.08, "olumsuz": 0.86, "istek_gorus": 0.06, "method": "Heuristic+"}
+            # Son kısım pozitifse → olumlu ağırlıklı  
+            if after_pos > after_neg and after_pos > 0:
+                return {"olumlu": 0.85, "olumsuz": 0.09, "istek_gorus": 0.06, "method": "Heuristic+"}
+            break
+
+    # ── TÜRKÇE İRONİ/SARKASM TESPİTİ (Fix 5) ────────────────────────────────────
+    sarkasm_patterns = [
+        "ne indirin ne de indirin", "ne indirin nede",
+        "indirmeden önce çok normaldim", "indirdim ve bir otist",
+        "indirdim ve bağımlı", "aferin size", "helal olsun",
+        "tebrikler", "çok faydalı olacaktır", "böyle yapmaya devam edin",
+        "sizi bildiği gibi yapsın", "allah belanızı versin", "başınıza taş yağsın",
+        "sizi biliyor gibi yapsın", "elinize sağlık", "ne güzel",
+        "bravo size", "eyvallah",
+    ]
+    sarkasm_found = any(p in t for p in sarkasm_patterns)
+    if sarkasm_found:
+        neg_count = sum(1 for w in neg_words if w in t)
+        if neg_count > 0:
+            return {"olumlu": 0.05, "olumsuz": 0.90, "istek_gorus": 0.05, "method": "Heuristic+"}
 
     # ── SKOR HESABI ──────────────────────────────────────────────────────────
     neg_score = sum(1 for w in neg_words if w in t)
