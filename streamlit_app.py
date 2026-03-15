@@ -921,143 +921,125 @@ st.markdown("""
     /* ── PRINT / PDF MODU ─────────────────────────────── */
     @media print {
 
-        /* === GİZLE === */
-
-        /* Sidebar */
+        /* ═══════════════════════════════════════════════
+           1. GİZLE — aksiyon butonu / input / sidebar / footer
+        ═══════════════════════════════════════════════ */
         [data-testid="stSidebar"],
-        section[data-testid="stSidebar"]        { display: none !important; }
-
-        /* Toolbar / header / decoration */
+        section[data-testid="stSidebar"],
         [data-testid="stToolbar"],
         [data-testid="stHeader"],
-        [data-testid="stDecoration"]             { display: none !important; }
-
-        /* Mağaza/Dosya/Metin tab barı */
-        div[data-testid="stTabList"],
-        div[data-baseweb="tab-list"],
-        div[data-baseweb="tab-highlight"]        { display: none !important; }
-
-        /* Input alanları (Mağaza linki, tarih seçici, dosya yükle, metin girişi) */
+        [data-testid="stDecoration"],
         [data-testid="stTextInput"],
         [data-testid="stSelectbox"],
         [data-testid="stFileUploader"],
-        [data-testid="stTextArea"]               { display: none !important; }
-
-        /* Input container satırı (Apple açıklaması dahil) */
-        [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) {
-            display: none !important;
-        }
-
-        /* Analiz Ayarları içeriği (radio butonlar) */
+        [data-testid="stTextArea"],
         [data-testid="stRadio"],
-        .stRadio                                  { display: none !important; }
-
-        /* Analiz Ayarları + Paylaş başlıkları (.no-print class) */
-        .no-print                                 { display: none !important; }
-
-        /* Tüm butonlar (Analizini Yap, Tüm Yorumları Göster, Sonraki batch vb.) */
-        [data-testid="stButton"]                  { display: none !important; }
-        [data-testid="stDownloadButton"]          { display: none !important; }
-
-        /* Alert/Info kutuları */
+        .stRadio,
+        [data-testid="stButton"],
+        [data-testid="stDownloadButton"],
         [data-testid="stAlert"],
-        [data-testid="stInfo"]                    { display: none !important; }
-
-        /* Sosyal paylaşım ikonları ve PNG butonu */
-        .u-tray                                   { display: none !important; }
-        #btn-png-download                         { display: none !important; }
-
-        /* iframe (PDF butonu, JS scriptler, components.html) */
-        iframe                                    { display: none !important; }
-
-        /* st.divider ve footer */
+        [data-testid="stInfo"],
+        [data-testid="stWarning"],
+        [data-testid="stTabList"],
+        div[data-baseweb="tab-list"],
+        div[data-baseweb="tab-highlight"],
+        .no-print,
+        .u-tray,
+        #btn-png-download,
+        iframe,
         hr,
         footer,
-        [data-testid="stFooter"]                  { display: none !important; }
+        [data-testid="stFooter"]        { display: none !important; }
 
-        /* Warning kutusu (Analiz süresince sayfayı kapatmayın) */
-        [data-testid="stWarning"]                 { display: none !important; }
+        /* Gizlenen elementlerin boşluklarını tamamen kapat */
+        [data-testid="stSidebar"] *,
+        [data-testid="stButton"] *,
+        [data-testid="stAlert"] *,
+        .no-print *                     { margin: 0 !important; padding: 0 !important; height: 0 !important; }
 
-        /* === LAYOUT FİX === */
+        /* ═══════════════════════════════════════════════
+           2. LAYOUT — sütunları dikey akıta
+        ═══════════════════════════════════════════════ */
 
-        /* Metric kartlar print'te tek sütuna dönmesin */
+        /* Streamlit column wrapper'ı block yap */
+        [data-testid="stHorizontalBlock"] {
+            display: block !important;
+            width: 100% !important;
+        }
+
+        /* Her kolon tam genişlik, yan yana değil alt alta */
+        [data-testid="column"] {
+            display: block !important;
+            width: 100% !important;
+            min-width: 100% !important;
+            float: none !important;
+            page-break-inside: avoid !important;
+        }
+
+        /* Ana container */
+        [data-testid="stAppViewBlockContainer"] {
+            max-width: 100% !important;
+            padding: 0 0.8cm !important;
+        }
+
+        /* Gereksiz dikey boşlukları sıkıştır */
+        [data-testid="stVerticalBlock"] {
+            gap: 8px !important;
+        }
+        [data-testid="stVerticalBlock"] > div {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* ═══════════════════════════════════════════════
+           3. METRİK KARTLAR — tek sütun değil yatay sır
+        ═══════════════════════════════════════════════ */
         .metric-container {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             gap: 6px !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 16px !important;
+            width: 100% !important;
         }
         .metric-card {
             flex: 1 !important;
-            min-width: 55px !important;
-            padding: 12px 4px !important;
-        }
-        .metric-value {
-            font-size: 1.5rem !important;
-        }
-        .metric-label {
-            font-size: 0.55rem !important;
-        }
-
-        /* Streamlit columns print'te yan yana kalsın */
-        [data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            gap: 16px !important;
-        }
-        [data-testid="column"] {
-            flex: 1 !important;
-            width: auto !important;
             min-width: 0 !important;
+            padding: 10px 4px !important;
         }
+        .metric-value { font-size: 1.4rem !important; }
+        .metric-label { font-size: 0.5rem !important; }
 
-        /* Ana container tam genişlik */
-        [data-testid="stAppViewBlockContainer"] {
-            max-width: 100% !important;
-            padding: 0 0.5cm !important;
-        }
-
-        /* Renk koruması — SVG ve arka planlar dahil */
-        *,
-        svg,
-        svg * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-        }
-
-        /* Rapor kartı SVG pie chart fix */
-        #nlp-report-card svg path {
-            display: block !important;
-            visibility: visible !important;
-        }
-
-        /* Genel Deneyim Skoru kutusu sayfa ortasında bölünmesin */
-        [data-testid="stMarkdownContainer"] > div {
-            page-break-inside: avoid !important;
-        }
-
-        /* Rapor kartı kesinlikle bölünmesin */
+        /* ═══════════════════════════════════════════════
+           4. RAPOR KARTI — SVG pie fix + sayfa kırılmasın
+        ═══════════════════════════════════════════════ */
         #nlp-report-card {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            margin-top: 16px !important;
         }
 
-        /* Rapor kartı SVG pie — transform print'te çalışmıyor,
-           düz daire olarak göster */
-        #nlp-report-card .chart-svg-box {
-            transform: none !important;
+        /* SVG transform print'te çalışmıyor → düz göster */
+        #nlp-report-card .chart-container {
+            flex-direction: column !important;
+            align-items: center !important;
         }
-        #nlp-report-card .chart-svg-box > div {
+        #nlp-report-card .chart-svg-box {
+            width: 120px !important;
+            height: 120px !important;
+            margin: 0 auto 12px auto !important;
+        }
+        /* Gölge div'i gizle */
+        #nlp-report-card .chart-svg-box > div:first-child {
             display: none !important;
         }
+        /* SVG transform sıfırla */
         #nlp-report-card .chart-svg-box svg {
             transform: none !important;
             position: relative !important;
             top: 0 !important;
-            width: 130px !important;
-            height: 130px !important;
+            width: 120px !important;
+            height: 120px !important;
         }
         #nlp-report-card .chart-svg-box svg path {
             display: block !important;
@@ -1065,26 +1047,26 @@ st.markdown("""
             opacity: 1 !important;
         }
 
-        /* Son sayfadaki boşluğu önle */
-        .stApp > * {
-            page-break-after: auto !important;
-        }
-
-        /* Analiz Sonuçları başlığı öncesinde sayfa kırılmasın */
-        h2 {
+        /* ═══════════════════════════════════════════════
+           5. SAYFA KIRILIMLARI
+        ═══════════════════════════════════════════════ */
+        h2, h3 {
             page-break-before: avoid !important;
             page-break-after: avoid !important;
         }
-
-        /* Boş div'ler ekstra sayfa açmasın */
-        [data-testid="stVerticalBlock"] > div:empty {
-            display: none !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
+        .neon-pos, .neon-neg, .neon-neu, .normal-card {
+            page-break-inside: avoid !important;
         }
 
-        /* Sayfa ayarları */
+        /* ═══════════════════════════════════════════════
+           6. RENK + BASKI BOYASI
+        ═══════════════════════════════════════════════ */
+        *, svg, svg * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
         @page {
             margin: 1.2cm;
             size: A4 portrait;
