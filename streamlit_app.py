@@ -144,7 +144,9 @@ elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
 st.sidebar.title("🤖 AI Ayarları")
 cost_now = API_TRACKER.get("cost_tl", 0.0)
 if cost_now > 0:
-    st.sidebar.caption(f"💰 Tahmini Maliyet: ₺{cost_now:.2f} / ₺150")
+    st.sidebar.caption(
+        f"💰 Tahmini Maliyet: ₺{cost_now:.2f} / ₺{COST_LIMIT_TL:.0f}"
+    )
 ai_provider = st.sidebar.selectbox(
     "AI Sağlayıcı:",
     options=["Google Gemini", "Mistral AI", "Groq AI"],
@@ -1393,10 +1395,11 @@ if comments_to_analyze:
         st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
 
+import threading as _threading
+
 _rate_state = {"Groq AI": [], "Google Gemini": [], "Mistral AI": []}
-_rate_lock  = threading.Lock()
+_rate_lock  = _threading.Lock()
 RPM_LIMITS  = {"Groq AI": 28, "Google Gemini": 28, "Mistral AI": 4}
-PROVIDER_CHAIN = ["Groq AI", "Google Gemini", "Mistral AI"]
 CONFIDENCE_THRESHOLD = 0.82
 COST_LIMIT_TL = 150.0
 
@@ -1417,29 +1420,22 @@ def _record_api_call(provider):
     with _rate_lock:
         _rate_state[provider].append(time.time())
 
-def _build_prompt(text, rating=None):
-    rating_str = f"Kullanıcı Puanı: {rating}/5" if rating else "Kullanıcı Puanı: Belirtilmemiş"
-    return f"""Sen çok dilli uygulama mağaza yorumu analizi uzmanısın.
-Yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
-
-{rating_str}
-
-KATEGORİLER:
-- olumlu: Memnun, övgü, teşekkür, tavsiye.
-- olumsuz: Şikayet, sorun, kızgınlık, hayal kırıklığı.
-- istek_gorus: Tarafsız öneri, soru, beklenti.
-
-KARAR KURALLARI:
-1. Son cümle baskındır. Başta şikayet sonda çözüm → olumlu.
-2. Başta iltifat sonda şikayet → olumsuz.
-3. İroni/sarkasm → olumsuz.
-4. ÖNEMLİ: Bazı kullanıcılar yorumlarının öne çıkması için bilinçli olarak 5 yıldız verip çok sert eleştiri yazabilirler. Bu durumlarda puanı değil, metindeki duyguyu (ironi, kızgınlık, şikayet) baz al.
-
-ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
-{{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
-
-Yorum: "{text[:500]}"
-"""
+def _build_prompt(text):
+    return (
+        'Sen çok dilli uygulama mağaza yorumu analizi uzmanısın.\n'
+        'Yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.\n\n'
+        'KATEGORİLER:\n'
+        '- olumlu: Memnun, övgü, teşekkür, tavsiye.\n'
+        '- olumsuz: Şikayet, sorun, kızgınlık, hayal kırıklığı.\n'
+        '- istek_gorus: Tarafsız öneri, soru, beklenti.\n\n'
+        'KARAR KURALLARI:\n'
+        '1. Son cümle baskındır. Başta şikayet sonda çözüm → olumlu.\n'
+        '2. Başta iltifat sonda şikayet → olumsuz.\n'
+        '3. İroni/sarkasm → olumsuz.\n\n'
+        'ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.\n'
+        '{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}\n\n'
+        f'Yorum: "{text[:500]}"'
+    )
 
 def _parse_response(content, provider):
     try:
@@ -1447,9 +1443,9 @@ def _parse_response(content, provider):
         if not match:
             return None
         data  = json.loads(match.group())
-        p     = float(data.get("olumlu",     0))
-        n     = float(data.get("olumsuz",    0))
-        neu   = float(data.get("istek_gorus",0))
+        p     = float(data.get("olumlu",      0))
+        n     = float(data.get("olumsuz",     0))
+        neu   = float(data.get("istek_gorus", 0))
         total = p + n + neu
         if total <= 0:
             return None
@@ -1462,35 +1458,35 @@ def _parse_response(content, provider):
     except Exception:
         return None
 
-def _call_groq(text, client, model, rating=None):
+def _call_groq(text, client, model):
     try:
         resp = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": _build_prompt(text, rating=rating)}],
+            messages=[{"role": "user", "content": _build_prompt(text)}],
             temperature=0,
             timeout=12,
         )
         usage = getattr(resp, "usage", None)
         if usage:
-            p_t = getattr(usage, "prompt_tokens", 0)
+            p_t = getattr(usage, "prompt_tokens",     0)
             c_t = getattr(usage, "completion_tokens", 0)
             API_TRACKER["cost_tl"] += (p_t * 0.1 + c_t * 0.4) / 1_000_000 * 36.0
         return _parse_response(resp.choices[0].message.content or "", "Groq AI")
     except Exception:
         return None
 
-def _call_gemini(text, client, model, rating=None):
+def _call_gemini(text, client, model):
     try:
         resp = client.models.generate_content(
             model=model,
-            contents=_build_prompt(text, rating=rating),
+            contents=_build_prompt(text),
             config=genai_types.GenerateContentConfig(temperature=0),
         )
         meta = getattr(resp, "usage_metadata", None)
         if meta:
-            p_t = getattr(meta, "prompt_token_count", 0)
+            p_t = getattr(meta, "prompt_token_count",     0)
             c_t = getattr(meta, "candidates_token_count", 0)
-            is_pro = "pro" in model.lower()
+            is_pro   = "pro" in model.lower()
             cost_in  = p_t * (3.50 if is_pro else 0.075) / 1_000_000
             cost_out = c_t * (10.50 if is_pro else 0.30)  / 1_000_000
             API_TRACKER["cost_tl"] += (cost_in + cost_out) * 36.0
@@ -1498,15 +1494,15 @@ def _call_gemini(text, client, model, rating=None):
     except Exception:
         return None
 
-def _call_mistral(text, client, model, rating=None):
+def _call_mistral(text, client, model):
     try:
         resp = client.chat.complete(
             model=model,
-            messages=[{"role": "user", "content": _build_prompt(text, rating=rating)}],
+            messages=[{"role": "user", "content": _build_prompt(text)}],
         )
         usage = getattr(resp, "usage", None)
         if usage:
-            p_t = getattr(usage, "prompt_tokens", 0)
+            p_t = getattr(usage, "prompt_tokens",     0)
             c_t = getattr(usage, "completion_tokens", 0)
             is_large = "large" in model.lower()
             cost_in  = p_t * (2.0 if is_large else 0.2) / 1_000_000
@@ -1521,37 +1517,51 @@ _CALLER_MAP = {
     "Google Gemini": _call_gemini,
     "Mistral AI":    _call_mistral,
 }
-_CLIENT_MAP_FN = lambda: {
-    "Groq AI":       GROQ_CLIENT,
-    "Google Gemini": GEMINI_CLIENT,
-    "Mistral AI":    MISTRAL_CLIENT,
-}
+
+def _build_chain(selected_provider):
+    """Seçilen provider'ı başa koy, diğerlerini arkaya ekle."""
+    full = ["Groq AI", "Google Gemini", "Mistral AI"]
+    rest = [p for p in full if p != selected_provider]
+    return [selected_provider] + rest
 
 def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
     """
-    Hibrit AI zinciri: Heuristic önfiltre → Groq → Gemini → Mistral → Fallback.
-    Asla exception fırlatmaz. Her zaman geçerli dict döner.
+    Hibrit AI zinciri:
+      1. Heuristic önfiltre (conf >= 0.82 → API atla)
+      2. Sidebar'da seçilen provider → başarısız → Groq → Gemini → Mistral
+      3. Heuristic fallback (her zaman çalışır)
+    Asla exception fırlatmaz.
     """
-    FALLBACK = {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33,
-                "method": "Heuristic+Fallback"}
+    FALLBACK = {
+        "olumlu": 0.33, "olumsuz": 0.34,
+        "istek_gorus": 0.33, "method": "Heuristic+Fallback",
+    }
 
     if not text or len(str(text).strip()) < 2:
         return FALLBACK
 
     # Maliyet limiti
     if API_TRACKER["cost_tl"] >= COST_LIMIT_TL:
-        return {"_error": "cost_limit"}
+        r = heuristic_analysis(text, rating=rating)
+        r["method"] = "Heuristic+CostLimit"
+        return r
 
     # Heuristic önfiltre
     h = heuristic_analysis(text, rating=rating)
-    max_conf = max(h["olumlu"], h["olumsuz"], h["istek_gorus"])
-    if max_conf >= CONFIDENCE_THRESHOLD:
+    if max(h["olumlu"], h["olumsuz"], h["istek_gorus"]) >= CONFIDENCE_THRESHOLD:
         h["method"] = "Heuristic+Skip"
         return h
 
-    # Provider zinciri
-    clients = _CLIENT_MAP_FN()
-    chain = [provider] if provider else PROVIDER_CHAIN
+    # Client haritası
+    clients = {
+        "Groq AI":       GROQ_CLIENT,
+        "Google Gemini": GEMINI_CLIENT,
+        "Mistral AI":    MISTRAL_CLIENT,
+    }
+
+    # Sidebar seçimini al, zinciri ona göre kur
+    selected = provider or st.session_state.get("current_ai_provider", "Groq AI")
+    chain    = _build_chain(selected)
 
     for prov in chain:
         client = clients.get(prov)
@@ -1559,12 +1569,16 @@ def get_ai_sentiment(text, model_name=None, provider=None, rating=None):
             continue
         if not _is_provider_available(prov):
             continue
-        model = model_name if provider else _MODEL_MAP[prov]
+        # Model: override varsa kullan, yoksa varsayılan
+        if prov == selected and model_name:
+            model = model_name
+        else:
+            model = _MODEL_MAP[prov]
         caller = _CALLER_MAP.get(prov)
         if caller is None:
             continue
         _record_api_call(prov)
-        result = caller(text, client, model, rating=rating)
+        result = caller(text, client, model)
         if result is not None:
             return result
 
@@ -2175,8 +2189,10 @@ def run_bulk_analysis(data_to_process, is_append=False):
             comment = str(entry.get("text", ""))[:1000].strip()
             is_valid = entry.get("is_valid", True)
             if not is_valid or not comment or len(comment) < 2:
-                return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0,
-                                    "method": "Skipped"}, "—", None
+                return idx, entry, {
+                    "olumlu": 0, "olumsuz": 0,
+                    "istek_gorus": 0, "method": "Skipped"
+                }, "—", None
 
             current_rating = entry.get("rating")
 
@@ -2186,22 +2202,25 @@ def run_bulk_analysis(data_to_process, is_append=False):
             else:
                 res_api = get_ai_sentiment(
                     text=comment,
+                    model_name=st.session_state.get("current_ai_model"),
+                    provider=st.session_state.get("current_ai_provider"),
                     rating=current_rating,
                 )
                 err = None
-                if "_error" in res_api:
-                    err = res_api.get("_error", "unknown")
-                    res_api = heuristic_analysis(comment, rating=current_rating)
-                    res_api["method"] = "Heuristic+Fallback"
 
-            scores  = {"Olumlu": res_api["olumlu"], "Olumsuz": res_api["olumsuz"],
-                       "İstek/Görüş": res_api["istek_gorus"]}
+            scores  = {
+                "Olumlu":       res_api["olumlu"],
+                "Olumsuz":      res_api["olumsuz"],
+                "İstek/Görüş":  res_api["istek_gorus"],
+            }
             verdict = str(max(scores, key=lambda k: scores[k]))
             return idx, entry, res_api, verdict, err
 
         except Exception:
-            safe = {"olumlu": 0.33, "olumsuz": 0.34, "istek_gorus": 0.33,
-                    "method": "Error+Fallback"}
+            safe = {
+                "olumlu": 0.33, "olumsuz": 0.34,
+                "istek_gorus": 0.33, "method": "Error+Fallback",
+            }
             return idx, entry, safe, "—", None
 
     completed_count = 0
@@ -2228,8 +2247,6 @@ def run_bulk_analysis(data_to_process, is_append=False):
                     st.error("🚨 Tahmini 50 TL faturaya yaklaşıldı. Analiz işlemi otomatik durduruldu!")
                     st.session_state['_cost_warned'] = True
                 break
-            elif err:
-                st.warning(err)
             
             comment = entry["text"]
             date = entry.get("date")
