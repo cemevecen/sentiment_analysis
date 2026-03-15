@@ -2688,7 +2688,7 @@ if "bulk_results" in st.session_state:
                 parts = [tone_intro, pos_text, neg_text, neu_text]
                 summary_body = " ".join(p for p in parts if p)
 
-            st.markdown(f"""
+                st.markdown(f"""
             <div style="background: {grad_bg}; padding: 20px; border-radius: 12px;
                         border: 2px solid {border_c}; color: #1e293b; line-height: 1.8;">
                 <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">
@@ -2699,6 +2699,268 @@ if "bulk_results" in st.session_state:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+                # ── 3. TREND GÖSTERGESİ ──────────────────────────────
+                try:
+                    dated = [r for r in st.session_state.get("bulk_results", [])
+                             if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                    if dated and len(dated) >= 20:
+                        dated_sorted = sorted(dated, key=lambda x: x["Tarih"])
+                        half = len(dated_sorted) // 2
+                        first_half = dated_sorted[:half]
+                        second_half = dated_sorted[half:]
+
+                        def neg_rate(lst):
+                            if not lst: return 0
+                            return sum(1 for r in lst if r["Baskın Duygu"] == "Olumsuz") / len(lst)
+
+                        r1 = neg_rate(first_half)
+                        r2 = neg_rate(second_half)
+                        diff_trend = r2 - r1
+
+                        if diff_trend > 0.05:
+                            trend_icon, trend_color, trend_text = "↑", "#f43f5e", f"Olumsuz oran artıyor (+%{int(diff_trend*100)})"
+                        elif diff_trend < -0.05:
+                            trend_icon, trend_color, trend_text = "↓", "#10b981", f"Memnuniyet artıyor (+%{int(abs(diff_trend)*100)})"
+                        else:
+                            trend_icon, trend_color, trend_text = "→", "#f59e0b", "Oran stabil seyrediyor"
+
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                    padding:12px 15px;margin-top:8px;display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:1.6rem;color:{trend_color};font-weight:800;line-height:1;">
+                                {trend_icon}
+                            </span>
+                            <div>
+                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;
+                                            text-transform:uppercase;letter-spacing:1px;">Trend</div>
+                                <div style="font-size:0.85rem;font-weight:600;color:{trend_color};">
+                                    {trend_text}
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+                # ── 4. KULLANICI PROFİL ÖZETİ ────────────────────────
+                try:
+                    all_results = st.session_state.get("bulk_results", [])
+                    if all_results:
+                        lengths = [len(str(r.get("Yorum", ""))) for r in all_results]
+                        avg_len = int(sum(lengths) / len(lengths)) if lengths else 0
+
+                        texts = " ".join(str(r.get("Yorum", "")) for r in all_results).lower()
+                        tr_count = sum(1 for w in ["bir", "çok", "ama", "için", "bu"] if w in texts)
+                        en_count = sum(1 for w in ["the", "this", "app", "good", "bad"] if w in texts)
+                        ar_count = sum(1 for w in ["لا", "في", "من", "على", "هذا"] if w in texts)
+                        ru_count = sum(1 for w in ["не", "это", "для", "что", "как"] if w in texts)
+
+                        lang_scores = {"TR": tr_count, "EN": en_count, "AR": ar_count, "RU": ru_count}
+                        top_langs = sorted(lang_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+                        top_langs = [(l, s) for l, s in top_langs if s > 0]
+                        total_lang = sum(s for _, s in top_langs) or 1
+                        lang_bars = "".join(
+                            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+                            f'<span style="font-size:0.75rem;font-weight:700;color:#475569;width:20px;">{l}</span>'
+                            f'<div style="flex:1;background:#F1F5F9;border-radius:4px;height:6px;">'
+                            f'<div style="width:{int(s/total_lang*100)}%;background:#818CF8;height:6px;border-radius:4px;"></div>'
+                            f'</div>'
+                            f'<span style="font-size:0.7rem;color:#94A3B8;">%{int(s/total_lang*100)}</span>'
+                            f'</div>'
+                            for l, s in top_langs
+                        )
+
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                    padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;
+                                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                                Kullanıcı Profili
+                            </div>
+                            <div style="font-size:0.8rem;color:#475569;margin-bottom:6px;">
+                                Ort. yorum uzunluğu: <strong>{avg_len} karakter</strong>
+                            </div>
+                            {lang_bars}
+                        </div>
+                        """, unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+                # ── 1. DUYGU ISI HARİTASI ────────────────────────────
+                try:
+                    dated2 = [r for r in st.session_state.get("bulk_results", [])
+                              if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                    if dated2 and len(dated2) >= 14:
+                        import collections
+                        day_neg = collections.defaultdict(int)
+                        day_total = collections.defaultdict(int)
+                        for r in dated2:
+                            try:
+                                d = pd.to_datetime(r["Tarih"]).strftime("%a")
+                                day_total[d] += 1
+                                if r["Baskın Duygu"] == "Olumsuz":
+                                    day_neg[d] += 1
+                            except Exception:
+                                pass
+
+                        days_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                        days_tr    = {"Mon": "Pzt", "Tue": "Sal", "Wed": "Çrş",
+                                      "Thu": "Per", "Fri": "Cum", "Sat": "Cmt", "Sun": "Paz"}
+
+                        cells = ""
+                        for d in days_order:
+                            if day_total[d] == 0:
+                                continue
+                            rate = day_neg[d] / day_total[d]
+                            if rate >= 0.6:
+                                bg = "#FEE2E2"; fc = "#DC2626"
+                            elif rate >= 0.35:
+                                bg = "#FEF9C3"; fc = "#D97706"
+                            else:
+                                bg = "#DCFCE7"; fc = "#16A34A"
+                            cells += (
+                                f'<div style="flex:1;text-align:center;background:{bg};'
+                                f'border-radius:8px;padding:6px 2px;">'
+                                f'<div style="font-size:0.65rem;color:{fc};font-weight:700;">'
+                                f'{days_tr[d]}</div>'
+                                f'<div style="font-size:0.7rem;color:{fc};font-weight:600;">'
+                                f'%{int(rate*100)}</div>'
+                                f'</div>'
+                            )
+
+                        if cells:
+                            st.markdown(f"""
+                            <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                        padding:12px 15px;margin-top:8px;">
+                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;
+                                            text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                                    Günlük Olumsuz Oran
+                                </div>
+                                <div style="display:flex;gap:4px;">{cells}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+                # ── 2. MİNİ İSTATİSTİKLER ────────────────────────────
+                try:
+                    dated3 = [r for r in st.session_state.get("bulk_results", [])
+                              if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                    if dated3:
+                        dates_only = []
+                        for r in dated3:
+                            try:
+                                dates_only.append(pd.to_datetime(r["Tarih"]).date())
+                            except Exception:
+                                pass
+                        if dates_only:
+                            import collections
+                            date_counts = collections.Counter(dates_only)
+                            busiest_date = max(date_counts, key=date_counts.get)
+                            busiest_count = date_counts[busiest_date]
+                            unique_days = len(date_counts)
+                            daily_avg = round(len(dated3) / unique_days, 1) if unique_days else 0
+
+                            st.markdown(f"""
+                            <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                        padding:12px 15px;margin-top:8px;">
+                                <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;
+                                            text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                                    Hızlı İstatistikler
+                                </div>
+                                <div style="display:flex;justify-content:space-between;gap:8px;">
+                                    <div style="text-align:center;flex:1;">
+                                        <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">
+                                            {daily_avg}
+                                        </div>
+                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">
+                                            Günlük Ort.
+                                        </div>
+                                    </div>
+                                    <div style="text-align:center;flex:2;">
+                                        <div style="font-size:0.85rem;font-weight:800;color:#6366F1;">
+                                            {busiest_date.strftime('%d %b')}
+                                        </div>
+                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">
+                                            En Yoğun ({busiest_count} yorum)
+                                        </div>
+                                    </div>
+                                    <div style="text-align:center;flex:1;">
+                                        <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">
+                                            {unique_days}
+                                        </div>
+                                        <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">
+                                            Aktif Gün
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+                # ── 5. AKSİYON LİSTESİ ───────────────────────────────
+                try:
+                    neg_yorumlar = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                                    if r.get("Baskın Duygu") == "Olumsuz"]
+                    if neg_yorumlar:
+                        action_keywords = {
+                            "Giriş / şifre sorunu giderilmeli": [
+                                "giriş yapamıyorum", "şifre", "login", "giremiyorum",
+                                "can't login", "password"
+                            ],
+                            "Uygulama çökmesi / donması düzeltilmeli": [
+                                "donuyor", "çöküyor", "crash", "freezing", "lag",
+                                "kapanıyor", "atıyor", "crashing"
+                            ],
+                            "Reklam yoğunluğu azaltılmalı": [
+                                "reklam", "ads", "ad every", "too many ads", "publicidad"
+                            ],
+                            "Hesap askı / ban süreci iyileştirilmeli": [
+                                "askıya", "banned", "suspended", "ban", "hesabım kapatıldı",
+                                "disabled"
+                            ],
+                            "Müzik / medya sorunu çözülmeli": [
+                                "müzik", "ses yok", "music", "audio", "no sound"
+                            ],
+                            "Güncelleme sonrası bozulan özellikler düzeltilmeli": [
+                                "güncelleme", "update", "son güncelleme", "after update"
+                            ],
+                            "Mesaj / bildirim sorunları giderilmeli": [
+                                "mesaj", "bildirim", "messages", "notification",
+                                "dm not working"
+                            ],
+                        }
+                        neg_text_all = " ".join(neg_yorumlar).lower()
+                        found_actions = []
+                        for action, keywords in action_keywords.items():
+                            if any(kw in neg_text_all for kw in keywords):
+                                found_actions.append(action)
+                            if len(found_actions) >= 4:
+                                break
+
+                        if found_actions:
+                            items_html = "".join(
+                                f'<div style="display:flex;align-items:flex-start;gap:8px;'
+                                f'margin-bottom:6px;">'
+                                f'<span style="color:#f43f5e;font-size:0.8rem;margin-top:1px;">●</span>'
+                                f'<span style="font-size:0.8rem;color:#334155;font-weight:500;">'
+                                f'{a}</span></div>'
+                                for a in found_actions
+                            )
+                            st.markdown(f"""
+                            <div style="background:#FEF2F2;border:1px solid #FEE2E2;border-radius:12px;
+                                        padding:12px 15px;margin-top:8px;">
+                                <div style="font-size:0.7rem;color:#DC2626;font-weight:700;
+                                            text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                                    ⚡ Aksiyon Listesi
+                                </div>
+                                {items_html}
+                            </div>
+                            """, unsafe_allow_html=True)
+                except Exception:
+                    pass
         
 
     
