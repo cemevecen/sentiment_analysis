@@ -2563,7 +2563,7 @@ if "bulk_results" in st.session_state:
             
             if len(words) >= 5:
                 counter = collections.Counter(words)
-                top_words = counter.most_common(12)
+                top_words = counter.most_common(5)
                 
                 tags_html = ""
                 for word, count in top_words:
