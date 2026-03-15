@@ -395,10 +395,9 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                             content = str(r.get('content', ''))
                             if content and len(content.strip()) >= 2:
                                 r_id = r.get('reviewId', content)
-                                # Append language info to ID to avoid collisions across regions
-                                unique_id = f"{r_id}_{lang}_{country}"
+                                # Global reviewId is unique enough; removing suffix to allow deduplication
                                 channel_data.append({
-                                    "id": unique_id, 
+                                    "id": r_id, 
                                     "text": content, 
                                     "date": r_at, 
                                     "rating": str(score),
@@ -2071,6 +2070,26 @@ def heuristic_analysis(text, rating=None):
     return {"olumlu": 0.35, "olumsuz": 0.33, "istek_gorus": 0.32, "method": "Heuristic+"}
 
 def run_bulk_analysis(data_to_process, is_append=False):
+    # Final safeguard: Deduplicate data to prevent processing same reviews multiple times
+    seen_ids = set()
+    seen_texts = set()
+    clean_data = []
+    for d in data_to_process:
+        r_id = d.get("id")
+        txt = str(d.get("text", "")).strip()
+        if not txt: continue
+        
+        if r_id:
+            if r_id not in seen_ids:
+                seen_ids.add(r_id)
+                clean_data.append(d)
+        else:
+            if txt not in seen_texts:
+                seen_texts.add(txt)
+                clean_data.append(d)
+    
+    data_to_process = clean_data
+    
     bulk_results = st.session_state.get("bulk_results", []) if is_append else []
     
     time_display = st.empty()
