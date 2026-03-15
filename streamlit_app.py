@@ -3,8 +3,23 @@ import streamlit.components.v1 as components
 from streamlit_lottie import st_lottie
 from google import genai
 from google.genai import types as genai_types
-from mistralai import Mistral
-from groq import Groq
+try:
+    from mistralai import Mistral
+    HAS_MISTRAL_PKG = True
+except ImportError:
+    try:
+        from mistralai.client import MistralClient as Mistral
+        HAS_MISTRAL_PKG = True
+    except ImportError:
+        HAS_MISTRAL_PKG = False
+        Mistral = None
+
+try:
+    from groq import Groq
+    HAS_GROQ_PKG = True
+except ImportError:
+    HAS_GROQ_PKG = False
+    Groq = None
 import os
 import json
 import re
