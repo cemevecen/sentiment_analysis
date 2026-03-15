@@ -2438,10 +2438,10 @@ if "bulk_results" in st.session_state:
         diff_val = abs(m_olumlu - m_olumsuz)
         
         if st.session_state.get("analysis_type") == "Zengin Analiz":
-            if "ai_summary_cache" not in st.session_state or st.session_state.get("last_results_len") != len(analysis_df):
+            if "ai_summary" not in st.session_state or st.session_state.get("last_results_len") != len(analysis_df):
                 with st.spinner("🤖 Yapay zeka derinlemesine raporu hazırlıyor..."):
                     summary_text = generate_dynamic_summary(analysis_results=st.session_state.bulk_results)
-                    st.session_state.ai_summary_cache = summary_text
+                    st.session_state.ai_summary = summary_text
                     st.session_state.last_results_len = len(analysis_df)
             
             st.markdown(f"""
@@ -2450,7 +2450,7 @@ if "bulk_results" in st.session_state:
                     <span>✨ Yapay Zeka Derin Analiz Raporu</span>
                 </div>
                 <div style="font-size: 0.95rem;">
-                    {st.session_state.ai_summary_cache}
+                    {st.session_state.ai_summary}
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -2844,7 +2844,13 @@ if "bulk_results" in st.session_state:
             return "\n".join([line.strip() for line in h.split('\n') if line.strip()])
         
         
-        display_summary = st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')
+        # Dinamik özet varsa kullan, yoksa genel skor özeti çıkar
+        display_summary = st.session_state.get('ai_summary')
+        if not display_summary:
+            if pos_p > 70: display_summary = "Kullanıcı topluluğu uygulamadan oldukça memnun. Pozitif geri bildirimler baskın."
+            elif neg_p > 50: display_summary = "Kritik teknik sorunlar ve kullanıcı memnuniyetsizliği tespit edildi. Acil müdahale gerekebilir."
+            else: display_summary = "Kullanıcı deneyimi karmaşık bir yapıda. Hem pozitif hem negatif geri bildirimler dengeli seyrediyor."
+        
         display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
         
         
