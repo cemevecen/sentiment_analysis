@@ -3522,59 +3522,169 @@ if "bulk_results" in st.session_state:
         
         share_ui = textwrap.dedent(f"""
             <style>
-                @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 10px; }}
-                .u-btn {{
-                    width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-                    display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
-                    transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
+                .share-btn-row {{
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                    margin-bottom: 10px;
+                    flex-wrap: wrap;
                 }}
-                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
-                .u-wa {{ color: #25D366 !important; }} 
-                .u-li {{ color: #0077B5 !important; }} 
-                .u-x {{ color: #000000 !important; }}
-                .u-tg {{ color: #24A1DE !important; }} 
-                .u-mail {{
-                    background: conic-gradient(from 180deg at 50% 50%, #ea4335 0deg, #ea4335 90deg, #fbbc04 90deg, #fbbc04 180deg, #34a853 180deg, #34a853 270deg, #4285f4 270deg, #4285f4 360deg);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
+                .share-btn {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    border: 1px solid #E2E8F0;
+                    background: #FFFFFF;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    font-family: 'Poppins', sans-serif;
+                    color: #1E293B;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    transition: all 0.2s ease;
+                    text-decoration: none;
                 }}
-                
-                .dl-main-btn {{
-                    width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #5a67d8; color: #FFFFFF; 
-                    border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
-                    box-shadow: 0 4px 12px rgba(90, 103, 216, 0.3); transition: all 0.2s;
-                    display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
+                .share-btn:hover {{
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+                    border-color: #CBD5E1;
                 }}
-                .dl-main-btn:hover {{ background: #4c51bf; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(90, 103, 216, 0.4); }}
-                
-                div[data-testid="stDownloadButton"] button {{
-                    background-color: #5CB85C !important;
-                    color: white !important;
-                    border: none !important;
-                    border-radius: 12px !important;
-                    height: 50px !important;
-                    font-weight: 600 !important;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-                    transition: all 0.2s !important;
+                .share-btn-primary {{
+                    background: #6366F1;
+                    color: white;
+                    border-color: #6366F1;
+                    font-size: 1rem;
+                    padding: 14px 28px;
                 }}
-                div[data-testid="stDownloadButton"] button:hover {{
-                    background-color: #4cae4c !important;
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
-                }}
-                div[data-testid="stDownloadButton"] button p {{
-                    color: white !important;
+                .share-btn-primary:hover {{
+                    background: #4F46E5;
+                    border-color: #4F46E5;
+                    color: white;
                 }}
             </style>
 
-            <div class="u-tray">
-                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
-                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
+            <div class="share-btn-row">
+                <button
+                    class="share-btn share-btn-primary"
+                    onclick="shareImage()"
+                    id="btn-share-image"
+                >
+                    📤 Görseli Paylaş
+                </button>
             </div>
+
+            <div class="share-btn-row" id="fallback-share-row" style="display:none;">
+                <span style="font-size:0.8rem;color:#94A3B8;text-align:center;width:100%;">
+                    Tarayıcınız doğrudan paylaşımı desteklemiyor. Görseli indirip manuel paylaşabilirsiniz.
+                </span>
+                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn" style="color:#25D366;font-size:1.3rem;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn" style="color:#000;font-size:1.3rem;">
+                    <i class="fa-brands fa-x-twitter"></i>
+                </a>
+                <a href="https://t.me/share/url?url=https://sentimentanalysis-aimode.streamlit.app/&text={encoded_text}" target="_blank" class="share-btn" style="color:#24A1DE;font-size:1.3rem;">
+                    <i class="fa-brands fa-telegram"></i>
+                </a>
+            </div>
+
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+            <script>
+            async function shareImage() {{
+                const btn = document.getElementById('btn-share-image');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '⏳ Hazırlanıyor...';
+                btn.disabled = true;
+
+                try {{
+                    const target = window.parent.document.getElementById('nlp-report-card');
+                    if (!target) throw new Error('Kart bulunamadı');
+
+                    const canvas = await window.parent.html2canvas(target, {{
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#FFFFFF',
+                        logging: false,
+                        allowTaint: true
+                    }});
+
+                    canvas.toBlob(async function(blob) {{
+                        const fileName = '{image_name}';
+                        const file = new File([blob], fileName, {{ type: 'image/png' }});
+
+                        // Web Share API — mobilde tüm uygulamalara paylaş
+                        if (navigator.share && navigator.canShare && navigator.canShare({{ files: [file] }})) {{
+                            try {{
+                                await navigator.share({{
+                                    files: [file],
+                                    title: 'AI Yorum Analiz Raporu',
+                                }});
+                                btn.innerHTML = '✅ Paylaşıldı!';
+                                setTimeout(() => {{
+                                    btn.innerHTML = originalText;
+                                    btn.disabled = false;
+                                }}, 2000);
+                            }} catch(e) {{
+                                if (e.name !== 'AbortError') {{
+                                    // Paylaşım iptal edilmedi, başka hata
+                                    fallbackShare(blob, fileName, btn, originalText);
+                                }} else {{
+                                    btn.innerHTML = originalText;
+                                    btn.disabled = false;
+                                }}
+                            }}
+                        }} else {{
+                            // Web Share API yok → fallback
+                            fallbackShare(blob, fileName, btn, originalText);
+                        }}
+                    }}, 'image/png');
+
+                }} catch(err) {{
+                    console.error(err);
+                    btn.innerHTML = '❌ Hata';
+                    setTimeout(() => {{
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }}, 2000);
+                }}
+            }}
+
+            function fallbackShare(blob, fileName, btn, originalText) {{
+                // Yeni sekmede göster (mobil: basılı tut > kaydet/paylaş)
+                const url = URL.createObjectURL(blob);
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                
+                if (isIOS) {{
+                    const newTab = window.open();
+                    if (newTab) {{
+                        newTab.document.write(
+                            '<img src="' + url + '" style="width:100%;height:auto;">' +
+                            '<p style="text-align:center;font-family:sans-serif;color:#64748B;font-size:14px;">Kaydetmek veya paylaşmak için görsele basılı tutun.</p>'
+                        );
+                        newTab.document.title = 'Analiz Raporu';
+                    }}
+                }} else {{
+                    // Desktop — indir
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                }}
+
+                // Fallback satır sosyal linkleri göster
+                const row = document.getElementById('fallback-share-row');
+                if (row) row.style.display = 'flex';
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                URL.revokeObjectURL(url);
+            }}
+            </script>
         """).strip()
         st.markdown(share_ui, unsafe_allow_html=True)
 
