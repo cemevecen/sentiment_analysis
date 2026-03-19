@@ -1,0 +1,11 @@
+streamlit
+google-genai
+python-dotenv
+requests
+pandas
+openpyxl
+plotly
+google-play-scraper
+streamlit-lottie
+mistralai>=1.0.0
+groq>=0.9.0
