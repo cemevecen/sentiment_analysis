@@ -3651,15 +3651,16 @@ def heuristic_analysis(text, rating=None):
         "bozuldu", "uygulama bozdu", "app is broken",
         "sikayetler", "ticipale çalışmıyor", "prematüre crashing",
     ]
-    if any(kw in t for kw in CRITICAL_BUG):
-        # Kritik bug bulundu → belki evet ama kontrol et
-        if _rating != 5 or neg_score > 0:  # Rating 5 ama bug → content wins
-            return {"olumlu": 0.04, "olumsuz": 0.92, "istek_gorus": 0.04, "method": "Heuristic+CriticalBug"}
-
+    
     # ── 8. KEYWORD SCORING ────────────────────────────────────────────────────
     neg_score = sum(1 for w in NEG_WORDS if w in t)
     pos_score = sum(1 for w in POS_WORDS if w in t)
     neu_score = sum(1 for w in NEU_WORDS if w in t)
+    
+    if any(kw in t for kw in CRITICAL_BUG):
+        # Kritik bug bulundu → belki evet ama kontrol et
+        if _rating != 5 or neg_score > 0:  # Rating 5 ama bug → content wins
+            return {"olumlu": 0.04, "olumsuz": 0.92, "istek_gorus": 0.04, "method": "Heuristic+CriticalBug"}
 
     # Negatif kelimeler biraz daha ağır
     neg_score_w = neg_score * 1.25
