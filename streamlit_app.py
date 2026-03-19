@@ -1452,6 +1452,7 @@ def on_tab_change():
     st.session_state["_store_url_input"] = ""
     st.session_state["manual_text_input"] = ""
     st.session_state["_selected_app_id"] = None  # Clear selected app
+    st.session_state["_selected_app_platform"] = None  # Clear selected app platform
     st.session_state["_show_search"] = True  # Reset search visibility flag
     st.session_state["_search_results_all"] = []  # Clear search cache
     st.session_state["_last_search_query"] = ""  # Reset search query
@@ -1528,6 +1529,9 @@ if active_tab == "Mağaza Linki":
         
         if "_selected_app_id" not in st.session_state:
             st.session_state._selected_app_id = None
+        
+        if "_selected_app_platform" not in st.session_state:
+            st.session_state._selected_app_platform = None
         
         if "_platform_filter" not in st.session_state:
             st.session_state._platform_filter = "Android"
@@ -1763,6 +1767,7 @@ if active_tab == "Mağaza Linki":
                             button_key = f"select_app_{idx}_{app_id}"
                             if st.button("Seç", key=button_key, width='content'):
                                 st.session_state._selected_app_id = app_id
+                                st.session_state._selected_app_platform = result.get('platform', 'Android')
                                 st.session_state._show_search = False
                                 st.session_state._search_results_all = []
                                 st.session_state._last_search_query = ""
@@ -1826,15 +1831,39 @@ if active_tab == "Mağaza Linki":
                 from google_play_scraper import app as get_app_details
                 
                 selected_app_id = store_url.strip()
-                cache_key = f"_selected_app_{selected_app_id}"
+                selected_platform = st.session_state._selected_app_platform or "Android"
+                cache_key = f"_selected_app_{selected_app_id}_{selected_platform}"
                 
                 if cache_key not in st.session_state:
+                    app_details = None
                     try:
-                        app_details = get_app_details(selected_app_id, lang='tr', country='tr')
-                        st.session_state[cache_key] = app_details
+                        if selected_platform == "iOS":
+                            # Fetch iOS app details from iTunes API
+                            for try_country in ['tr', 'us', 'gb']:
+                                try:
+                                    resp = requests.get(
+                                        f"https://itunes.apple.com/lookup?id={selected_app_id}&country={try_country}",
+                                        timeout=5
+                                    )
+                                    if resp.status_code == 200:
+                                        data = resp.json()
+                                        if data.get('results'):
+                                            app_data = data['results'][0]
+                                            app_details = {
+                                                'title': app_data.get('trackCensoredName', app_data.get('trackName', selected_app_id)),
+                                                'icon': app_data.get('artworkUrl512', app_data.get('artworkUrl100', '')),
+                                                'score': float(app_data.get('averageUserRating', 0)),
+                                                'genre': app_data.get('genres', ['Kategori Bilinmiyor'])[0] if app_data.get('genres') else 'Kategori Bilinmiyor'
+                                            }
+                                            break
+                                except:
+                                    continue
+                        else:
+                            # Fetch Android app details from Google Play
+                            app_details = get_app_details(selected_app_id, lang='tr', country='tr')
                     except:
                         app_details = None
-                        st.session_state[cache_key] = None
+                    st.session_state[cache_key] = app_details
                 else:
                     app_details = st.session_state[cache_key]
                 
@@ -1845,8 +1874,8 @@ if active_tab == "Mağaza Linki":
                         app_title = app_details.get('title', selected_app_id)
                         app_icon = app_details.get('icon', '')
                         app_rating = app_details.get('score', 0)
-                        # Get category (genre for Android, trackGenreName for iOS)
-                        app_category = app_details.get('genre', app_details.get('trackGenreName', 'Kategori Bilinmiyor'))
+                        app_category = app_details.get('genre', 'Kategori Bilinmiyor')
+                        store_name = "App Store" if selected_platform == "iOS" else "Play Store"
                         
                         success_html = f"""
                         <div style="margin-bottom: 0px; padding: 4px 8px; background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%); border: 1.5px solid #10B981; border-radius: 12px; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);">
@@ -1854,6 +1883,7 @@ if active_tab == "Mağaza Linki":
                                 {f'<img src="{app_icon}" style="width: 48px; height: 48px; border-radius: 10px; object-fit: cover; flex-shrink: 0;"/>' if app_icon else '<div style="width: 48px; height: 48px; border-radius: 10px; background: #E0E7FF; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;"></div>'}
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="font-size: 14px; color: #047857; font-weight: 600; margin-bottom: 2px; word-break: break-word;">{app_title}</div>
+                                    <div style="font-size: 11px; color: #059669; margin-bottom: 3px;">Store: {store_name}</div>
                                     <div style="font-size: 11px; color: #059669; margin-bottom: 3px;">Kategori: {app_category}</div>
                                     <div style="font-size: 12px; color: #10B981; margin-bottom: 3px;">Puanı: {app_rating:.1f} ★</div>
                                     <div style="font-size: 12px; color: #059669; font-weight: 500;">Yorumları çekiliyor...</div>
@@ -1913,6 +1943,7 @@ if active_tab == "Mağaza Linki":
                 
                 if st.button("✕", key="new_search_btn", help="Yeni arama yapın", width='content'):
                     st.session_state._selected_app_id = None
+                    st.session_state._selected_app_platform = None
                     st.session_state._show_search = True
                     st.session_state._search_results_all = []
                     st.session_state._last_search_query = ""
