@@ -1535,19 +1535,25 @@ if active_tab == "Mağaza Linki":
         # Styling ONLY for platform selector buttons
         st.markdown("""
         <style>
-        /* Platform selector buttons - wide button styling ONLY */
+        /* Container for platform buttons - compact chip layout */
+        [data-testid="stButton"]:has(> button[key*="platform_"]) {
+            width: auto !important;
+            display: inline-block !important;
+        }
+        
+        /* Platform selector buttons - chip-like styling */
         [data-testid="stButton"] > button[key*="platform_"] {
-            width: 100% !important;
-            height: 56px !important;
-            border-radius: 36px !important;
+            width: auto !important;
+            height: 40px !important;
+            border-radius: 20px !important;
             font-weight: 600 !important;
             font-family: 'Poppins', sans-serif !important;
-            font-size: 16px !important;
+            font-size: 14px !important;
             border: 2px solid #E5E7EB !important;
             background-color: white !important;
             color: #1F2937 !important;
-            padding: 0 16px !important;
-            display: flex !important;
+            padding: 6px 16px !important;
+            display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
