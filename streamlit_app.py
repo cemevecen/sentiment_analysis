@@ -1576,20 +1576,6 @@ if active_tab == "Mağaza Linki":
         </style>
         """, unsafe_allow_html=True)
         
-        # Platform selector buttons - only show AFTER a search is made
-        if st.session_state._search_performed:
-            platform_col1, platform_col2 = st.columns(2, gap="medium")
-            
-            with platform_col1:
-                if st.button("Android", key="platform_android", use_container_width=True):
-                    st.session_state._platform_filter = "Android"
-                    st.rerun()
-            
-            with platform_col2:
-                if st.button("iOS", key="platform_ios", use_container_width=True):
-                    st.session_state._platform_filter = "iOS"
-                    st.rerun()
-
         # Determine the actual app ID (either from selection or from input text)
         selected_app = st.session_state._selected_app_id
         
@@ -1617,6 +1603,20 @@ if active_tab == "Mağaza Linki":
             st.session_state._search_performed = True
         elif not store_url.strip():
             st.session_state._search_performed = False
+        
+        # Platform selector buttons - only show AFTER a search is made
+        if st.session_state._search_performed:
+            platform_col1, platform_col2 = st.columns(2, gap="medium")
+            
+            with platform_col1:
+                if st.button("Android", key="platform_android", use_container_width=True):
+                    st.session_state._platform_filter = "Android"
+                    st.rerun()
+            
+            with platform_col2:
+                if st.button("iOS", key="platform_ios", use_container_width=True):
+                    st.session_state._platform_filter = "iOS"
+                    st.rerun()
         
         # Only show search if ALL conditions are met
         should_show_search = is_search_query and not is_app_selected and st.session_state._show_search
