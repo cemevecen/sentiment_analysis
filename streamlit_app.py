@@ -2590,7 +2590,7 @@ elif active_tab == "Karşılaştır":
                 icon_html = (
                     f'<img src="{icon_url}" '
                     f'referrerpolicy="no-referrer" crossorigin="anonymous" '
-                    f'style="width:44px;height:44px;border-radius:10px;'
+                    f'style="width:44px;height:44px;border-radius:50%;'
                     f'object-fit:cover;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;" '
                     f'onerror="this.style.display=\'none\'" />'
                 ) if icon_url else ""
