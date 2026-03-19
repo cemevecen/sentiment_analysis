@@ -1880,7 +1880,7 @@ if active_tab == "Mağaza Linki":
                         success_html = f"""
                         <div style="margin-bottom: 0px; padding: 4px 8px; background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%); border: 1.5px solid #10B981; border-radius: 12px; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);">
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                {f'<img src="{app_icon}" style="width: 48px; height: 48px; border-radius: 10px; object-fit: cover; flex-shrink: 0;"/>' if app_icon else '<div style="width: 48px; height: 48px; border-radius: 10px; background: #E0E7FF; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;"></div>'}
+                                {f'<img src="{app_icon}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;"/>' if app_icon else '<div style="width: 48px; height: 48px; border-radius: 50%; background: #E0E7FF; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;"></div>'}
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="font-size: 14px; color: #047857; font-weight: 600; margin-bottom: 2px; word-break: break-word;">{app_title}</div>
                                     <div style="font-size: 11px; color: #059669; margin-bottom: 3px;">Store: {store_name}</div>
