@@ -160,7 +160,24 @@ HAS_GROQ = GROQ_CLIENT is not None
 
 DEEPSEEK_API_KEY = setup_deepseek()
 HAS_DEEPSEEK = DEEPSEEK_API_KEY is not None
-    
+
+@st.cache_resource(show_spinner="Google Maps API yapılandırılıyor...")
+def setup_maps_api():
+    """
+    Google Maps API anahtarını st.secrets veya env üzerinden çeker.
+    Places API (işletme yorumları) için gereklidir.
+    """
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("GOOGLE_MAPS_API_KEY")
+        except:
+            pass
+    return api_key if (api_key and len(api_key) > 5) else None
+
+GOOGLE_MAPS_KEY = setup_maps_api()
+HAS_MAPS = GOOGLE_MAPS_KEY is not None
+
 # ============ COST PROTECTION SYSTEM ============
 # KRITIK: Hiçbir zaman parasal ücret çıkmasın
 # Strateji:
@@ -528,6 +545,114 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                 
     if _progress_callback: _progress_callback(1.0)
     return list(all_fetched_map.values())
+
+
+def parse_google_maps_url(url: str) -> str:
+    """
+    Google Maps URL'inden işletme adını veya arama sorgusunu çıkarır.
+    Desteklenen formatlar:
+      - https://www.google.com/maps/place/İşletme+Adı/...
+      - https://maps.google.com/?q=İşletme+Adı
+      - https://www.google.com/maps/search/İşletme+Adı/...
+    """
+    # /maps/place/Name veya /maps/search/Name formatı
+    place_match = re.search(r'/maps/(?:place|search)/([^/@?]+)', url)
+    if place_match:
+        raw = place_match.group(1)
+        return urllib.parse.unquote_plus(raw.replace('+', ' '))
+
+    # ?q=Name formatı
+    q_match = re.search(r'[?&]q=([^&]+)', url)
+    if q_match:
+        return urllib.parse.unquote_plus(q_match.group(1).replace('+', ' '))
+
+    return url
+
+
+def fetch_google_business_reviews(query_or_url: str, api_key: str) -> tuple:
+    """
+    Google Places API üzerinden işletme yorumlarını çeker.
+    Returns: (reviews: List[Dict], place_info: Dict)
+
+    Place Details API en fazla 5 yorum döndürür (Google kısıtlaması).
+    """
+    TEXTSEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+
+    query = query_or_url.strip()
+
+    # Google Maps URL ise işletme adını çıkar
+    if "google.com/maps" in query or "maps.google" in query:
+        query = parse_google_maps_url(query)
+
+    place_info: Dict[str, Any] = {}
+
+    # 1. İşletmeyi ara
+    search_resp = requests.get(
+        TEXTSEARCH_URL,
+        params={"query": query, "key": api_key, "language": "tr"},
+        timeout=10,
+    )
+    search_resp.raise_for_status()
+    search_data = search_resp.json()
+
+    status = search_data.get("status", "")
+    if status != "OK" or not search_data.get("results"):
+        error_msg = search_data.get("error_message", status)
+        raise ValueError(f"İşletme bulunamadı: {error_msg}")
+
+    first_result = search_data["results"][0]
+    place_id = first_result.get("place_id", "")
+    place_info = {
+        "name": first_result.get("name", query),
+        "address": first_result.get("formatted_address", ""),
+        "rating": first_result.get("rating", 0.0),
+        "user_ratings_total": first_result.get("user_ratings_total", 0),
+        "place_id": place_id,
+    }
+
+    if not place_id:
+        return [], place_info
+
+    # 2. Yorumları çek
+    details_resp = requests.get(
+        DETAILS_URL,
+        params={
+            "place_id": place_id,
+            "fields": "name,rating,reviews,user_ratings_total,formatted_address",
+            "key": api_key,
+            "language": "tr",
+            "reviews_sort": "newest",
+        },
+        timeout=10,
+    )
+    details_resp.raise_for_status()
+    details_data = details_resp.json()
+
+    if details_data.get("status") != "OK":
+        error_msg = details_data.get("error_message", details_data.get("status", ""))
+        raise ValueError(f"Detaylar alınamadı: {error_msg}")
+
+    result = details_data.get("result", {})
+    place_info.update({
+        "name": result.get("name", place_info["name"]),
+        "address": result.get("formatted_address", place_info["address"]),
+        "rating": result.get("rating", place_info["rating"]),
+        "user_ratings_total": result.get("user_ratings_total", place_info["user_ratings_total"]),
+    })
+
+    reviews: List[Dict[str, Any]] = []
+    for r in result.get("reviews", []):
+        text = r.get("text", "").strip()
+        if text:
+            reviews.append({
+                "text": text,
+                "rating": r.get("rating", 0),
+                "date": datetime.fromtimestamp(r["time"]) if r.get("time") else datetime.now(),
+                "author": r.get("author_name", ""),
+            })
+
+    return reviews, place_info
 
 
 st.markdown("""
@@ -1409,7 +1534,7 @@ if 'cmp_results' not in st.session_state:
 
 # --- TAB STATE MANAGEMENT ---
 # Initialize persistent results for each tab
-tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
+tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Google İşletme", "Karşılaştır"]
 if 'tab_states' not in st.session_state:
     st.session_state.tab_states = {
         tab: {
@@ -1451,6 +1576,7 @@ def on_tab_change():
     # 3. Clear ONLY input-specific keys
     st.session_state["_store_url_input"] = ""
     st.session_state["manual_text_input"] = ""
+    st.session_state["_maps_query_input"] = ""
     st.session_state["_selected_app_id"] = None  # Clear selected app
     st.session_state["_selected_app_platform"] = None  # Clear selected app platform
     st.session_state["_show_search"] = True  # Reset search visibility flag
@@ -1476,8 +1602,7 @@ def clear_current_tab_data():
     st.session_state.bulk_results = None
     st.session_state.all_fetched_pool = []
 
-tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
-st.markdown('<div class="no-print">', unsafe_allow_html=True)
+tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Google İşletme", "Karşılaştır"]
 active_tab = st.radio(
     "Navigasyon",
     tabs,
@@ -2461,6 +2586,104 @@ elif active_tab == "Metin Girişi":
         else:
             st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
+
+elif active_tab == "Google İşletme":
+    with st.container(border=True):
+        st.markdown("### 🗺️ Google İşletme Yorumları")
+        st.markdown(
+            '<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">'
+            "Google Maps'teki bir işletmenin yorumlarını çekerek duygu analizi yapın. "
+            "İşletme adı, arama terimi veya Google Maps linki girebilirsiniz."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if not HAS_MAPS:
+            st.warning(
+                "⚠️ **Google Maps API anahtarı bulunamadı.**\n\n"
+                "Bu sekmeyi kullanmak için ortam değişkenine `GOOGLE_MAPS_API_KEY` eklemeniz gerekir.\n\n"
+                "**Nasıl alınır?**\n"
+                "1. [Google Cloud Console](https://console.cloud.google.com) → API ve Hizmetler → Kimlik Bilgileri\n"
+                "2. **Places API**'yi etkinleştirin.\n"
+                "3. Oluşturulan anahtarı `.env` dosyasına veya Streamlit Secrets'e `GOOGLE_MAPS_API_KEY=...` olarak ekleyin."
+            )
+        else:
+            maps_query = st.text_input(
+                "",
+                placeholder="🔍 Örn: Sultanahmet Köftecisi İstanbul  veya Google Maps linki",
+                key="_maps_query_input",
+            )
+
+            if "_maps_reviews" not in st.session_state:
+                st.session_state._maps_reviews = []
+            if "_maps_place_info" not in st.session_state:
+                st.session_state._maps_place_info = {}
+
+            fetch_btn = st.button(
+                "Yorumları Çek",
+                key="maps_fetch_btn",
+                type="primary",
+                width="stretch",
+            )
+
+            if fetch_btn and maps_query.strip():
+                with st.spinner("Google Places API'den yorumlar çekiliyor..."):
+                    try:
+                        reviews_raw, place_info = fetch_google_business_reviews(
+                            maps_query.strip(), GOOGLE_MAPS_KEY
+                        )
+                        st.session_state._maps_reviews = reviews_raw
+                        st.session_state._maps_place_info = place_info
+                        if "bulk_results" in st.session_state:
+                            del st.session_state.bulk_results
+                        st.session_state.comments_to_analyze = []
+                    except Exception as e:
+                        st.error(f"Hata: {e}")
+                        st.session_state._maps_reviews = []
+                        st.session_state._maps_place_info = {}
+
+            place_info = st.session_state.get("_maps_place_info", {})
+            reviews_raw = st.session_state.get("_maps_reviews", [])
+
+            if place_info:
+                total_count = place_info.get("user_ratings_total", 0)
+                rating_val = place_info.get("rating", 0.0)
+                stars_filled = int(round(rating_val))
+                star_html = "".join(
+                    f'<span style="color:{"#F59E0B" if i < stars_filled else "#D1D5DB"};font-size:1rem;">★</span>'
+                    for i in range(5)
+                )
+                st.markdown(
+                    f"""
+<div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+  <div style="font-size:1.1rem;font-weight:700;color:#0369A1;margin-bottom:4px;">
+    🏢 {place_info.get('name', '')}
+  </div>
+  <div style="font-size:0.83rem;color:#475569;margin-bottom:8px;">
+    📍 {place_info.get('address', '')}
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <span>{star_html} <strong style="color:#D97706;">{rating_val}</strong></span>
+    <span style="font-size:0.85rem;color:#64748B;">Toplam <strong>{total_count:,}</strong> değerlendirme</span>
+    <span style="font-size:0.82rem;color:#94A3B8;">(Çekilen: <strong>{len(reviews_raw)}</strong> yorum — Places API limiti)</span>
+  </div>
+</div>""",
+                    unsafe_allow_html=True,
+                )
+
+            if reviews_raw:
+                analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+                st.session_state.comments_to_analyze = reviews_raw
+                st.success(
+                    f"✅ **{len(reviews_raw)}** yorum analiz için hazır! "
+                    "Aşağıda duygu analizi sonuçlarını görebilirsiniz."
+                )
+
+            st.caption(
+                "ℹ️ Google Places API, işletme başına en fazla **5 yorum** döndürmektedir (Google kısıtlaması). "
+                "Daha fazla yorum için birden fazla dil/bölge araması yapabilir veya Google Maps'ten yorumları "
+                "kopyalayıp **Metin Girişi** sekmesini kullanabilirsiniz."
+            )
 
 elif active_tab == "Karşılaştır":
     st.markdown("### Uygulama Karşılaştırma")
