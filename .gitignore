@@ -17,6 +17,12 @@ dist/
 .env.*
 !.env.example
 
+# Backups (sensitive data)
+backups/
+*.zip
+*.tar.gz
+*.backup
+
 # Streamlit
 # Keep config, ignore secrets
 .streamlit/*
