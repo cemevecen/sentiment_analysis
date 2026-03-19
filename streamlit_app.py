@@ -1539,7 +1539,7 @@ if active_tab == "Mağaza Linki":
         [data-testid="stButton"] > button[key*="platform_"] {
             width: 100% !important;
             height: 56px !important;
-            border-radius: 20px !important;
+            border-radius: 36px !important;
             font-weight: 600 !important;
             font-family: 'Poppins', sans-serif !important;
             font-size: 16px !important;
