@@ -530,6 +530,117 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     return list(all_fetched_map.values())
 
 
+# Trendyol product URL pattern: matches the numeric content ID after '-p-'
+_TRENDYOL_PRODUCT_ID_RE = re.compile(r'-p-(\d+)')
+
+
+def fetch_trendyol_reviews(product_url: str, days_limit: int = 30, _progress_callback: Any = None) -> List[Dict[str, Any]]:
+    """Trendyol ürün yorumlarını genel API üzerinden çeker."""
+    content_id_match = _TRENDYOL_PRODUCT_ID_RE.search(product_url)
+    if not content_id_match:
+        return []
+
+    content_id = content_id_match.group(1)
+
+    merchant_id_match = re.search(r'[?&]merchantId=(\d+)', product_url)
+    merchant_id = merchant_id_match.group(1) if merchant_id_match else None
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
+        'Referer': 'https://www.trendyol.com',
+        'Origin': 'https://www.trendyol.com',
+    }
+
+    all_reviews: List[Dict[str, Any]] = []
+    cutoff_date = datetime.now() - timedelta(days=days_limit)
+    page = 0
+    total_pages = 1
+
+    while page < total_pages:
+        params: Dict[str, Any] = {
+            'contentId': content_id,
+            'pageIndex': page,
+            'pageSize': 100,
+        }
+        if merchant_id:
+            params['merchantId'] = merchant_id
+
+        try:
+            resp = requests.get(
+                'https://public-mdc.trendyol.com/discovery-web-socialgw-service/api/RatingAndReview/GetProductRatingAndReviews',
+                params=params,
+                headers=headers,
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                break
+            data = resp.json()
+        except Exception:
+            break
+
+        product_reviews = data.get('result', {}).get('productReviews', {})
+        reviews = product_reviews.get('content', [])
+        total_pages = product_reviews.get('totalPages', 1)
+
+        if not reviews:
+            break
+
+        stop_early = False
+        for idx_in_page, r in enumerate(reviews):
+            last_modified = r.get('lastModifiedDate')
+            if last_modified:
+                comment_date = datetime.fromtimestamp(last_modified / 1000)
+            else:
+                comment_date = datetime.now()
+
+            if comment_date < cutoff_date:
+                stop_early = True
+                break
+
+            comment_text = r.get('comment', '').strip()
+            if not comment_text:
+                continue
+
+            all_reviews.append({
+                'id': str(r.get('id', f'{content_id}_{page}_{idx_in_page}')),
+                'text': comment_text,
+                'date': comment_date,
+                'rating': int(r.get('rate', 0)),
+            })
+
+        if stop_early:
+            break
+
+        page += 1
+
+        if _progress_callback:
+            progress = min(page / max(total_pages, 1), 0.9)
+            _progress_callback(progress)
+
+    if _progress_callback:
+        _progress_callback(1.0)
+
+    return all_reviews
+
+
+def get_trendyol_product_name(url: str, content_id: str) -> str:
+    """Trendyol ürün adını URL slug'ından çıkarır."""
+    try:
+        path = urllib.parse.urlparse(url).path
+        parts = path.strip('/').split('/')
+        if len(parts) >= 2:
+            product_slug = parts[-1]
+            name = _TRENDYOL_PRODUCT_ID_RE.sub('', product_slug)
+            name = name.replace('-', ' ').title()
+            if name:
+                return name
+    except Exception:
+        pass
+    return f"Trendyol Ürün #{content_id}"
+
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
@@ -1958,7 +2069,7 @@ if active_tab == "Mağaza Linki":
         )
         range_map = {"Son 1 Hafta": 7, "Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
         days_limit = range_map[time_range]
-        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...), Trendyol: Ürün linki geçerlidir.</div>', unsafe_allow_html=True)
 
 
 
@@ -2001,6 +2112,12 @@ if active_tab == "Mağaza Linki":
             
             country_match = re.search(r"apple\.com/([a-z]{2,3})/", u)
             if country_match: country = country_match.group(1)
+        # ── Trendyol ─────────────────────────────────────────────────
+        elif "trendyol.com" in u:
+            platform = "trendyol"
+            content_id_match = _TRENDYOL_PRODUCT_ID_RE.search(u)
+            if content_id_match:
+                app_id = content_id_match.group(1)
         else:
             # Doğrudan paket adı ya da ID
             clean_u = u.lower()
@@ -2066,7 +2183,8 @@ if active_tab == "Mağaza Linki":
                     "- **Play Store Ürün Linki**: `https://play.google.com/store/apps/details?id=com.hepsipay.app`\n"
                     "- **Play Store Paket Adı**: `com.hepsipay.app`\n"
                     "- **App Store Ürün Linki**: `https://apps.apple.com/tr/app/.../id123456789`\n"
-                    "- **App Store Metin ID**: `id123456789` veya sadece `123456789`\n\n"
+                    "- **App Store Metin ID**: `id123456789` veya sadece `123456789`\n"
+                    "- **Trendyol Ürün Linki**: `https://www.trendyol.com/marka/urun-adi-p-12345678`\n\n"
                     "📱 **Arama linki kullandıysanız**, bu da çalışır! Sistem ilk sonucu analiz edecektir."
                 )
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
@@ -2123,6 +2241,9 @@ if active_tab == "Mağaza Linki":
                         raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
                         name_for_state = urllib.parse.unquote(raw_name).title()
                     except: pass
+            elif platform == "trendyol":
+                st_for_state = "Trendyol"
+                name_for_state = get_trendyol_product_name(u, app_id)
 
             with st.container():
                 loading_placeholder = st.empty()
@@ -2169,6 +2290,8 @@ if active_tab == "Mağaza Linki":
                                 text = r.get('text', '')
                                 if is_valid_comment(text):
                                     fetched_comments.append(r)
+                    elif platform == "trendyol":
+                        fetched_comments = fetch_trendyol_reviews(u, days_limit, _progress_callback=update_fetch_progress)
 
                     if fetched_comments:
                         # Az yorum uyarısı
@@ -5244,6 +5367,10 @@ if st.session_state.get("_cmp_pending"):
             platform_c = "apple"
             m = re.search(r"id(\d+)", u)
             if m: app_id_c = m.group(1)
+        elif "trendyol.com" in u:
+            platform_c = "trendyol"
+            m = _TRENDYOL_PRODUCT_ID_RE.search(u)
+            if m: app_id_c = m.group(1)
         else:
             cu = u.lower()
             if cu.startswith("id") and cu[2:].isdigit():
@@ -5315,11 +5442,16 @@ if st.session_state.get("_cmp_pending"):
                                             break
                             except: pass
             except: pass
+        elif platform_c == "trendyol":
+            name_c = get_trendyol_product_name(u, app_id_c)
+            _store_label = "Trendyol"
 
         with st.spinner(f"{name_c} analiz ediliyor..."):
             try:
                 if platform_c == "google":
                     revs_c = fetch_google_play_reviews(app_id_c, cmp_days_run)
+                elif platform_c == "trendyol":
+                    revs_c = fetch_trendyol_reviews(u, cmp_days_run)
                 else:
                     revs_c = get_app_store_reviews(app_id_c, _days_limit=cmp_days_run)
                     threshold_c = datetime.now() - timedelta(days=cmp_days_run)
