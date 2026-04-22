@@ -1937,7 +1937,7 @@ if "bulk_results" in st.session_state:
             summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
         summary_text += "━━━━━━━━━━━━━━━━━━━━━\n"
         summary_text += f"Analizini yap: https://sentimentanalysis-aimode.streamlit.app/\n"
-        summary_text += "#NLP #SentimentAnalysis #CemEvecen"
+        summary_text += "#ivicin"
         
         encoded_text = urllib.parse.quote(summary_text)
 
