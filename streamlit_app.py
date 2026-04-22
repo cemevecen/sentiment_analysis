@@ -816,23 +816,32 @@ st.markdown("""
     [data-testid="stButton"] {
         width: 100% !important;
     }
-    /* Yeniden çek butonu — sabit 100x26 */
-    [data-testid="stButton"]:has(button[data-testid="baseButton-secondary"][key="refresh_btn"]),
+    /* Yeniden çek — sağ alt köşe, küçük link stili */
     [data-testid="stElementContainer"]:has(> [data-testid="stButton"] button[key="refresh_btn"]) {
-        width: 100px !important;
-        min-width: 100px !important;
-        max-width: 100px !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        margin-top: -8px !important;
+        margin-bottom: 0 !important;
     }
     [data-testid="stButton"] button[key="refresh_btn"] {
-        width: 100px !important;
-        min-width: 100px !important;
-        max-width: 100px !important;
-        height: 26px !important;
-        min-height: 26px !important;
-        font-size: 0.72rem !important;
-        padding: 0 8px !important;
-        border-radius: 8px !important;
+        width: auto !important;
+        min-width: 0 !important;
+        height: 20px !important;
+        min-height: 20px !important;
+        font-size: 0.65rem !important;
+        padding: 0 6px !important;
+        border-radius: 6px !important;
         box-shadow: none !important;
+        background: transparent !important;
+        border: none !important;
+        color: #94A3B8 !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stButton"] button[key="refresh_btn"]:hover {
+        color: #6366F1 !important;
+        background: transparent !important;
+        transform: none !important;
+        text-decoration: underline !important;
     }
 
     .stButton > button[kind="primary"] {
@@ -1292,7 +1301,7 @@ with tab1:
             """, height=60, scrolling=False)
 
         # 5. Yenile butonu — sağa hizalı, küçük (5/1 oranı)
-        _, col_ref = st.columns([5, 1])
+        _, col_ref = st.columns([1, 1])
         with col_ref:
             if st.button("↺ yeniden çek", key="refresh_btn", use_container_width=True):
                 st.session_state["_refresh_token"] = int(time.time())
