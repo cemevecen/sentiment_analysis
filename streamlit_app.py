@@ -2879,13 +2879,9 @@ if "bulk_results" in st.session_state:
                     stroke-dasharray="{uf} {ug}"
                     transform="rotate(-90 70 70)"/>
                 <!-- Merkez -->
-                <text x="70" y="65" text-anchor="middle"
-                    style="font-size:20px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
+                <text x="70" y="75" text-anchor="middle"
+                    style="font-size:24px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
                     {pos_pct}%
-                </text>
-                <text x="70" y="80" text-anchor="middle"
-                    style="font-size:9px;font-weight:600;fill:#94A3B8;font-family:Poppins,sans-serif;letter-spacing:1px;">
-                    OLUMLU
                 </text>
             </svg>
             <!-- Legend -->
