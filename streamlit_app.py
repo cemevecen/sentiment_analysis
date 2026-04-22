@@ -207,11 +207,33 @@ else:
     if text_input:
         comments_to_analyze = [{"text": text_input}]
 
-def get_gemini_sentiment(text):
+# ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
+if is_bulk and comments_to_analyze:
+    st.markdown("---")
+    mode = st.radio(
+        "Analiz hızı:",
+        options=["Hızlı", "Yavaş"],
+        captions=[
+            "Genel değerlendirmeler, daha kısa sürer",
+            "Çok daha doğru sonuçlar, uzun sürer"
+        ],
+        horizontal=True,
+        key="analysis_mode"
+    )
+    n = len(comments_to_analyze)
+    secs_per = 2 if mode == "Hızlı" else 4
+    total_secs = n * secs_per
+    total_min = total_secs // 60
+    total_sec = total_secs % 60
+    time_str = f"~{total_min}dk {total_sec}sn" if total_min > 0 else f"~{total_sec}sn"
+    st.caption(f"📊 {n} yorum için tahmini süre: **{time_str}**")
+    st.markdown("")
+
+def get_gemini_sentiment(text, model_name='gemini-3.1-flash-lite-preview'):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
+        model = genai.GenerativeModel(model_name)
         prompt = f"""
 Sen bir uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
@@ -298,38 +320,61 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
             progress_bar = st.progress(0)
             status_text = st.empty()
             quota_info = st.empty()  # Single placeholder for quota warnings
+            st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
             st.session_state['_quota_hits'] = 0
             
+            # Seçilen moda göre model ve bekleme süresi
+            mode = st.session_state.get("analysis_mode", "Hızlı")
+            if mode == "Hızlı":
+                ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
+                DELAY_SECS = 2
+                RPM_LIMIT = 30
+            else:
+                ANALYSIS_MODEL = 'gemini-3.1-flash-lite-preview'
+                DELAY_SECS = 4
+                RPM_LIMIT = 15
+
+            start_time = time.time()
+
             for i, entry in enumerate(comments_to_analyze):
                 comment = entry["text"]
                 date = entry.get("date")
-                status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)})...")
-                res = get_gemini_sentiment(comment) or heuristic_analysis(comment)
+                elapsed = int(time.time() - start_time)
+                el_min, el_sec = divmod(elapsed, 60)
+                el_str = f"{el_min}dk {el_sec}sn" if el_min > 0 else f"{el_sec}sn"
+                status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)}) — ⏱ {el_str} geçti")
+
+                res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
                 scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
                 verdict = max(scores, key=scores.get)
-                
+
                 # Update quota warning placeholder
                 q = st.session_state.get('_quota_hits', 0)
                 if q == 1:
-                    quota_info.info("ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla 15 istek)")
+                    quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
                 elif q > 1:
                     quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
-                
+
                 bulk_results.append({
                     "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
                     "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
                     "Tarih": date
                 })
                 progress_bar.progress((i + 1) / len(comments_to_analyze))
-                # Gemini-3.1-flash-lite-preview: 15 istek/dk → 4 sn bekleme
+
                 remaining = len(comments_to_analyze) - (i + 1)
                 if remaining > 0:
-                    est_secs = remaining * 4
-                    est_min = est_secs // 60
-                    est_sec = est_secs % 60
-                    time_str = f"{est_min}dk {est_sec}sn" if est_min > 0 else f"{est_sec}sn"
-                    status_text.text(f"Analiz ediliyor ({i+2}/{len(comments_to_analyze)})... ≈ {time_str} kaldı")
-                    time.sleep(4)
+                    time.sleep(DELAY_SECS)
+                    # Kalan süreyi gerçek geçen süreye göre hesapla
+                    avg_secs = (time.time() - start_time) / (i + 1)
+                    est_rem = int(avg_secs * remaining)
+                    rem_min, rem_sec = divmod(est_rem, 60)
+                    rem_str = f"{rem_min}dk {rem_sec}sn" if rem_min > 0 else f"{rem_sec}sn"
+                    elapsed2 = int(time.time() - start_time)
+                    el2_min, el2_sec = divmod(elapsed2, 60)
+                    el2_str = f"{el2_min}dk {el2_sec}sn" if el2_min > 0 else f"{el2_sec}sn"
+                    status_text.text(f"Analiz ediliyor ({i+2}/{len(comments_to_analyze)}) — ⏱ {el2_str} geçti · ≈ {rem_str} kaldı")
+
             
             st.session_state.bulk_results = bulk_results
             status_text.success("Analiz Başarıyla Tamamlandı!")
