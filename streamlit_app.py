@@ -263,17 +263,11 @@ if is_bulk and "bulk_results" in st.session_state:
 
     col_stats, col_pie = st.columns([1, 1])
     with col_stats:
-        filter_choice = st.radio(
-            "Highlight Edilecek Duygu Seçin:",
-            ["Hiçbiri (Hepsi)", "Pozitif", "Nötr", "Negatif"],
-            key="bulk_filter",
-            horizontal=True
-        )
+        st.write("#### 📊 Genel Dağılım")
         st.write(f"**Pozitif:** {counts.get('Pozitif', 0)} | **Nötr:** {counts.get('Nötr', 0)} | **Negatif:** {counts.get('Negatif', 0)}")
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        # Adding a 'pull' effect to make it feel more dynamic and standout (popping out)
         fig = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
                      color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
         fig.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent+label')
@@ -281,21 +275,38 @@ if is_bulk and "bulk_results" in st.session_state:
         st.plotly_chart(fig, use_container_width=True)
 
     # Comments List
-    st.write(f"### 💬 Yorum Listesi ({filter_choice})")
-    for _, row in df.iterrows():
-        sentiment = row["Baskın Duygu"]
-        # In 'Hiçbiri' mode, everyone gets normal-card. Otherwise, only match gets neon.
-        if filter_choice != "Hiçbiri (Hepsi)" and sentiment == filter_choice:
-            cls = "neon-pos" if sentiment == "Pozitif" else ("neon-neg" if sentiment == "Negatif" else "neon-neu")
-        else:
+    st.write("### 💬 Yorum Listesi")
+    
+    tab_all, tab_pos, tab_neg, tab_neu = st.tabs(["🌐 Tümü", "🟢 Pozitif", "🔴 Negatif", "🔵 Nötr"])
+    
+    def display_comments(filtered_df, highlight=True):
+        if filtered_df.empty:
+            st.info("Bu kategoride henüz yorum bulunmuyor.")
+            return
+        for _, row in filtered_df.iterrows():
+            sentiment = row["Baskın Duygu"]
             cls = "normal-card"
+            if highlight:
+                cls = "neon-pos" if sentiment == "Pozitif" else ("neon-neg" if sentiment == "Negatif" else "neon-neu")
+            
+            st.markdown(f"""
+            <div class="{cls}">
+                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}</span><br>
+                {row['Yorum']}
+            </div>
+            """, unsafe_allow_html=True)
+
+    with tab_all:
+        display_comments(df, highlight=False)
+    
+    with tab_pos:
+        display_comments(df[df["Baskın Duygu"] == "Pozitif"])
         
-        st.markdown(f"""
-        <div class="{cls}">
-            <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}</span><br>
-            {row['Yorum']}
-        </div>
-        """, unsafe_allow_html=True)
+    with tab_neg:
+        display_comments(df[df["Baskın Duygu"] == "Negatif"])
+        
+    with tab_neu:
+        display_comments(df[df["Baskın Duygu"] == "Nötr"])
 
     # Excel Download
     try:
