@@ -609,25 +609,26 @@ def clipboard_paste_bridge():
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
             .paste-btn {
-                background-color: transparent; 
-                color: #6366F1; 
-                border: 1.5px solid #6366F1; 
-                padding: 6px 14px; 
+                background-color: #FFFFFF !important; 
+                color: #000000 !important; 
+                border: 1px solid #CBD5E1 !important; 
+                padding: 8px 16px; 
                 border-radius: 50px; 
                 cursor: pointer;
                 font-family: 'Poppins', sans-serif;
                 font-weight: 600;
-                font-size: 0.8rem;
+                font-size: 0.85rem;
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 6px;
                 transition: all 0.2s ease;
                 margin-top: 5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
             .paste-btn:hover {
-                background-color: #6366F1;
-                color: white;
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+                background-color: #F8FAFC !important;
+                border-color: #94A3B8 !important;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             }
         </style>
         <button id="pasteBtn" class="paste-btn">
@@ -640,21 +641,24 @@ def clipboard_paste_bridge():
                     // Try to read clipboard
                     const text = await navigator.clipboard.readText();
                     if (text && text.trim().length > 2) {
-                        const parentUrl = new URL(window.parent.location.href);
-                        parentUrl.searchParams.set('auto_url', text.trim());
-                        // Important: Force a clean reload on the parent window
-                        window.parent.location.href = parentUrl.toString();
+                        // Use window.top to ensure interaction with the main Streamlit window
+                        const topWin = window.top || window.parent;
+                        const url = new URL(topWin.location.href);
+                        url.searchParams.set('auto_url', text.trim());
+                        
+                        // Force update
+                        topWin.location.href = url.toString();
                     } else {
-                        alert("Pano boş veya geçersiz bir metin var.");
+                        alert("Pano boş veya metin çok kısa.");
                     }
                 } catch (err) {
-                    alert("Panoyu okuma izni verilmedi. Lütfen tarayıcı adres çubuğundaki kilit simgesinden izin verin.");
+                    alert("YAPISTIRMA HATASI: Tarayıcınız güvenli bağlantı (HTTPS) dışında veya iframe içinde clipboard erişimine izin vermiyor olabilir. Lütfen linki kutuya manuel (CMD/CTRL+V) yapıştırın.");
                     console.error("Paste error:", err);
                 }
             });
         </script>
         """,
-        height=45,
+        height=50,
     )
 
 comments_to_analyze = [] # Reset local ref for tab logic
