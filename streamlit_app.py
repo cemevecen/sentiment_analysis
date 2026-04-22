@@ -2049,8 +2049,6 @@ if "bulk_results" in st.session_state:
                 <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
                 <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
-                <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="u-btn u-rd"><i class="fa-brands fa-reddit-alien"></i></a>
-                <a href="slack://share?text={encoded_text}" class="u-btn u-sl"><i class="fa-brands fa-slack"></i></a>
             </div>
             
             <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
