@@ -1149,8 +1149,19 @@ with tab1:
 
         # Geçmiş chip'leri
         if st.session_state.url_history:
+            def _set_input_js(url):
+                return (
+                    "var inp=window.parent.document.querySelector('[data-testid=\"stTextInput\"] input');"
+                    "if(inp){"
+                    "var nativeInputValueSetter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;"
+                    f"nativeInputValueSetter.call(inp,'{url}');"
+                    "inp.dispatchEvent(new Event('input',{bubbles:true}));"
+                    "inp.dispatchEvent(new Event('change',{bubbles:true}));"
+                    "}"
+                )
+
             chips_html = "".join([
-                f'<span onclick="window.parent.document.querySelector(\'[data-testid=\\"stTextInput\\"] input\').value=\'{h["url"] if isinstance(h, dict) else h}\';" '
+                f'<span onclick="{_set_input_js(h["url"] if isinstance(h, dict) else h)}" '
                 f'style="display:inline-block;cursor:pointer;background:#EEF2FF;border:1px solid #818CF8;'
                 f'color:#4338CA;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;'
                 f'margin:2px 3px;font-family:Poppins,sans-serif;white-space:nowrap;'
@@ -1161,6 +1172,7 @@ with tab1:
                 f'</span>'
                 for h in st.session_state.url_history[:5]
             ])
+
             st.markdown(
                 f'<div style="margin:4px 0 6px 0;">'
                 f'<div style="font-size:0.7rem;color:#94A3B8;font-weight:700;'
