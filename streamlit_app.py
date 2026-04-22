@@ -1766,6 +1766,8 @@ def on_tab_change():
 
     # 3. Clear ONLY input-specific keys
     st.session_state["_store_url_input"] = ""
+    st.session_state["_business_query_input"] = ""
+    st.session_state["_active_fetch_url"] = ""
     st.session_state["manual_text_input"] = ""
     if "last_files_key" in st.session_state:
         st.session_state.last_files_key = ""
@@ -1812,12 +1814,53 @@ if active_tab == "Mağaza Linki":
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        # 3. Giriş alanı
-        store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
-            key="_store_url_input"
-        )
+        if "_active_fetch_url" not in st.session_state:
+            st.session_state["_active_fetch_url"] = ""
+
+        # 3. Bitişik giriş panelleri
+        left_panel, right_panel = st.columns(2)
+        with left_panel:
+            st.markdown("#### Uygulama Mağazası")
+            store_input = st.text_input(
+                "Uygulama linki veya ID girin:",
+                placeholder="Örn: com.instagram.android veya 1500198745",
+                key="_store_url_input"
+            )
+            fetch_store_clicked = st.button(
+                "Mağaza Yorumlarını Çek",
+                type="primary",
+                use_container_width=True,
+                key="fetch_store_reviews_btn"
+            )
+
+        with right_panel:
+            st.markdown("#### Google İşletme")
+            business_input = st.text_input(
+                "İşletme adı veya Maps linki:",
+                placeholder="Örn: maps:Starbucks Kadıköy veya https://www.google.com/maps/place/...",
+                key="_business_query_input"
+            )
+            fetch_business_clicked = st.button(
+                "İşletme Yorumlarını Çek",
+                type="primary",
+                use_container_width=True,
+                key="fetch_business_reviews_btn"
+            )
+
+        if fetch_store_clicked and store_input.strip():
+            st.session_state["_active_fetch_url"] = store_input.strip()
+
+        if fetch_business_clicked and business_input.strip():
+            business_url = business_input.strip()
+            if not (
+                "google.com/maps" in business_url
+                or "maps.app.goo.gl" in business_url
+                or business_url.lower().startswith("maps:")
+            ):
+                business_url = f"maps:{business_url}"
+            st.session_state["_active_fetch_url"] = business_url
+
+        store_url = st.session_state.get("_active_fetch_url", "")
         st.session_state.app_url = store_url
 
         # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
@@ -1849,7 +1892,7 @@ if active_tab == "Mağaza Linki":
                         span.textContent = c.name;
                         span.title = c.url;
                         span.addEventListener('click', function() {{
-                            var inp = window.parent.document.querySelector('[data-testid="stTextInput"] input');
+                            var inp = window.parent.document.querySelector('input[aria-label="Uygulama linki veya ID girin:"]');
                             if (!inp) return;
                             var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                             setter.call(inp, c.url);
