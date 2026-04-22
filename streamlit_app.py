@@ -2178,6 +2178,14 @@ def heuristic_analysis(text, rating=None):
         "bravo size", "helal olsun yine",  # "helal olsun yine çöktü" → negatif
         "indirdim ve bağımlı", "indirdim ve bir otist",
         "indirmeden önce çok normaldim",
+        "this app destroyed",
+        "destroyed all my happiness",
+        "fix your appp",
+        "fire every single one",
+        "shame on this company",
+        "get rid of meta",
+        "go out see a band",
+        "stay off socials",
     ]
     sarkasm_hit = any(p in t for p in SARKASM)
 
@@ -2344,6 +2352,57 @@ def heuristic_analysis(text, rating=None):
         "something went wrong",
         "error", "not loading",
 
+        # EN — Ek
+        "destroyed", "destroying", "destroy",
+        "where is my account", "give me my account",
+        "can't deactivate", "cannot deactivate",
+        "disabling my account", "disabling accounts",
+        "falsely banned", "falsely suspended",
+        "false cse", "accused of cse",
+        "too many bugs", "so many bugs",
+        "fix your app", "fix the app", "fix this app",
+        "taken my account", "took my account",
+        "lost my account", "account taken",
+        "permanently disabled",
+        "still filled with",
+        "turned into a platform for ads",
+        "more ads than posts",
+        "full of bots",
+        "note expiring",
+
+        # DE — Ek
+        "stocken", "stockt", "ruckelt",
+        "non stop grundlos",
+
+        # TR — Ek
+        "düzeltin artık", "düzeltilmesi lazım",
+        "hikayeler gözükmüyor", "hikayeler yüklenmiyor",
+        "sohbetteki eski", "fotoğraflar yüklenmiyor",
+        "arşivimde yok", "eski hikayelerim yok",
+        "kapanıyor hesabım", "yeniden kapandı",
+        "hesabım askıya", "durduk yere",
+        "rezil bir uygulama",
+        "kesinlikle yüklemeyin",
+        "giderek kötüleşti",
+        "vpn çalışmıyor", "vpn ile çalışmıyor",
+        "indirilemiyor",
+
+        # RU — Ek
+        "stocken",
+        "постоянно вылетает", "вылетает приложение",
+        "не работает с vpn", "vpn не работает",
+        "удалили музыку", "убрали музыку",
+        "верните музыку",
+
+        # FR — Ek
+        "ban sans raison", "banni sans raison",
+        "compte suspendu sans raison",
+        "ergonomie catastrophique",
+
+        # IT — Ek
+        "pesantissima", "instabile", "pessima qualità",
+        "crash", "si blocca", "non funciona più",
+
         # RU
         "заблокировали", "блокировка", "аккаунт заблокирован",
         "бан", "забанили", "не работает",
@@ -2467,6 +2526,39 @@ def heuristic_analysis(text, rating=None):
 
         # DE
         "wäre schön", "bitte fügt", "wünsche mir", "vorschlag",
+
+        # EN — Ek istek
+        "bring back", "please bring back",
+        "still don't have", "i still don't have",
+        "where is the feature", "when will you add",
+        "repost feature", "add repost",
+        "story comments", "please add story",
+        "reorganize grid", "grid reorder",
+        "who views my profile", "profile visits",
+        "voice effects", "voice effect update",
+        "please return", "return to normal",
+        "old layout", "old format",
+
+        # TR — Ek istek
+        "repost özelliği", "repost geri",
+        "profil ziyareti gelsin", "kim görüntüledi",
+        "ses efekti gelmedi", "ses efekti bana",
+        "eski düzene dön", "eski arayüze dön",
+        "ekleyin lütfen", "geri getirin lütfen",
+        "yeni özellik istiyorum",
+
+        # RU — Ek istek
+        "верните старый", "верните функцию",
+        "добавьте репост", "когда добавят",
+        "хотелось бы вернуть",
+
+        # FR — Ek istek
+        "remettre", "remettez", "ramener",
+        "pouvoir ajouter", "pourrait-on ajouter",
+
+        # DE — Ek istek
+        "bringt zurück", "bitte fügt hinzu",
+        "wünsche mir zurück",
     ]
 
     # ── 7. KEYWORD SCORING ────────────────────────────────────────────────────
@@ -2532,7 +2624,7 @@ def heuristic_analysis(text, rating=None):
                 "istek_gorus": round((1-conf)/2, 3), "method": "Heuristic+"}
 
     # Rating 5 ama içerikte net negatif var → content wins
-    if _rating == 5 and neg_score > pos_score and neg_score >= 2:
+    if _rating == 5 and neg_score > pos_score and neg_score >= 1:
         conf = min(0.88, 0.65 + neg_score * 0.05)
         return {"olumlu": 0.06, "olumsuz": round(conf, 3),
                 "istek_gorus": round(1-conf-0.06, 3), "method": "Heuristic+"}
