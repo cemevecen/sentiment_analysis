@@ -203,7 +203,7 @@ if is_bulk:
                 comments_to_analyze = all_comments
                 st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
 else:
-    text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
+    text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Güzel uygulama. Elinize sağlık!")
     if text_input:
         comments_to_analyze = [{"text": text_input}]
 
@@ -315,7 +315,7 @@ def heuristic_analysis(text):
 
 
 # Analysis Trigger
-if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
+if st.button("Analizini Yap", use_container_width=True):
     if not comments_to_analyze:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
