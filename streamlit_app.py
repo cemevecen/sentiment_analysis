@@ -141,11 +141,14 @@ if is_bulk:
                             # Store text and date together
                             for idx, row in df_upload.iterrows():
                                 if col_name in row:
-                                    text = row[col_name]
-                                    if is_valid_comment(text):
-                                        entry = {"text": str(text).strip()}
+                                    val = row[col_name]
+                                    if pd.notnull(val) and is_valid_comment(val):
+                                        entry = {"text": str(val).strip()}
                                         if date_col:
-                                            entry["date"] = pd.to_datetime(row[date_col], errors='coerce')
+                                            parsed_date = pd.to_datetime(row[date_col], errors='coerce')
+                                            # Mantıklı bir tarih aralığı (Örn: 2024-2030) kontrolü
+                                            if pd.notnull(parsed_date) and 2024 <= parsed_date.year <= 2030:
+                                                entry["date"] = parsed_date
                                         all_comments.append(entry)
                             
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
