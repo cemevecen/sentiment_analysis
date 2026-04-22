@@ -607,6 +607,7 @@ def clipboard_paste_bridge():
     components.html(
         """
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
             .paste-btn {
                 background-color: transparent; 
                 color: #6366F1; 
@@ -636,14 +637,19 @@ def clipboard_paste_bridge():
         <script>
             document.getElementById('pasteBtn').addEventListener('click', async () => {
                 try {
+                    // Try to read clipboard
                     const text = await navigator.clipboard.readText();
-                    if (text && text.length > 3) {
-                        const url = new URL(window.parent.location.href);
-                        url.searchParams.set('auto_url', text);
-                        window.parent.location.href = url.toString();
+                    if (text && text.trim().length > 2) {
+                        const parentUrl = new URL(window.parent.location.href);
+                        parentUrl.searchParams.set('auto_url', text.trim());
+                        // Important: Force a clean reload on the parent window
+                        window.parent.location.href = parentUrl.toString();
+                    } else {
+                        alert("Pano boş veya geçersiz bir metin var.");
                     }
                 } catch (err) {
-                    console.error("Paste error", err);
+                    alert("Panoyu okuma izni verilmedi. Lütfen tarayıcı adres çubuğundaki kilit simgesinden izin verin.");
+                    console.error("Paste error:", err);
                 }
             });
         </script>
