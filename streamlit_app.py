@@ -598,7 +598,7 @@ with tab1:
                     if fetched_comments:
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
-                            st.warning(f"⚠️ Güvenlik ve API maliyet sınırı önlemi: Tek seferde en fazla {MAX_REVIEWS} yorum analiz edilebilir (Bulunan: {len(fetched_comments)}). İlgili tarih aralığındaki en yeni {MAX_REVIEWS} yorum analize eklendi.")
+                            st.warning(f"⚠️ En son {MAX_REVIEWS} yorum analize eklendi (Toplam bulunan {len(fetched_comments)}).")
                             fetched_comments = fetched_comments[:MAX_REVIEWS]
                         st.session_state.comments_to_analyze = fetched_comments
                         st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
@@ -750,7 +750,7 @@ with tab2:
         if all_comments:
             MAX_REVIEWS = 500
             if len(all_comments) > MAX_REVIEWS:
-                st.warning(f"⚠️ Güvenlik ve API maliyet sınırı önlemi: Dosyadaki ilk {MAX_REVIEWS} yorum analize alınacaktır (Toplam yüklenen: {len(all_comments)} satır).")
+                st.warning(f"⚠️ Dosyadaki ilk {MAX_REVIEWS} yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
                 all_comments = all_comments[:MAX_REVIEWS]
             st.session_state.comments_to_analyze = all_comments
             st.success(f"📋 Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
@@ -797,7 +797,7 @@ with tab3:
         if processed_comments:
             MAX_REVIEWS = 500
             if len(processed_comments) > MAX_REVIEWS:
-                st.warning(f"⚠️ Güvenlik önlemi: Manuel girişte en fazla {MAX_REVIEWS} yorum sınırına ulaşıldı.")
+                st.warning(f"⚠️ En fazla {MAX_REVIEWS} adet yorum girilebilir. Fazlası kırpıldı.")
                 processed_comments = processed_comments[:MAX_REVIEWS]
             st.session_state.comments_to_analyze = processed_comments
             st.success(f"✏️ Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
