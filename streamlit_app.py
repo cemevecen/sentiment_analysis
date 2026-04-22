@@ -374,14 +374,16 @@ if is_bulk and "bulk_results" in st.session_state:
             
             if selection and "selection" in selection and selection["selection"]["points"]:
                 point = selection["selection"]["points"][0]
-                sel_week = pd.to_datetime(point["x"]).tz_localize(None)
-                sel_sentiment = point["customdata"][0]
+                # Seçilen tarihi hafta başlangıcına normalize et (Plotly farklı gün döndürebilir)
+                raw_x = pd.to_datetime(point["x"]).tz_localize(None)
+                sel_week = raw_x.to_period('W').start_time
+                sel_sentiment = str(point["customdata"][0]).strip()
                 
-                # Filter comments based on selection
-                df_dates['Hafta_naive'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None)
+                # Dataframe'deki haftaları da normalize et (Garanti olması için)
+                df_dates['Hafta_filter'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None).dt.to_period('W').apply(lambda r: r.start_time)
                 
                 final_filtered = df_dates[
-                    (df_dates['Hafta_naive'] == sel_week) & 
+                    (df_dates['Hafta_filter'] == sel_week) & 
                     (df_dates['Baskın Duygu'] == sel_sentiment)
                 ]
                 
