@@ -1864,5 +1864,5 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
 
 # Footer
 st.divider()
-st.caption("Geliştiren: Cem Evecen")
+st.caption("Geliştiren: ivicin")
 
