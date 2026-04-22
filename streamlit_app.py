@@ -350,23 +350,47 @@ if is_bulk and "bulk_results" in st.session_state:
         st.info("Aşağıdaki sekmeleri kullanarak hem yorumları hem de tarihsel gelişimlerini detaylıca inceleyebilirsiniz.")
 
     # Chart & List Logic
-    def render_trend_chart(filtered_df, title_suffix=""):
+    def render_trend_chart(filtered_df, key, title_suffix=""):
         df_dates = filtered_df.dropna(subset=["Tarih"]).copy()
         if not df_dates.empty:
             df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
-            # Haftalık gruplandırma
             df_dates['Hafta'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
             trend_data = df_dates.groupby(['Hafta', "Baskın Duygu"]).size().reset_index(name='Adet')
             
+            # Custom data for selection processing
             fig_trend = px.bar(trend_data, x="Hafta", y="Adet", color="Baskın Duygu",
                                title=f"Haftalık Duygu Dağılımı {title_suffix}",
                                color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
-                               barmode='group')
+                               barmode='group',
+                               custom_data=["Baskın Duygu"])
             
             fig_trend.update_layout(height=280, margin={"t": 50, "b": 20, "l": 10, "r": 10},
                                    legend={"orientation": "h", "yanchor": "bottom", "y": -0.4, "xanchor": "center", "x": 0.5},
-                                   xaxis_title="Hafta (Başlangıç)", yaxis_title="Yorum Sayısı")
-            st.plotly_chart(fig_trend, use_container_width=True)
+                                   xaxis_title="Hafta (Başlangıç)", yaxis_title="Yorum Sayısı",
+                                   clickmode='event+select')
+            
+            # Use on_select for interactivity (Streamlit 1.35+)
+            selection = st.plotly_chart(fig_trend, use_container_width=True, on_select="rerun", key=f"chart_{key}")
+            
+            if selection and "selection" in selection and selection["selection"]["points"]:
+                point = selection["selection"]["points"][0]
+                sel_week = pd.to_datetime(point["x"]).tz_localize(None)
+                sel_sentiment = point["customdata"][0]
+                
+                # Filter comments based on selection
+                df_dates['Hafta_naive'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None)
+                
+                final_filtered = df_dates[
+                    (df_dates['Hafta_naive'] == sel_week) & 
+                    (df_dates['Baskın Duygu'] == sel_sentiment)
+                ]
+                
+                st.info(f"🔎 Filtrelendi: **{sel_week.strftime('%d.%m.%Y')}** haftası - **{sel_sentiment}** yorumlar")
+                if st.button("Filtreyi Temizle", key=f"clear_{key}"):
+                    st.rerun()
+                return final_filtered
+            
+        return filtered_df
 
     def display_comments(filtered_df, highlight=True):
         if filtered_df.empty:
@@ -401,22 +425,22 @@ if is_bulk and "bulk_results" in st.session_state:
     ])
 
     with tab_all:
-        render_trend_chart(df, "(Genel)")
-        display_comments(df, highlight=False)
+        f_df = render_trend_chart(df, "all", "(Genel)")
+        display_comments(f_df, highlight=False)
     
     with tab_pos:
         pos_df = df[df["Baskın Duygu"] == "Pozitif"]
-        render_trend_chart(pos_df, "(Pozitif)")
-        display_comments(pos_df)
+        f_df = render_trend_chart(pos_df, "pos", "(Pozitif)")
+        display_comments(f_df)
         
     with tab_neg:
         neg_df = df[df["Baskın Duygu"] == "Negatif"]
-        render_trend_chart(neg_df, "(Negatif)")
-        display_comments(neg_df)
+        f_df = render_trend_chart(neg_df, "neg", "(Negatif)")
+        display_comments(f_df)
         
     with tab_neu:
         neu_df = df[df["Baskın Duygu"] == "Nötr"]
-        render_trend_chart(neu_df, "(Nötr)")
+        f_df = render_trend_chart(neu_df, "neu", "(Nötr)")
         display_comments(neu_df)
 
     # Excel Download
