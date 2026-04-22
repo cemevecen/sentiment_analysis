@@ -1183,19 +1183,21 @@ with tab1:
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
-            key="_store_url_input"
-        )
-        st.session_state.app_url = store_url
-
-        # Yenile butonu
-        col_refresh = st.columns([4, 1])
-        with col_refresh[1]:
-            if st.button("🔄 Yenile", key="refresh_btn", use_container_width=True):
-                st.session_state.pop("last_fetch_key", None)
-                st.session_state.pop("all_fetched_pool", None)
+        # Üst sağda yenile butonu
+        col_inp, col_ref = st.columns([5, 1])
+        with col_inp:
+            store_url = st.text_input(
+                "Uygulama linki veya ID girin:",
+                placeholder="Örn: com.instagram.android veya 1500198745",
+                key="_store_url_input"
+            )
+            st.session_state.app_url = store_url
+        with col_ref:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            if st.button("🔄", key="refresh_btn", use_container_width=True, help="Yorumları yeniden çek"):
+                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                           "comments_to_analyze", "ai_summary", "last_results_len"]:
+                    st.session_state.pop(_k, None)
                 st.rerun()
 
         # Geçmiş chip'leri — components.html ile render (onclick çalışır)
