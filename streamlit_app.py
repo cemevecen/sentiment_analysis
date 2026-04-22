@@ -2059,7 +2059,6 @@ if "bulk_results" in st.session_state:
             .icon-rd { color: #FF4500; } .icon-rd:hover { background: #FF4500; color: white; }
             .icon-sl { color: #4A154B; } .icon-sl:hover { background: #4A154B; color: white; }
             .icon-gc { color: #00897B; } .icon-gc:hover { background: #00897B; color: white; }
-            .icon-cp { color: #6366F1; } .icon-cp:hover { background: #6366F1; color: white; }
             
             .copy-notif {
                 position: fixed; top: 20px; right: 20px; background: #10B981; color: white; 
@@ -2096,7 +2095,6 @@ if "bulk_results" in st.session_state:
             <a href="https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}" target="_blank" class="share-icon icon-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
             <a href="slack://share?text={encoded_text}" class="share-icon icon-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
             <div onclick="copyToClip(`{summary_text}`, true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
-            <div onclick="copyToClip(`{summary_text}`)" class="share-icon icon-cp" title="Kopyala"><i class="fa-solid fa-copy"></i></div>
         </div>
         """
         st.markdown(icons_html, unsafe_allow_html=True)
