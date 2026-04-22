@@ -503,7 +503,7 @@ st.markdown("""
         transform: scale(1.02);
     }
     
-    /* Primary Analyze Button Styling */
+    /* Primary Analyze Button Styling - Width fixed to exactly 707.2px */
     .stButton > button[kind="primary"] {
         background-color: #F4A261 !important; /* Pastel Orange */
         color: #FFFFFF !important;
@@ -511,6 +511,8 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         height: 50px !important;
         font-weight: 600 !important;
+        width: 707.2px !important;
+        max-width: 707.2px !important;
     }
     .stButton > button[kind="primary"] * {
         color: #FFFFFF !important;
