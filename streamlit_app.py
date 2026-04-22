@@ -1546,12 +1546,19 @@ if "bulk_results" in st.session_state:
         st.write("#### Yapay Zeka Görüşü")
         # Calculate summary counts
         total_all = m_olumlu + m_olumsuz + m_istek
+        diff_val = abs(m_olumlu - m_olumsuz)
+        
         # Determine Colors and Summary Text based on dominant sentiment
         if total_all == 0:
             grad_bg = "#F8FAFC"
             border_c = "#E2E8F0"
             summary_title = "Henüz yeterli veri yok."
             summary_body = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
+        elif total_all > 10 and (diff_val / total_all) < 0.15 and m_olumlu > 0 and m_olumsuz > 0: # Balanced/Mixed case
+            grad_bg = "#fef9c3" # Light Yellow
+            border_c = "#eab308" # Amber
+            summary_title = f"Dengeli/Karmaşık bir kullanıcı deneyimi gözlendi. ({total_all} yorum)"
+            summary_body = "Uygulama şu anda kullanıcı kitlesini neredeyse tam ortadan ikiye bölmüş durumda. Bir grup kullanıcı sunulan hizmetten, hızdan ve arayüzden son derece memnunken; diğer bir önemli grup ise teknik aksaklıklar, bağlantı sorunları veya beklenen özelliklerin eksikliği gibi konularda ciddi eleştiriler dile getiriyor. Marka imajı şu anda bir 'kritik eşik' evresinde; olumlu taraftaki kullanıcılar sadık kalmaya meyilliyken, olumsuz taraftakiler ise her an rakiplere yönelebilir. Bu bıçak sırtı dengeden kurtulmak için en acil şikayetlere (bug'lar, performans sorunları vb.) odaklanılmalı ve bu kitle hızlıca memnun edilmeli. Eğer bu karmaşık tablo doğru yönetilirse kitle olumlu yöne çekilebilir, aksi takdirde olumsuz sesler baskın hale gelecektir."
         elif counts.idxmax() == "Olumlu":
             grad_bg = "#dcfce7" # Light Green
             border_c = "#10b981" # Emerald
@@ -1961,17 +1968,21 @@ if "bulk_results" in st.session_state:
     </div>
     
     <div style="display: flex; justify-content: space-around; margin-bottom: 30px;">
-        <div style="text-align: center;">
-            <div style="font-size: 0.75rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Toplam Veri</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #334155;">{total_q}</div>
+        <div style="text-align: center; flex: 1;">
+            <div style="font-size: 0.7rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Analiz</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: #334155;">{total_q}</div>
         </div>
-        <div style="text-align: center; border-left: 1px solid #F1F5F9; border-right: 1px solid #F1F5F9; padding: 0 25px;">
-            <div style="font-size: 0.75rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
+        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+            <div style="font-size: 0.7rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
         </div>
-        <div style="text-align: center;">
-            <div style="font-size: 0.75rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
+        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+            <div style="font-size: 0.7rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
+            <div style="font-size: 0.7rem; color: #3B82F6; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Görüş</div>
+            <div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">%{neu_p}</div>
         </div>
     </div>
 
