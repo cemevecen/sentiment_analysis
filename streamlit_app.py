@@ -598,6 +598,7 @@ with tab1:
                     if fetched_comments:
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
+                            total_found = len(fetched_comments)
                             # Sort by date (newest first) to ensure we always get the *most recent* ones up to threshold
                             fetched_comments.sort(key=lambda x: x['date'], reverse=True)
                             fetched_comments = fetched_comments[:MAX_REVIEWS]
@@ -605,7 +606,7 @@ with tab1:
                             min_dt = min([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
                             max_dt = max([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
                             
-                            st.warning(f"⚠️ En son {MAX_REVIEWS} yorum analize eklendi. (Dahil edilen tarih aralığı: {min_dt} — {max_dt})")
+                            st.warning(f"⚠️ Toplamda **{total_found}** yorum bulundu. Bu yorumların arasından en güncel olan **{MAX_REVIEWS}** tanesi analize dahil ediliyor. (Seçilen yorumların tarih aralığı: {min_dt} ile {max_dt} arasındadır)")
                         
                         st.session_state.comments_to_analyze = fetched_comments
                         st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
