@@ -210,16 +210,19 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        # Using a more stable and widely available model name
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Analyze the sentiment of the following Turkish text with EXTREME PRECISION.
+        Analyze the sentiment of the following Turkish app review with EXTREME PRECISION.
         
-        CRITICAL RULES:
-        1. If the text describes app crashes, freezes, or bugs (e.g. 'donuyor', 'kasıyor', 'açılmıyor'), it is HEAVILY NEGATIVE.
-        2. Return ONLY a JSON response in this exact format:
-           {{"positive": score, "negative": score, "neutral": score}}
-        3. Use high-precision floats. The SUM must be EXACTLY 1.0.
+        SENSITIVITY RULES:
+        1. POSITIVE signals: '5 yıldız' (5 stars), 'devam eder' (keep it up), 'teşekkürler', absence of ads ('reklamsız', 'reklam olmadan').
+        2. NEGATIVE signals: 'açılmıyor', 'donuyor', 'kasıyor', 'berbat', '1 yıldız'.
+        3. CONTEXT: If a user says 'without wild ads' (vahşi reklam anlayışı olmadan), it's a COMPLIMENT.
+        
+        Return ONLY a JSON response:
+        {{"positive": score, "negative": score, "neutral": score}}
+        
+        High-precision floats. The SUM must be EXACTLY 1.0.
         
         Text: "{text}"
         """
