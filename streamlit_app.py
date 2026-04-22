@@ -1364,7 +1364,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
             ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
             ticker_placeholder.markdown(f"""
-            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
+            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
                     <span>ŞU AN EKLENEN (#{start_offset + i + 1})</span>
                     <span>{ticker_date}</span>
