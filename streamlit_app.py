@@ -2006,41 +2006,55 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- NATIVE STREAMLIT UNIFIED TRAY ---
+        # --- ULTIMATE CONSOLIDATED TRAY (SVG + Parent Bridge) ---
         import base64
         import json
         
-        # 1. Parent JS for PNG & PDF
+        # Prepare 8 Actions: WA, LI, X, TG, Mail, XL, PDF, PNG
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_")
-        st.markdown(f"""
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-            <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
-                <span id="uMsg">Metin Kopyalandı!</span>
-            </div>
-            <style>
-                /* Styler for native Streamlit buttons to look like sharing icons */
-                div[data-testid="stColumn"] button, div[data-testid="stColumn"] a {{
-                    min-height: 48px !important; height: 48px !important; width: 100% !important;
-                    padding: 0 !important; border-radius: 12px !important; border: 1px solid #E2E8F0 !important;
-                    background-color: white !important; color: #475569 !important; font-size: 1.2rem !important;
-                    transition: all 0.2s ease !important; display: flex !important; align-items: center !important; justify-content: center !important;
-                    text-decoration: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-                }}
-                div[data-testid="stColumn"] button:hover, div[data-testid="stColumn"] a:hover {{
-                    transform: translateY(-3px) !important; box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important; border-color: #CBD5E1 !important;
-                }}
-                /* Color hints */
-                .wa-icon {{ color: #25D366 !important; }}
-                .li-icon {{ color: #0077B5 !important; }}
-                .x-icon {{ color: #000000 !important; }}
-                .tg-icon {{ color: #0088CC !important; }}
-                .mail-icon {{ color: #D44638 !important; }}
-                .xl-icon {{ color: #1D6F42 !important; }}
-                .pdf-icon {{ color: #F4A261 !important; }}
-                .png-icon {{ color: #6366F1 !important; }}
-            </style>
-            <script>
-                function notify(msg) {{
+        excel_filename = image_name.replace(".png", ".xlsx")
+        excel_b64 = base64.b64encode(output.getvalue()).decode()
+        
+        # SVG Icons (Branding matching)
+        svg_icons = {
+            "wa": '<svg viewBox="0 0 448 512" width="22" height="22" fill="#25D366"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.4-8.6-44.6-27.5-16.5-14.7-27.6-32.8-30.8-38.4-3.2-5.6-.3-8.6 2.5-11.4 2.5-2.5 5.5-6.4 8.3-9.7 2.8-3.3 3.8-5.7 5.7-9.4 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.5 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.5 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>',
+            "li": '<svg viewBox="0 0 448 512" width="20" height="20" fill="#0077B5"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>',
+            "x": '<svg viewBox="0 0 512 512" width="18" height="18" fill="#000000"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg>',
+            "tg": '<svg viewBox="0 0 496 512" width="20" height="20" fill="#0088CC"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm121.8 169.9l-40.7 191.8c-3 13.6-11.1 16.9-22.4 10.5l-62-45.7-29.9 28.8c-3.3 3.3-6.1 6.1-12.5 6.1l4.4-63.1 114.9-103.8c5-4.4-1.1-6.9-7.7-2.5l-142 89.4-61.2-19.1c-13.3-4.2-13.6-13.3 2.8-19.7l239.1-92.2c11.1-4 20.8 2.7 17.2 19.5z"/></svg>',
+            "mail": '<svg viewBox="0 0 512 512" width="20" height="20" fill="#D44638"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>',
+            "xl": '<svg viewBox="0 0 384 512" width="20" height="20" fill="#1D6F42"><path d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM155.7 250.2L192 302.1l36.3-51.9c4.4-6.3 13-7.8 19.2-3.4s7.8 13 3.4 19.2L210.9 320l40.1 57.3c4.4 6.3 2.8 14.8-3.4 19.2s-14.8 2.8-19.2-3.4L192 337.9l-36.3 51.9c-4.4 6.3-13 7.8-19.2 3.4s-7.8-13-3.4-19.2L173.1 320l-40.1-57.3c-4.4-6.3-2.8-14.8 3.4-19.2s14.8-2.8 19.2 3.4z"/></svg>',
+            "pdf": '<svg viewBox="0 0 512 512" width="20" height="20" fill="#F4A261"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V288H216c-13.3 0-24 10.7-24 24s10.7 24 24 24H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM176 352h32c30.9 0 56 25.1 56 56s-25.1 56-56 56H192v32c0 13.3-10.7 24-24 24s-24-10.7-24-24V376c0-13.3 10.7-24 24-24zm32 64h-16v-16h16c4.4 0 8 3.6 8 8s-3.6 8-8 8z"/></svg>',
+            "png": '<svg viewBox="0 0 512 512" width="20" height="20" fill="#6366F1"><path d="M448 80c8.8 0 16 7.2 16 16V415.8l-5-6.5-136-176c-4.5-5.9-11.6-9.3-19-9.3s-14.4 3.4-19 9.3L202 340.7l-30.5-42.7C167 291.7 159.8 288 152 288s-15 3.7-19.5 10.1l-80 112L48 416.3V96c0-8.8 7.2-16 16-16H448zM64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zm80 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/></svg>'
+        }
+
+        consolidated_html = f"""
+        <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: sans-serif; white-space: nowrap;">
+            <span id="uMsg">Kopyalandı!</span>
+        </div>
+        <style>
+            .u-row {{ display: flex; flex-wrap: nowrap; gap: 10px; justify-content: center; margin: 30px 0; overflow-x: auto; padding-bottom: 5px; }}
+            .u-icon-btn {{
+                width: 48px; height: 48px; min-width: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px;
+                display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.02); text-decoration: none !important;
+            }}
+            .u-icon-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: #CBD5E1; }}
+        </style>
+        <div class="u-row">
+            <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-icon-btn" title="WhatsApp">{svg_icons['wa']}</a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-icon-btn" title="LinkedIn">{svg_icons['li']}</a>
+            <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-icon-btn" title="X (Twitter)">{svg_icons['x']}</a>
+            <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-icon-btn" title="Telegram">{svg_icons['tg']}</a>
+            <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-icon-btn" title="E-Posta">{svg_icons['mail']}</a>
+            
+            <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_b64}" download="{excel_filename}" class="u-icon-btn" title="Excel İndir">{svg_icons['xl']}</a>
+            <div class="u-icon-btn" onclick="window.parent.triggerBridge('pdf')" title="PDF Yazdır">{svg_icons['pdf']}</div>
+            <div class="u-icon-btn" onclick="window.parent.triggerBridge('png')" title="PNG İndir">{svg_icons['png']}</div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script>
+            (function() {{
+                const notify = (msg) => {{
                     const n = document.getElementById('uNotif');
                     const m = document.getElementById('uMsg');
                     if(n && m) {{
@@ -2051,8 +2065,8 @@ if "bulk_results" in st.session_state:
                             n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
                         }}, 3000);
                     }}
-                }}
-                window.parent.triggerAction = function(type) {{
+                }};
+                window.parent.triggerBridge = function(type) {{
                     if(type === 'pdf') window.print();
                     if(type === 'png') {{
                         const target = document.getElementById('nlp-report-card');
@@ -2066,44 +2080,11 @@ if "bulk_results" in st.session_state:
                             notify("İndirme Başlatıldı! ⬇️");
                         }});
                     }}
-                }}
-            </script>
-        """, unsafe_allow_html=True)
-
-        # 2. Native Columns
-        cols = st.columns(8)
-        
-        # 1-5 Social Links (using HTML inside columns for target="_blank" support)
-        links = [
-            (cols[0], "WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}", "fa-brands fa-whatsapp", "wa-icon"),
-            (cols[1], "LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}", "fa-brands fa-linkedin-in", "li-icon"),
-            (cols[2], "X", f"https://twitter.com/intent/tweet?text={encoded_text}", "fa-brands fa-x-twitter", "x-icon"),
-            (cols[3], "Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}", "fa-brands fa-telegram", "tg-icon"),
-            (cols[4], "Mail", f"mailto:?subject=NLP Analiz Raporu&body={encoded_text}", "fa-solid fa-envelope", "mail-icon")
-        ]
-        
-        for col, title, url, icon, cls in links:
-            with col:
-                st.markdown(f'<a href="{url}" target="_blank" title="{title}"><i class="{icon} {cls}"></i></a>', unsafe_allow_html=True)
-        
-        # 6. Native Excel Download
-        with cols[5]:
-             st.download_button(label=" ", data=output.getvalue(), file_name=image_name.replace(".png", ".xlsx"), 
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                                help="Excel İndir", key="icon_xl")
-             st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-excel xl-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
-
-        # 7. Native PDF Button
-        with cols[6]:
-            if st.button(" ", key="icon_pdf", help="PDF Olarak Yazdır"):
-                st.markdown('<script>window.parent.triggerAction("pdf");</script>', unsafe_allow_html=True)
-            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-pdf pdf-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
-
-        # 8. Native PNG Button
-        with cols[7]:
-            if st.button(" ", key="icon_png", help="PNG Görseli İndir"):
-                st.markdown('<script>window.parent.triggerAction("png");</script>', unsafe_allow_html=True)
-            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-image png-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
+                }};
+            }})();
+        </script>
+        """
+        st.markdown(consolidated_html, unsafe_allow_html=True)
                     
     except Exception as e:
         st.error(f"Paylaşım sistemi hatası: {e}")
