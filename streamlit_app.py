@@ -21,7 +21,7 @@ load_dotenv(override=True)
 # Set Page Config
 st.set_page_config(
     page_title="AI Duygu Analizi",
-    page_icon="❤️",
+    page_icon="💮",
     layout="centered"
 )
 
