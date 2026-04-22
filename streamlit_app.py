@@ -303,9 +303,10 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
         return country_reviews
 
     
+    # ── Parael Fetching with increased workers (40 for each country) ──
     total_countries = len(countries)
     completed = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
         future_to_country = {executor.submit(fetch_country_reviews, c): c for c in countries}
         for future in concurrent.futures.as_completed(future_to_country):
             completed += 1
@@ -445,17 +446,22 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
             except: break
         return fresh_data
 
-    # Önce filtresiz taze çekim — tr/tr + en/us için
-    for _lang, _country in [('tr', 'tr'), ('en', 'us'), ('de', 'de'), ('ru', 'ru')]:
-        for r in fetch_unfiltered(_lang, _country):
-            all_fetched_map[r['id']] = r
+    # Önce filtresiz taze çekim — TR, US, DE, RU (Parallelized)
+    initial_pairs = [('tr', 'tr'), ('en', 'us'), ('de', 'de'), ('ru', 'ru')]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(initial_pairs)) as init_executor:
+        init_futures = [init_executor.submit(fetch_unfiltered, lp, cp) for lp, cp in initial_pairs]
+        for f in concurrent.futures.as_completed(init_futures):
+            for r in f.result():
+                all_fetched_map[r['id']] = r
 
+    # ── Parallel Execution for Multi-Channel Depth (Increased Workers: 60) ──
     total_channels = len(channels)
     completed_channels = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
         future_to_channel = {executor.submit(fetch_channel, s, sc, l, c): (s, sc, l, c) for s, sc, l, c in channels}
         for future in concurrent.futures.as_completed(future_to_channel):
             completed_channels += 1
+            # Progress can be granular but let's keep it smooth
             if _progress_callback: _progress_callback(min(completed_channels / total_channels, 0.99))
             res = future.result()
             for r in res:
@@ -1077,14 +1083,19 @@ st.markdown("""
        Actually, Streamlit's active radio label has a specific attribute or child. 
        Let's use a simpler approach: targeting the 'checked' state. */
 
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-        background-color: #818CF8 !important; /* Indigo primary */
+    /* Radio button - Seçili state (Daha güçlü selector'ler) */
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
+    div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"],
+    div[data-testid="stRadio"] input[type="radio"]:checked + label {
+        background-color: #818CF8 !important;
         color: white !important;
         border-color: #818CF8 !important;
         box-shadow: 0 4px 10px rgba(129, 140, 248, 0.3) !important;
         font-weight: 600 !important;
     }
 
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
     div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p {
         color: white !important;
     }
@@ -1255,6 +1266,47 @@ st.markdown("""
         }
     }
 </style>
+
+<script>
+(function() {
+    function styleRadios() {
+        const labels = document.querySelectorAll('[data-testid="stRadio"] label');
+        labels.forEach(label => {
+            const input = label.querySelector('input[type="radio"]');
+            if (input && input.checked) {
+                label.style.backgroundColor = '#818CF8';
+                label.style.color = 'white';
+                label.style.borderColor = '#818CF8';
+                label.style.boxShadow = '0 4px 10px rgba(129, 140, 248, 0.3)';
+                const p = label.querySelector('p');
+                if (p) p.style.color = 'white';
+            } else if (label.querySelector('input[type="radio"]')) {
+                label.style.backgroundColor = '#FFFFFF';
+                label.style.color = '#475569';
+                label.style.borderColor = '#E2E8F0';
+                label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                const p = label.querySelector('p');
+                if (p) p.style.color = '#475569';
+            }
+        });
+    }
+    
+    // İlk yükleme ve periyodik kontrol
+    styleRadios();
+    
+    // Streamlit rerun sonrası veya DOM değişikliklerinde stili güncelle
+    const observer = new MutationObserver((mutations) => {
+        styleRadios();
+    });
+    
+    observer.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-checked', 'aria-checked']
+    });
+})();
+</script>
 """, unsafe_allow_html=True)
 
 
