@@ -212,41 +212,42 @@ def get_app_store_reviews(app_id: str, country: str = 'tr', _progress_callback: 
         return reviews
 
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
-    """Deep fetcher that scans multiple countries to bypass Google's 3k limit per store"""
+    """Brute force fetcher that combines multiple sorts and scores to get max depth"""
     from google_play_scraper import Sort, reviews as play_reviews
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
     
     all_fetched_map = {} 
     
-    # We scan multiple countries with lang='tr' because Turkish users are everywhere.
-    # Each country provides its own ~3000 review pagination limit.
-    scan_countries = ['tr', 'us', 'de', 'az', 'gb', 'fr', 'at', 'nl']
+    # Using multiple strategies to exceed the 3k limit
+    # NEWEST covers the timeline, MOST_RELEVANT covers older popular reviews
+    sort_strategies = [Sort.NEWEST, Sort.MOST_RELEVANT]
     scores = [1, 2, 3, 4, 5]
     
-    total_steps = len(scan_countries) * len(scores)
-    current_step = 0
+    total_phases = len(sort_strategies) * len(scores)
+    current_phase = 0
     
     try:
-        for country in scan_countries:
+        for sort_type in sort_strategies:
             for score in scores:
-                current_step += 1
+                current_phase += 1
                 continuation_token = None
                 
-                # For high-traffic apps, we go up to 25 batches (approx 5k reviews) per score/country combo
-                for i in range(25):
+                # Fetch up to 40 batches (approx 8k reviews) per sort/score combo
+                for i in range(40):
                     result, continuation_token = play_reviews(
                         app_id,
-                        lang='tr',
-                        country=country,
-                        sort=Sort.NEWEST,
+                        lang='tr', country='tr',
+                        sort=sort_type,
                         count=200,
                         filter_score_with=score,
                         continuation_token=continuation_token
                     )
                     if not result: break
                     
-                    reached_threshold = False
+                    batch_dates = []
+                    found_out_of_range = False
+                    
                     for r in result:
                         r_at_raw = r.get('at')
                         if r_at_raw:
@@ -254,28 +255,29 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                             if r_at.tzinfo is not None:
                                 r_at = r_at.replace(tzinfo=None)
                             
+                            batch_dates.append(r_at)
+                            
                             if r_at >= threshold_date:
                                 content = str(r.get('content', ''))
                                 if content and len(content.strip()) >= 2:
                                     r_id = r.get('reviewId', content)
-                                    # Store with metadata for analysis
                                     all_fetched_map[r_id] = {
                                         "text": content, 
                                         "date": r_at, 
-                                        "rating": str(score),
-                                        "country": country
+                                        "rating": str(score)
                                     }
                             else:
-                                reached_threshold = True
-                    
+                                # For Sort.NEWEST, we can stop if we hit old reviews
+                                if sort_type == Sort.NEWEST:
+                                    found_out_of_range = True
+                                    
                     if _progress_callback:
-                        # Progress: (Completed steps / total steps) + (current batch progress / total steps)
-                        base_p = (current_step - 1) / total_steps
-                        batch_p = (i + 1) / 25
-                        overall_p = base_p + (batch_p / total_steps)
+                        base_p = (current_phase - 1) / total_phases
+                        batch_p = (i + 1) / 40
+                        overall_p = base_p + (batch_p / total_phases)
                         _progress_callback(min(overall_p, 0.99))
 
-                    if reached_threshold: break
+                    if found_out_of_range: break
                     if not continuation_token: break
                 
         if _progress_callback: 
