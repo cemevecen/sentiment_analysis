@@ -534,12 +534,12 @@ st.markdown("""
     .metric-card {
         flex: 1;
         min-width: 140px;
-        background-color: #F1F5F9;
-        border: 1px solid #E2E8F0;
-        border-radius: 30px;
-        padding: 20px;
+        background-color: #F8FAFC;
+        border: 2px solid #FFD1B3;
+        border-radius: 100px;
+        padding: 25px 20px;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
     .metric-value {
         font-size: 2rem;
