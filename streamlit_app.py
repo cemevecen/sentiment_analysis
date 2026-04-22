@@ -46,31 +46,28 @@ st.markdown("""
     /* Global Overrides */
     html, body, [class*="st-"], .stApp, *, .stButton>button, .stTextInput input, .stTextArea textarea {
         font-family: 'Poppins', sans-serif !important;
+        color: #1E293B !important; /* Dark Slate for readability */
     }
     
     .stApp {
-        background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 100%);
+        background-color: #F8FAFC !important; /* Solid Light Pastel Background */
     }
     
     /* Header Card */
     .header-container {
-        background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%);
-        border: 1px solid rgba(124, 58, 237, 0.3);
-        border-radius: 24px;
+        background-color: #E0F2FE; /* Solid Pastel Light Blue/Green */
+        border: 2px solid #BAE6FD;
+        border-radius: 20px;
         padding: 40px;
         margin-bottom: 40px;
         text-align: center;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
     .header-title {
         font-family: 'Poppins', sans-serif;
-        font-size: 3.5rem;
+        font-size: 3.2rem;
         font-weight: 700;
-        background: linear-gradient(to right, #a78bfa, #f472b6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 20px;
+        color: #6366F1; /* Solid Pastel Indigo */
+        margin-bottom: 15px;
     }
     .header-desc {
         color: #94a3b8;
@@ -81,51 +78,46 @@ st.markdown("""
 
     /* Custom Container */
     .glass-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
+        background-color: #FFFFFF;
+        border: 2px solid #F1F5F9;
+        border-radius: 16px;
         padding: 30px;
         margin-bottom: 25px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
 
     /* Buttons */
     .stButton>button {
-        background: linear-gradient(90deg, #7c3aed 0%, #ec4899 100%) !important;
+        background-color: #FB923C !important; /* Solid Pastel Orange */
         border: none !important;
         color: white !important;
-        font-weight: 700 !important;
+        font-weight: 600 !important;
         border-radius: 12px !important;
-        padding: 12px 24px !important;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        font-size: 1.1rem !important;
-        height: auto !important;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
+        padding: 10px 24px !important;
+        transition: transform 0.2s ease !important;
+        font-size: 1rem !important;
     }
     .stButton>button:hover {
-        transform: translateY(-2px) scale(1.02) !important;
-        box-shadow: 0 8px 25px rgba(124, 58, 237, 0.5) !important;
-        filter: brightness(1.1);
+        background-color: #F97316 !important;
+        transform: scale(1.02);
     }
 
     /* Inputs & Toggles */
     .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-        background: rgba(15, 23, 42, 0.8) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 12px !important;
-        color: white !important;
+        background-color: #FFFFFF !important;
+        border: 2px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        color: #1E293B !important;
     }
     
-    /* Radio Buttons */
-    [data-testid="stRadio"] label {
-        color: #e2e8f0 !important;
-        font-weight: 600 !important;
+    .stCheckbox label, .stRadio label {
+        color: #475569 !important;
+        font-weight: 500 !important;
     }
     
     /* Custom divider */
     .fancy-divider {
-        height: 2px;
-        background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.5), transparent);
+        height: 3px;
+        background-color: #E2E8F0;
         margin: 40px 0;
     }
 
@@ -138,20 +130,16 @@ st.markdown("""
 
     /* Result Cards */
     .result-card {
-        background: rgba(15, 23, 42, 0.6);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 15px;
-        border-right: 4px solid #334155;
-        transition: all 0.2s ease;
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 12px;
+        border-left: 5px solid #CBD5E1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .result-card:hover {
-        background: rgba(30, 41, 59, 0.8);
-        border-right-width: 6px;
-    }
-    .pos-border { border-right-color: #10b981 !important; }
-    .neg-border { border-right-color: #ef4444 !important; }
-    .neu-border { border-right-color: #3b82f6 !important; }
+    .pos-border { border-left-color: #34D399 !important; }
+    .neg-border { border-left-color: #F87171 !important; }
+    .neu-border { border-left-color: #60A5FA !important; }
 
     /* Custom Metric Cards */
     .metric-container {
@@ -162,22 +150,21 @@ st.markdown("""
     }
     .metric-card {
         flex: 1;
-        min-width: 150px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 24px;
+        min-width: 140px;
+        background-color: #F1F5F9;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
-        backdrop-filter: blur(5px);
     }
     .metric-value {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
     .metric-label {
-        font-size: 0.85rem;
-        color: #94a3b8;
+        font-size: 0.8rem;
+        color: #64748B;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 1px;
