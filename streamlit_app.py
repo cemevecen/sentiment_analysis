@@ -542,6 +542,7 @@ def heuristic_analysis(text):
 
 
 # Analysis Trigger
+ticker_placeholder = st.empty()
 if st.button("Analizini Yap", use_container_width=True):
     if not comments_to_analyze:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
@@ -604,8 +605,6 @@ if st.button("Analizini Yap", use_container_width=True):
                 f"⏱ **Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; ⏳ **Tahmini kalan:** {rem_str}"
             )
 
-        # LIVE TICKER CONTAINER
-        ticker_placeholder = st.empty()
 
         for i, entry in enumerate(comments_to_analyze):
             comment = entry["text"]
