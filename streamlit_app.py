@@ -2506,6 +2506,21 @@ elif active_tab == "Karşılaştır":
         else:
             cmp_analysis_mode = 0
 
+    # Style button with pastel green - find the last primary button and style it
+    st.markdown("""
+    <style>
+    [data-testid="stButton"] button[kind="primary"] {
+        background-color: #A7E6A3 !important;
+        color: #1F6B35 !important;
+        border: 1.5px solid #7FE4A0 !important;
+    }
+    [data-testid="stButton"] button[kind="primary"]:hover {
+        background-color: #7FE4A0 !important;
+        border-color: #5EC97A !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     if st.button("Karşılaştırmayı Başlat", type="primary", width='stretch', key="cmp_start_btn"):
         active_inputs = [u for u in cmp_inputs if u]
         if len(active_inputs) < 2:
