@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-15-00"  # Full scraper rewrite: robust selectors, direct place URL nav
+CURRENT_VERSION = "2026-03-19-16-00"  # Add debug log, CAPTCHA detection, robust place navigation
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -821,293 +821,345 @@ def scrape_google_reviews_playwright(
     if (
         "google.com/travel" in maps_url
         or ("google.com/search" in maps_url and "google.com/maps" not in maps_url)
-    ):
-        _resolved = _extract_maps_url_from_travel(maps_url)
-        if _resolved:
-            maps_url = _resolved
+    def scrape_google_reviews_playwright(
+        maps_url: str,
+        max_reviews: int = 300,
+        _progress_callback=None,
+        days_hint: int = 365,
+    ) -> List[Dict[str, Any]]:
+        """
+        Playwright (Chromium headless) ile Google Maps sayfasından yorumları çeker.
+        Travel/Search URL'leri otomatik Maps URL'sine dönüştürülür.
+        """
+        st.session_state["_gb_last_scrape_error"] = None
+        _log: List[str] = []
 
-    reviews: List[Dict[str, Any]] = []
+        def _dbg(msg: str) -> None:
+            _log.append(msg)
+            st.session_state["_gb_debug_log"] = _log[:]
 
-    # ── Selector listeleri (eski → yeni sırasıyla) ──────────────────
-    _CARD_SELS  = ["div[data-review-id]", "div.jftiEf", "div.GHT2ce"]
-    _TEXT_SELS  = ["span.wiI7pd", "span[data-expandable-section]", "div.MyEned span", "div.Jtu6Td span"]
-    _STAR_SELS  = ["span.kvMYJc", 'span[aria-label*="yıldız"]', 'span[aria-label*="star"]',
-                   'span[aria-label*="Star"]']
-    _DATE_SELS  = ["span.rsqaWe", "span.xRkPPb", "span.DU9Pgb", "span.y3Ibjb",
-                   "span[class*='rsqa']", "span[class*='xRkP']"]
-    _USER_SELS  = ["div.d4r55", "button.al6Kxe span", "div.WNxzHc span", "div.RfnDt span"]
-    _FEED_SELS  = ["div[role='feed']", "div.m6QErb", "div.DxyBCb", "div.section-layout"]
-    _MORE_SELS  = "button.w8nwRe, button[aria-label*='fazla'], button[aria-label*='more']"
-    _TAB_SELS   = [
-        'button[data-tab-index="1"]',
-        'button[aria-label*="Yorum"]',  'button[aria-label*="Review"]',
-        '[role="tab"]:has-text("Yorumlar")', '[role="tab"]:has-text("Reviews")',
-        'button:has-text("Yorumlar")',  'button:has-text("Reviews")',
-    ]
-
-    def _first(cards_iter, sel):
-        for s in sel:
-            el = cards_iter.query_selector(s)
-            if el:
-                return el
-        return None
-
-    try:
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox", "--disable-setuid-sandbox",
-                    "--disable-gpu", "--disable-dev-shm-usage",
-                    "--disable-crash-reporter", "--no-zygote",
-                ],
+        try:
+            from playwright.sync_api import sync_playwright  # noqa: F401
+        except ImportError:
+            st.session_state["_gb_last_scrape_error"] = (
+                "Playwright Python paketi kurulu değil. `pip install playwright` gerekir."
             )
-            ctx = browser.new_context(
-                locale="tr-TR",
-                viewport={"width": 1280, "height": 900},
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-            )
-            page = ctx.new_page()
+            return []
 
-            # ── 1. Sayfayı aç ───────────────────────────────────────
-            try:
-                page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
-            except Exception as _ge:
-                if "crashed" in str(_ge).lower():
-                    _fb = _extract_maps_url_from_travel(maps_url)
-                    if _fb:
-                        maps_url = _fb
-                        page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+        # ── Ön-çözümleme: Travel/Search URL → Maps URL ──────────────────
+        if (
+            "google.com/travel" in maps_url
+            or ("google.com/search" in maps_url and "google.com/maps" not in maps_url)
+        ):
+            _resolved = _extract_maps_url_from_travel(maps_url)
+            _dbg(f"Travel URL çözümlendi: {_resolved or 'BAŞARISIZ'}")
+            if _resolved:
+                maps_url = _resolved
+
+        _dbg(f"Hedef URL: {maps_url}")
+        reviews: List[Dict[str, Any]] = []
+
+        # ── Selector listeleri (eski → yeni sırasıyla) ──────────────────
+        _CARD_SELS  = ["div[data-review-id]", "div.jftiEf", "div.GHT2ce"]
+        _TEXT_SELS  = ["span.wiI7pd", "span[data-expandable-section]", "div.MyEned span", "div.Jtu6Td span"]
+        _STAR_SELS  = ["span.kvMYJc", 'span[aria-label*="yıldız"]', 'span[aria-label*="star"]',
+                       'span[aria-label*="Star"]']
+        _DATE_SELS  = ["span.rsqaWe", "span.xRkPPb", "span.DU9Pgb", "span.y3Ibjb",
+                       "span[class*='rsqa']", "span[class*='xRkP']"]
+        _USER_SELS  = ["div.d4r55", "button.al6Kxe span", "div.WNxzHc span", "div.RfnDt span"]
+        _FEED_SELS  = ["div[role='feed']", "div.m6QErb", "div.DxyBCb", "div.section-layout"]
+        _MORE_SELS  = "button.w8nwRe, button[aria-label*='fazla'], button[aria-label*='more']"
+        _TAB_SELS   = [
+            'button[data-tab-index="1"]',
+            'button[aria-label*="Yorum"]',  'button[aria-label*="Review"]',
+            '[role="tab"]:has-text("Yorumlar")', '[role="tab"]:has-text("Reviews")',
+            'button:has-text("Yorumlar")',  'button:has-text("Reviews")',
+        ]
+
+        try:
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox", "--disable-setuid-sandbox",
+                        "--disable-gpu", "--disable-dev-shm-usage",
+                        "--disable-crash-reporter", "--no-zygote",
+                    ],
+                )
+                ctx = browser.new_context(
+                    locale="tr-TR",
+                    viewport={"width": 1280, "height": 900},
+                    user_agent=(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                )
+                page = ctx.new_page()
+
+                # ── 1. Sayfayı aç ───────────────────────────────────────
+                try:
+                    page.goto(maps_url, timeout=35000, wait_until="domcontentloaded")
+                except Exception as _ge:
+                    if "crashed" in str(_ge).lower():
+                        _dbg("Sayfa crash etti, fallback deneniyor")
+                        _fb = _extract_maps_url_from_travel(maps_url)
+                        if _fb:
+                            maps_url = _fb
+                            page.goto(maps_url, timeout=35000, wait_until="domcontentloaded")
+                        else:
+                            raise
                     else:
                         raise
-                else:
-                    raise
-            time.sleep(2)
 
-            # ── 2. Çerez popup'ı ────────────────────────────────────
-            for _ct in ["Tümünü kabul et", "Accept all", "Kabul et"]:
                 try:
-                    page.click(f'button:has-text("{_ct}")', timeout=2000)
-                    time.sleep(0.5)
-                    break
+                    page.wait_for_load_state("networkidle", timeout=8000)
                 except Exception:
-                    continue
-
-            # ── 3. Arama/liste sayfasındaysak → doğrudan place URL'e git ──
-            if "/maps/search/" in page.url:
-                _place_url = None
-                # Sayfadaki ilk /maps/place/ linkini DOM'dan çıkar
-                try:
-                    page.wait_for_selector('a[href*="/maps/place/"]', timeout=7000)
-                    _el = page.query_selector('a[href*="/maps/place/"]')
-                    if _el:
-                        _place_url = _el.get_attribute("href") or ""
-                except Exception:
-                    pass
-
-                if _place_url:
-                    page.goto(_place_url, timeout=30000, wait_until="domcontentloaded")
                     time.sleep(2)
-                else:
-                    # Fallback: tıkla + URL değişmesini bekle
+
+                _dbg(f"Açılan URL: {page.url}")
+                _dbg(f"Sayfa başlığı: {page.title()}")
+
+                # CAPTCHA / bot engeli tespiti
+                _body = (page.content() or "").lower()
+                if any(k in _body for k in ("unusual traffic", "captcha", "i'm not a robot", "verify you")):
+                    _dbg("⚠️ Google bot koruması tespit edildi")
+                    st.session_state["_gb_last_scrape_error"] = (
+                        "Google bot koruması (CAPTCHA) devreye girdi. "
+                        "Birkaç dakika bekleyip tekrar deneyin veya işletme adını doğrudan yazın."
+                    )
+                    browser.close()
+                    return []
+
+                # ── 2. Çerez popup'ı ────────────────────────────────────
+                for _ct in ["Tümünü kabul et", "Accept all", "Kabul et"]:
                     try:
-                        page.click("a.hfpxzc", timeout=5000)
-                        try:
-                            page.wait_for_url("**/maps/place/**", timeout=10000)
-                        except Exception:
-                            time.sleep(3)
+                        page.click(f'button:has-text("{_ct}")', timeout=2000)
+                        time.sleep(0.5)
+                        break
+                    except Exception:
+                        continue
+
+                # ── 3. Arama/liste sayfasındaysak → place sayfasına git ──
+                _cur_url = page.url
+                _dbg(f"Navigasyon öncesi URL: {_cur_url}")
+
+                if "/maps/search/" in _cur_url or (
+                    "/maps/" in _cur_url and "/maps/place/" not in _cur_url
+                ):
+                    _place_url = None
+
+                    # a) DOM'dan ilk geçerli /maps/place/ href'ini al
+                    try:
+                        page.wait_for_selector('a[href*="/maps/place/"]', timeout=8000)
+                        for _a in page.query_selector_all('a[href*="/maps/place/"]')[:10]:
+                            _h = (_a.get_attribute("href") or "").strip()
+                            if _h and "/maps/place/" in _h and len(_h) > 30:
+                                _place_url = _h
+                                break
                     except Exception:
                         pass
 
-            # ── 4. Yorumlar sekmesi ─────────────────────────────────
-            for _ts in _TAB_SELS:
-                try:
-                    page.click(_ts, timeout=3500)
-                    time.sleep(1.5)
-                    break
-                except Exception:
-                    continue
-
-            # ── 5. En yeni sıralama ─────────────────────────────────
-            for _sv in ["En yeni", "Newest"]:
-                try:
-                    page.click(f'[data-value="{_sv}"]', timeout=3000)
-                    time.sleep(1)
-                    break
-                except Exception:
-                    continue
-
-            # ── 6. İlk kartlar yüklenene kadar bekle ────────────────
-            for _cs in _CARD_SELS:
-                try:
-                    page.wait_for_selector(_cs, timeout=8000)
-                    break
-                except Exception:
-                    continue
-
-            # ── 7. Scroll döngüsü ───────────────────────────────────
-            last_count = 0
-            no_new = 0
-            for _ in range(80):
-                if last_count >= max_reviews:
-                    break
-
-                # Feed panelini bul ve scroll et
-                try:
-                    panel = None
-                    for _fs in _FEED_SELS:
-                        panel = page.query_selector(_fs)
-                        if panel:
-                            break
-                    if panel:
-                        panel.evaluate("el => el.scrollTop = el.scrollHeight")
-                    else:
-                        page.evaluate("window.scrollBy(0, 1500)")
-                except Exception:
-                    pass
-
-                time.sleep(0.8)
-
-                # "Daha fazla" butonları
-                try:
-                    for _mb in page.query_selector_all(_MORE_SELS)[:5]:
+                    # b) a.hfpxzc tıkla + URL değişmesini bekle
+                    if not _place_url:
                         try:
-                            _mb.click()
-                            time.sleep(0.15)
+                            page.click("a.hfpxzc", timeout=5000)
+                            try:
+                                page.wait_for_url("**/maps/place/**", timeout=10000)
+                                _place_url = page.url
+                            except Exception:
+                                time.sleep(3)
+                                if "/maps/place/" in page.url:
+                                    _place_url = page.url
                         except Exception:
                             pass
-                except Exception:
-                    pass
 
-                # Kart sayısını güncelle (birden fazla selector)
-                current = 0
-                for _cs in _CARD_SELS:
-                    current = len(page.query_selector_all(_cs))
-                    if current > 0:
+                    _dbg(f"Place URL bulundu: {_place_url or 'YOK'}")
+
+                    if _place_url and "/maps/place/" in _place_url and _place_url != page.url:
+                        page.goto(_place_url, timeout=35000, wait_until="domcontentloaded")
+                        try:
+                            page.wait_for_load_state("networkidle", timeout=8000)
+                        except Exception:
+                            time.sleep(2)
+
+                _dbg(f"Place sayfası: {page.url}")
+                _dbg(f"Place başlığı: {page.title()}")
+
+                # ── 4. Yorumlar sekmesi ─────────────────────────────────
+                _tab_clicked = False
+                for _ts in _TAB_SELS:
+                    try:
+                        page.click(_ts, timeout=3500)
+                        time.sleep(1.5)
+                        _tab_clicked = True
+                        _dbg(f"Tab tıklandı: {_ts}")
                         break
+                    except Exception:
+                        continue
+                if not _tab_clicked:
+                    _dbg("⚠️ Yorumlar sekmesi tıklanamadı")
 
-                if _progress_callback:
-                    _progress_callback(min(current / max(max_reviews, 1), 0.9))
-
-                if current == last_count:
-                    no_new += 1
-                    if no_new >= 3:
+                # ── 5. En yeni sıralama ─────────────────────────────────
+                for _sv in ["En yeni", "Newest"]:
+                    try:
+                        page.click(f'[data-value="{_sv}"]', timeout=3000)
+                        time.sleep(1)
                         break
-                else:
-                    no_new = 0
-                last_count = current
-
-            # ── 8. Kartları parse et ─────────────────────────────────
-            cards = []
-            for _cs in _CARD_SELS:
-                cards = page.query_selector_all(_cs)
-                if cards:
-                    break
-
-            for card in cards:
-                try:
-                    # Metin
-                    text = ""
-                    for _ts in _TEXT_SELS:
-                        _el = card.query_selector(_ts)
-                        if _el:
-                            text = (_el.inner_text() or "").strip()
-                            if text:
-                                break
-                    if not text or len(text) < 3:
+                    except Exception:
                         continue
 
-                    # Yıldız
-                    rating = "0"
-                    for _ss in _STAR_SELS:
-                        _el = card.query_selector(_ss)
-                        if _el:
-                            _aria = _el.get_attribute("aria-label") or ""
-                            _m = re.search(r"(\d+)", _aria)
-                            if _m:
-                                rating = _m.group(1)
+                # ── 6. İlk kartlar yüklenene kadar bekle ────────────────
+                _cards_found_sel = None
+                for _cs in _CARD_SELS:
+                    try:
+                        page.wait_for_selector(_cs, timeout=8000)
+                        _cards_found_sel = _cs
+                        break
+                    except Exception:
+                        continue
+                _dbg(f"İlk kart selectoru: {_cards_found_sel or 'HİÇBİRİ BULUNAMADI'}")
+
+                # ── 7. Scroll döngüsü ───────────────────────────────────
+                last_count = 0
+                no_new = 0
+                for _ in range(80):
+                    if last_count >= max_reviews:
+                        break
+
+                    try:
+                        panel = None
+                        for _fs in _FEED_SELS:
+                            panel = page.query_selector(_fs)
+                            if panel:
+                                break
+                        if panel:
+                            panel.evaluate("el => el.scrollTop = el.scrollHeight")
+                        else:
+                            page.evaluate("window.scrollBy(0, 1500)")
+                    except Exception:
+                        pass
+
+                    time.sleep(0.8)
+
+                    try:
+                        for _mb in page.query_selector_all(_MORE_SELS)[:5]:
+                            try:
+                                _mb.click()
+                                time.sleep(0.15)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+
+                    current = 0
+                    for _cs in _CARD_SELS:
+                        current = len(page.query_selector_all(_cs))
+                        if current > 0:
                             break
 
-                    # Tarih
-                    date_str = ""
-                    for _ds in _DATE_SELS:
-                        _el = card.query_selector(_ds)
-                        if _el:
-                            _t = (_el.inner_text() or "").strip()
-                            if _t and re.search(r'\d|\bönce\b|\bago\b|dün|yesterday', _t, re.I):
-                                date_str = _t
+                    if _progress_callback:
+                        _progress_callback(min(current / max(max_reviews, 1), 0.9))
+
+                    if current == last_count:
+                        no_new += 1
+                        if no_new >= 3:
+                            break
+                    else:
+                        no_new = 0
+                    last_count = current
+
+                _dbg(f"Scroll bitti, toplam kart: {last_count}")
+
+                # ── 8. Kartları parse et ─────────────────────────────────
+                cards = []
+                for _cs in _CARD_SELS:
+                    cards = page.query_selector_all(_cs)
+                    if cards:
+                        _dbg(f"Kart bulundu: {len(cards)} adet ({_cs})")
+                        break
+
+                if not cards:
+                    _dbg(f"⚠️ Hiç kart yok. Son URL: {page.url}")
+
+                for card in cards:
+                    try:
+                        text = ""
+                        for _ts in _TEXT_SELS:
+                            _el = card.query_selector(_ts)
+                            if _el:
+                                text = (_el.inner_text() or "").strip()
+                                if text:
+                                    break
+                        if not text or len(text) < 3:
+                            continue
+
+                        rating = "0"
+                        for _ss in _STAR_SELS:
+                            _el = card.query_selector(_ss)
+                            if _el:
+                                _aria = _el.get_attribute("aria-label") or ""
+                                _m = re.search(r"(\d+)", _aria)
+                                if _m:
+                                    rating = _m.group(1)
                                 break
-                    if not date_str:
-                        try:
-                            _m = re.search(
-                                r'\d+\s*(?:dakika|saat|gün|hafta|ay|yıl)\s*önce'
-                                r'|\d+\s*(?:minute|hour|day|week|month|year)s?\s+ago'
-                                r'|dün|yesterday',
-                                card.inner_text(), re.I,
-                            )
-                            if _m:
-                                date_str = _m.group(0)
-                        except Exception:
-                            pass
-                    parsed_date = _parse_relative_date(date_str)
 
-                    # Kullanıcı
-                    username = "Anonim"
-                    for _us in _USER_SELS:
-                        _el = card.query_selector(_us)
-                        if _el:
-                            _t = (_el.inner_text() or "").strip()
-                            if _t:
-                                username = _t
-                                break
+                        date_str = ""
+                        for _ds in _DATE_SELS:
+                            _el = card.query_selector(_ds)
+                            if _el:
+                                _t = (_el.inner_text() or "").strip()
+                                if _t and re.search(r'\d|\bönce\b|\bago\b|dün|yesterday', _t, re.I):
+                                    date_str = _t
+                                    break
+                        if not date_str:
+                            try:
+                                _m = re.search(
+                                    r'\d+\s*(?:dakika|saat|gün|hafta|ay|yıl)\s*önce'
+                                    r'|\d+\s*(?:minute|hour|day|week|month|year)s?\s+ago'
+                                    r'|dün|yesterday',
+                                    card.inner_text(), re.I,
+                                )
+                                if _m:
+                                    date_str = _m.group(0)
+                            except Exception:
+                                pass
+                        parsed_date = _parse_relative_date(date_str)
 
-                    review_id = card.get_attribute("data-review-id") or text[:50]
-                    reviews.append({
-                        "id":       review_id,
-                        "text":     text,
-                        "rating":   rating,
-                        "date":     parsed_date,
-                        "username": username,
-                        "lang":     "tr",
-                        "source":   "Google Maps",
-                    })
-                except Exception:
-                    continue
+                        username = "Anonim"
+                        for _us in _USER_SELS:
+                            _el = card.query_selector(_us)
+                            if _el:
+                                _t = (_el.inner_text() or "").strip()
+                                if _t:
+                                    username = _t
+                                    break
 
-            browser.close()
+                        review_id = card.get_attribute("data-review-id") or text[:50]
+                        reviews.append({
+                            "id":       review_id,
+                            "text":     text,
+                            "rating":   rating,
+                            "date":     parsed_date,
+                            "username": username,
+                            "lang":     "tr",
+                            "source":   "Google Maps",
+                        })
+                    except Exception:
+                        continue
 
-    except Exception as e:
-        st.session_state["_gb_last_scrape_error"] = format_playwright_runtime_error(e)
-        return []
+                _dbg(f"Parse edilen yorum: {len(reviews)}")
+                browser.close()
 
-    if _progress_callback:
-        _progress_callback(1.0)
+        except Exception as e:
+            _dbg(f"HATA: {e}")
+            st.session_state["_gb_last_scrape_error"] = format_playwright_runtime_error(e)
+            return []
 
-    return reviews
+        if _progress_callback:
+            _progress_callback(1.0)
 
-
-def render_google_business_ui() -> None:
-    """
-    Google İşletme sekmesinin tüm giriş/scraping UI'ını render eder.
-    Yorumları session state'e yazar; analiz mevcut ortak blok tarafından çalıştırılır.
-    Mobil Uygulama sekmesine hiçbir şekilde dokunmaz.
-    """
-    # Session state başlatma
-    for key, default in [
-        ("gb_selected_place",  None),
-        ("gb_search_results",  []),
-        ("gb_last_query",      ""),
-        ("gb_show_search",     True),
-        ("gb_url_history",     []),
-        ("gb_fetch_metadata",  {}),
-        ("_gb_last_cache_key", ""),
-        ("_gb_prev_input",     ""),
-        ("_gb_last_scrape_error", None),
-    ]:
+        return reviews
         if key not in st.session_state:
             st.session_state[key] = default
 
@@ -1334,6 +1386,13 @@ def render_google_business_ui() -> None:
             ]
 
             if filtered:
+                        # ── Debug log göster ────────────────────────────────────
+                        _debug_log = st.session_state.get("_gb_debug_log", [])
+                        if _debug_log:
+                            with st.expander("🔍 Scraping detayları (hata ayıklama)", expanded=False):
+                                for _dl in _debug_log:
+                                    st.text(_dl)
+
                 # Tarih sırası
                 filtered.sort(
                     key=lambda x: x.get("date") or datetime.now(), reverse=True
