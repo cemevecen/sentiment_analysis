@@ -798,6 +798,24 @@ st.markdown("""
     .stButton > button[kind="primary"] * {
         color: #FFFFFF !important;
     }
+    /* Pill tarih butonları */
+    .date-pills { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+    .date-pill {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 20px;
+        padding: 5px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748B;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.15s ease;
+        user-select: none;
+    }
+    .date-pill:hover { border-color: #818CF8; color: #6366F1; background: #EEF2FF; }
+    .date-pill.active { background: #818CF8; border-color: #818CF8; color: white; }
+
     .stButton > button[kind="primary"]:hover {
         background-color: #F8B478 !important;
         transform: scale(1.02);
@@ -1182,15 +1200,12 @@ tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin 
 
 with tab1:
     with st.container(border=True):
-        # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
             st.session_state.url_history = []
-
-        # 2. Geçmişten seçim yapıldıysa input'a yükle
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        # 3. Giriş alanı
+        # Input + yenile ikonu yan yana (components.html ile)
         store_url = st.text_input(
             "Uygulama linki veya ID girin:",
             placeholder="Örn: com.instagram.android veya 1500198745",
@@ -1198,7 +1213,17 @@ with tab1:
         )
         st.session_state.app_url = store_url
 
-        # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
+        # Yenile butonu — input'un sağ altına hizalı, link stili
+        col_sp, col_ref = st.columns([6, 1])
+        with col_ref:
+            if st.button("↺ yenile", key="refresh_btn", use_container_width=True):
+                st.session_state["_refresh_token"] = int(time.time())
+                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                           "comments_to_analyze", "ai_summary", "last_results_len"]:
+                    st.session_state.pop(_k, None)
+                st.rerun()
+
+        # Son Aramalar chip'leri
         if st.session_state.url_history:
             chips_data = [
                 {"url": h["url"] if isinstance(h, dict) else h,
@@ -1209,11 +1234,10 @@ with tab1:
             components.html(f"""
                 <style>
                     body {{ margin:0; padding:0; background:transparent; overflow:hidden; }}
-                    .chip-wrap {{ display:flex; flex-wrap:wrap; gap:6px; padding:2px 0 4px 0; }}
+                    .chip-wrap {{ display:flex; flex-wrap:wrap; gap:6px; padding:2px 0 6px 0; }}
                     .chip-label {{ font-size:0.68rem; color:#94A3B8; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; font-family:'Poppins',sans-serif; }}
                     .chip {{ display:inline-block; cursor:pointer; background:#EEF2FF; border:1px solid #818CF8; color:#4338CA; border-radius:20px; padding:4px 12px; font-size:0.78rem; font-weight:600; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s ease; user-select:none; }}
                     .chip:hover {{ background:#E0E7FF; border-color:#6366F1; transform:translateY(-1px); }}
-                    .chip:active {{ transform:scale(0.97); }}
                 </style>
                 <div class="chip-label">Son Aramalar</div>
                 <div class="chip-wrap" id="chip-wrap"></div>
@@ -1241,25 +1265,51 @@ with tab1:
                 </script>
             """, height=60, scrolling=False)
 
-        # Yenile butonu — sağa hizalı, küçük
-        _, col_ref = st.columns([5, 1])
-        with col_ref:
-            if st.button("↺ yenile", key="refresh_btn", use_container_width=True):
-                st.session_state["_refresh_token"] = int(time.time())
-                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                           "comments_to_analyze", "ai_summary", "last_results_len"]:
-                    st.session_state.pop(_k, None)
-                st.rerun()
+        # Pill tarih seçici (selectbox yerine)
+        if "selected_range" not in st.session_state:
+            st.session_state.selected_range = "Son 1 Ay"
 
-        # 6. Tarih aralığı
-        time_range = st.selectbox(
-            "Tarih Aralığı Seçin:",
-            options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl", "Son 2 Yıl", "Son 3 Yıl"],
-            index=0
-        )
-        range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
+        range_options = ["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl", "Son 2 Yıl", "Son 3 Yıl"]
+        range_labels  = ["1 Ay",     "3 Ay",     "6 Ay",     "1 Yıl",     "2 Yıl",     "3 Yıl"]
+        range_map     = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180,
+                         "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
+
+        pills_html = '<div style="font-size:0.75rem;color:#64748B;font-weight:600;margin-bottom:6px;font-family:Poppins,sans-serif;">Tarih Aralığı</div><div class="date-pills">'
+        for opt, lbl in zip(range_options, range_labels):
+            active = "active" if st.session_state.selected_range == opt else ""
+            pills_html += f'<span class="date-pill {active}" onclick="selectRange(\'{opt}\')">{lbl}</span>'
+        pills_html += "</div>"
+
+        components.html(f"""
+            <style>
+                body {{ margin:0; padding:0; background:transparent; overflow:hidden; font-family:'Poppins',sans-serif; }}
+                .date-pills {{ display:flex; gap:5px; flex-wrap:wrap; }}
+                .date-pill {{ background:#F8FAFC; border:1px solid #E2E8F0; border-radius:20px; padding:5px 14px; font-size:0.75rem; font-weight:600; color:#64748B; cursor:pointer; transition:all 0.15s ease; user-select:none; }}
+                .date-pill:hover {{ border-color:#818CF8; color:#6366F1; background:#EEF2FF; }}
+                .date-pill.active {{ background:#818CF8; border-color:#818CF8; color:white; }}
+            </style>
+            <div style="font-size:0.72rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Tarih Aralığı</div>
+            <div class="date-pills">
+                {''.join(f'<span class="date-pill {chr(34)}active{chr(34) if opt == st.session_state.selected_range else chr(34)}{chr(34)}" id="pill-{i}" onclick="selectRange({i})">{lbl}</span>' for i, (opt, lbl) in enumerate(zip(range_options, range_labels)))}
+            </div>
+            <input type="hidden" id="sel-out" value="{st.session_state.selected_range}"/>
+            <script>
+            var opts = {json.dumps(range_options)};
+            function selectRange(idx) {{
+                document.querySelectorAll('.date-pill').forEach(function(p,i) {{
+                    p.classList.toggle('active', i===idx);
+                }});
+                // Streamlit'e değer gönder — hidden input + Streamlit component messaging
+                window.parent.postMessage({{type:'streamlit:setComponentValue', value: opts[idx]}}, '*');
+            }}
+            </script>
+        """, height=70, scrolling=False)
+
+        # Seçili aralığı oku — fallback olarak session_state kullan
+        time_range = st.session_state.get("selected_range", "Son 1 Ay")
         days_limit = range_map[time_range]
-        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="no-print" style="margin-top:4px;font-size:0.82rem;color:#94A3B8;">Apple: id..., Play Store: com... formatında girin.</div>', unsafe_allow_html=True)
 
 
 
