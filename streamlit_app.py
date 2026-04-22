@@ -576,7 +576,7 @@ st.markdown("""
     .fancy-divider {
         height: 2px;
         background-color: #E2E8F0;
-        margin: 5px 0;
+        margin: 20px 0;
     }
     
     /* Radio button tightening */
@@ -719,7 +719,7 @@ with tab1:
         # Map range to days
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
-        st.markdown('<div style="margin-top: 2px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
 
 
     if store_url.strip():
