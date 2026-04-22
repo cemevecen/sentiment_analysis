@@ -212,22 +212,25 @@ def get_gemini_sentiment(text):
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        You are an expert Turkish app review sentiment analyzer.
+        You are an expert Turkish/multilingual app review sentiment analyzer.
 
-        Read the ENTIRE review carefully and determine the DOMINANT, FINAL emotional tone.
-        Do NOT focus on individual words — understand the full meaning and context.
+        Read the FULL review from start to finish. If it has multiple "Edit:" sections, the LAST edit overrides all previous statements and determines the final sentiment.
 
         Categories:
-        - OLUMLU: The overall tone is positive. Gratitude, praise, satisfaction. Even if the user mentions a past problem that was RESOLVED, the review is OLUMLU if they are happy now.
-        - OLUMSUZ: The overall tone is negative. Active complaints, unresolved technical problems (opens with difficulty, crashes, freezes, data loss). If a problem is STILL ongoing ("problem devam ediyor", "hâlâ açılmıyor"), it is OLUMSUZ.
-        - ISTEK/GORUS: Neutral suggestions or feature requests with no strong positive or negative emotion.
+        - OLUMSUZ: The final/overall tone is negative. Unresolved bugs, access failures, data loss, frustration. If the user says "problem still continues" at the end, it is OLUMSUZ even if they thanked the developer earlier.
+        - OLUMLU: The final/overall tone is positive. The user is satisfied, grateful, praises the app. The problem must be genuinely RESOLVED for a thank-you to count as positive.
+        - ISTEK/GORUS: Neutral feature request or constructive suggestion with no strong emotional tone and no unresolved complaint.
 
-        EXAMPLES:
-        - "Çok başarılı bir uygulama. Tüm ekibe çok teşekkür ederim." → OLUMLU (clear praise)
-        - "Önce sorun yaşadım ama ekip çözdü, teşekkürler." → OLUMLU (problem was resolved, ends positively)
-        - "Popup reklamlar var kafam şişti. Edit: Problem halen devam." → OLUMSUZ (unresolved problem)
-        - "Giremiyorum artık bozuldu uygulama" → OLUMSUZ (active access failure)
-        - "Keşke ekranda makas farkı da gösterilse çok iyi olurdu..." → ISTEK/GORUS (feature request)
+        CRITICAL RULE — FINAL EDIT WINS:
+        - Review says "thanks for fixing it. Edit2: Problem still continues." → OLUMSUZ (last edit is negative)
+        - Review says "had a problem but team fixed it, all good now." → OLUMLU (problem fully resolved, user is happy)
+        - Review says "app crashes. Edit: resolved now, great app!" → OLUMLU (last edit is positive)
+
+        MORE EXAMPLES:
+        - "Pop-up reklam saçmalık. Açamadım. Güncelleme yaptınız teşekkürler. 2.Edit: Problem halen devam." → OLUMSUZ (final statement is 'problem continues')
+        - "Çok başarılı bir uygulama, teşekkürler." → OLUMLU
+        - "Neden yavaş açılıyor bir türlü?" → OLUMSUZ (performance complaint)
+        - "Keşke döviz grafiği de olsa" → ISTEK/GORUS
 
         Return ONLY a JSON: {{"olumlu": score, "olumsuz": score, "istek_gorus": score}}
         Sum must equal 1.0.
