@@ -317,7 +317,9 @@ with tab2:
                     df_upload = pd.read_excel(uploaded_file)
                 
                 if df_upload is not None:
-                    with st.expander(f"Dosya Yapilandirmasi: {uploaded_file.name}", expanded=True):
+                    # Replace Expander with Container
+                    st.markdown(f"#### 📄 {uploaded_file.name}")
+                    with st.container(border=True):
                         st.info(f"Dosya okundu: {len(df_upload)} satir")
                         
                         # Smart Column Detection
@@ -347,14 +349,30 @@ with tab2:
                                 date_col = col
                                 break
 
-                        col_name = st.selectbox(
-                            "Analiz edilecek sutun:",
+                        # Replace Dropdown (Selectbox) with Radio Buttons
+                        col_name = st.radio(
+                            "Analiz edilecek sutun secin:",
                             options=df_upload.columns,
                             index=list(df_upload.columns).index(best_col),
-                            key=f"col_{uploaded_file.name}"
+                            key=f"col_{uploaded_file.name}",
+                            horizontal=True
                         )
                         
                         if col_name:
+                            # NEW FEATURE: Dosya Istatistikleri
+                            st.markdown("---")
+                            col_vals = df_upload[col_name].astype(str)
+                            total_words = col_vals.apply(lambda x: len(x.split())).sum()
+                            avg_len = col_vals.apply(len).mean()
+                            
+                            stat_col1, stat_col2, stat_col3 = st.columns(3)
+                            with stat_col1:
+                                st.metric("Toplam Kelime", f"{total_words:,}")
+                            with stat_col2:
+                                st.metric("Ort. Yorum Boyu", f"{int(avg_len)} krk")
+                            with stat_col3:
+                                st.metric("Satir Sayisi", len(df_upload))
+
                             # Pre-filter logic
                             def is_valid_comment(text):
                                 s = str(text).strip()
@@ -379,8 +397,8 @@ with tab2:
                                     valid_in_file += 1
                                     
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
-                            with st.expander("Onizleme"):
-                                st.write([str(row[col_name])[:100] + '...' for _, row in df_upload.head(3).iterrows()])
+                            st.write("**Onizleme (Ilk 3 Yorum):**")
+                            st.write([str(row[col_name])[:100] + '...' for _, row in df_upload.head(3).iterrows()])
                             
             except Exception as e:
                 st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
