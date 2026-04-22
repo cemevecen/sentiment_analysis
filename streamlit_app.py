@@ -447,89 +447,89 @@ if st.button("Analizini Yap", use_container_width=True):
         st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
         st.session_state['_quota_hits'] = 0
             
-            # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
-            mode_idx = st.session_state.get("analysis_mode", 0)
-            if mode_idx == 0:  # Hızlı
-                ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
-                DELAY_SECS = 2
-                RPM_LIMIT = 30
-            else:  # Yavaş
-                ANALYSIS_MODEL = 'gemini-3.1-flash-lite-preview'
-                DELAY_SECS = 4
-                RPM_LIMIT = 15
+        # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
+        mode_idx = st.session_state.get("analysis_mode", 0)
+        if mode_idx == 0:  # Hızlı
+            ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
+            DELAY_SECS = 2
+            RPM_LIMIT = 30
+        else:  # Yavaş
+            ANALYSIS_MODEL = 'gemini-3.1-flash-lite-preview'
+            DELAY_SECS = 4
+            RPM_LIMIT = 15
 
 
 
-            start_time = time.time()
-            time_display = st.empty()  # For side-by-side time display
-            total_items = len(comments_to_analyze)
-            est_total_secs = total_items * DELAY_SECS
+        start_time = time.time()
+        time_display = st.empty()  # For side-by-side time display
+        total_items = len(comments_to_analyze)
+        est_total_secs = total_items * DELAY_SECS
 
-            # JavaScript: sayfadan ayrılmaya karşı uyarı
-            components.html(f"""
-            <script>
-            (function() {{
-                var totalSecs = {est_total_secs};
-                window.parent.onbeforeunload = function(e) {{
-                    var m = Math.floor(totalSecs / 60);
-                    var s = totalSecs % 60;
-                    var timeStr = (m > 0 ? m + ' dakika ' : '') + s + ' saniye';
-                    var msg = '⚠️ Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
-                    e.preventDefault();
-                    e.returnValue = msg;
-                    return msg;
-                }};
-            }})();
-            </script>
-            """, height=0)
+        # JavaScript: sayfadan ayrılmaya karşı uyarı
+        components.html(f"""
+        <script>
+        (function() {{
+            var totalSecs = {est_total_secs};
+            window.parent.onbeforeunload = function(e) {{
+                var m = Math.floor(totalSecs / 60);
+                var s = totalSecs % 60;
+                var timeStr = (m > 0 ? m + ' dakika ' : '') + s + ' saniye';
+                var msg = '⚠️ Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
+                e.preventDefault();
+                e.returnValue = msg;
+                return msg;
+            }};
+        }})();
+        </script>
+        """, height=0)
 
-            def update_time(done, total, start):
-                elapsed = int(time.time() - start)
-                el_m, el_s = divmod(elapsed, 60)
-                el_str = f"{el_m} dk {el_s} sn" if el_m > 0 else f"{el_s} sn"
-                if done > 0:
-                    avg = (time.time() - start) / done
-                    rem_secs = int(avg * (total - done))
-                    rem_m, rem_s = divmod(rem_secs, 60)
-                    rem_str = f"{rem_m} dk {rem_s} sn" if rem_m > 0 else f"{rem_s} sn"
-                else:
-                    rem_str = "—"
-                time_display.markdown(
-                    f"⏱ **Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; ⏳ **Tahmini kalan:** {rem_str}"
-                )
+        def update_time(done, total, start):
+            elapsed = int(time.time() - start)
+            el_m, el_s = divmod(elapsed, 60)
+            el_str = f"{el_m} dk {el_s} sn" if el_m > 0 else f"{el_s} sn"
+            if done > 0:
+                avg = (time.time() - start) / done
+                rem_secs = int(avg * (total - done))
+                rem_m, rem_s = divmod(rem_secs, 60)
+                rem_str = f"{rem_m} dk {rem_s} sn" if rem_m > 0 else f"{rem_s} sn"
+            else:
+                rem_str = "—"
+            time_display.markdown(
+                f"⏱ **Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; ⏳ **Tahmini kalan:** {rem_str}"
+            )
 
-            for i, entry in enumerate(comments_to_analyze):
-                comment = entry["text"]
-                date = entry.get("date")
-                status_text.text(f"Analiz ediliyor: {i+1} / {len(comments_to_analyze)}")
-                update_time(i, len(comments_to_analyze), start_time)
+        for i, entry in enumerate(comments_to_analyze):
+            comment = entry["text"]
+            date = entry.get("date")
+            status_text.text(f"Analiz ediliyor: {i+1} / {len(comments_to_analyze)}")
+            update_time(i, len(comments_to_analyze), start_time)
 
-                res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
-                scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
-                verdict = max(scores, key=scores.get)
+            res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
+            scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
+            verdict = max(scores, key=scores.get)
 
-                # Update quota warning placeholder
-                q = st.session_state.get('_quota_hits', 0)
-                if q == 1:
-                    quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
-                elif q > 1:
-                    quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+            # Update quota warning placeholder
+            q = st.session_state.get('_quota_hits', 0)
+            if q == 1:
+                quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
+            elif q > 1:
+                quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
 
-                bulk_results.append({
-                    "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                    "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
-                    "Tarih": date
-                })
-                progress_bar.progress((i + 1) / len(comments_to_analyze))
+            bulk_results.append({
+                "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
+                "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
+                "Tarih": date
+            })
+            progress_bar.progress((i + 1) / len(comments_to_analyze))
 
-                remaining = len(comments_to_analyze) - (i + 1)
-                if remaining > 0:
-                    time.sleep(DELAY_SECS)
-                    update_time(i + 1, len(comments_to_analyze), start_time)
+            remaining = len(comments_to_analyze) - (i + 1)
+            if remaining > 0:
+                time.sleep(DELAY_SECS)
+                update_time(i + 1, len(comments_to_analyze), start_time)
 
-            
-            st.session_state.bulk_results = bulk_results
-            status_text.success("✅ Analiz Başarıyla Tamamlandı!")
+        
+        st.session_state.bulk_results = bulk_results
+        status_text.success("✅ Analiz Başarıyla Tamamlandı!")
         # Sayfadan ayrılma uyarısını kaldır
         components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
 
