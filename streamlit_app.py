@@ -623,6 +623,18 @@ def build_maps_url_from_place_id(place_id: str) -> str:
 def format_playwright_runtime_error(error: Union[str, Exception]) -> str:
     """Playwright runtime hatalarını kullanıcıya okunabilir hale getirir."""
     raw_message = str(error)
+    missing_lib_match = re.search(
+        r"error while loading shared libraries: ([^:]+): cannot open shared object file",
+        raw_message,
+        re.IGNORECASE,
+    )
+    if missing_lib_match:
+        missing_lib = missing_lib_match.group(1)
+        return (
+            "Deploy ortaminda Playwright icin gerekli Linux kutuphaneleri eksik. "
+            f"Eksik kutuphane: {missing_lib}. "
+            "Repo'ya OS paket listesi eklendi; deploy yeniden build aldiginda bu hata duzelmeli."
+        )
     if (
         "Executable doesn't exist" in raw_message
         or "Please run the following command to download new browsers" in raw_message
