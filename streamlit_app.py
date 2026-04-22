@@ -120,10 +120,12 @@ def get_app_store_reviews(app_id, country='tr'):
     reviews = []
     try:
         response = requests.get(url, timeout=12)
-        if response.status_code == 200:
-            data = response.json()
-            entries = data.get('feed', {}).get('entry', [])
-            if not entries: return []
+        if response.status_code != 200:
+            return []
+            
+        data = response.json()
+        entries = data.get('feed', {}).get('entry', [])
+        if not entries: return []
             
             # If only one entry, it's not a list
             if isinstance(entries, dict): entries = [entries]
@@ -680,22 +682,24 @@ with tab3:
     store_url = st.text_input("Uygulama linkini buraya yapıştırın:", placeholder="https://apps.apple.com/... veya https://play.google.com/...")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if store_url:
+    if store_url.strip():
+        u = store_url.strip()
         platform = None
         app_id = None
         
-        if "play.google.com" in store_url:
+        if "play.google.com" in u:
             platform = "google"
-            match = re.search(r"id=([^&]+)", store_url)
+            match = re.search(r"id=([^&/]+)", u)
             if match: app_id = match.group(1)
-        elif "apps.apple.com" in store_url:
+        elif "apple.com" in u:
             platform = "apple"
-            # App Store logic: ID usually ends with idXXXXXXXXX
-            match = re.search(r"/id(\d+)", store_url)
+            # App Store logic: Flexible ID search
+            match = re.search(r"id=?(\d+)", u)
             if match: app_id = match.group(1)
             
-            # Extract country code (tr, us, etc.) from URL
-            country_match = re.search(r"apple\.com/([^/]+)/app", store_url)
+            # Extract country code (tr, us, etc.) - More flexible
+            # Matches /us/app/ or /app/
+            country_match = re.search(r"apple\.com/([^/]{2,3})/app/", u)
             country = country_match.group(1) if country_match else "tr"
 
         if not platform or not app_id:
@@ -730,9 +734,11 @@ with tab3:
                     elif platform == "apple":
                         # App Store RSS Scraping
                         results = get_app_store_reviews(app_id, country)
-                        # If URL was 'us' let's also try 'tr' as fallback for Turkish apps
-                        if not results and country != 'tr':
-                            results = get_app_store_reviews(app_id, 'tr')
+                        
+                        # Falleback Logic: If no results, try 'tr' and 'us' specifically
+                        if not results:
+                            alt_country = 'tr' if country != 'tr' else 'us'
+                            results = get_app_store_reviews(app_id, alt_country)
                         
                         for r in results:
                             r_date = r.get('date')
