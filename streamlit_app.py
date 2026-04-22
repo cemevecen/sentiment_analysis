@@ -1708,6 +1708,7 @@ with tab4:
         if len(active_inputs) < 2:
             st.warning("En az 2 uygulama ID'si girin.")
         else:
+            st.session_state["_cmp_mode"] = True
             st.session_state["_cmp_pending"] = active_inputs
             st.session_state["_cmp_days"] = cmp_days
             st.session_state.cmp_results = {}
@@ -1718,6 +1719,81 @@ with tab4:
         results_c = st.session_state.cmp_results
         n_res = len(results_c)
         res_cols = st.columns(n_res)
+        # Mağaza meta verilerini çek
+        cmp_meta = {}
+        for u in [cmp_inputs[i] for i in range(num_apps) if cmp_inputs[i]]:
+            try:
+                cu = u.lower().strip()
+                if "play.google.com" in u:
+                    m = re.search(r"id=([^&/]+)", u)
+                    aid = m.group(1) if m else u
+                    info = play_app(aid, lang='tr', country='tr')
+                    cmp_meta[info.get('title', aid)] = {
+                        "rating": round(float(info.get('score') or 0), 1),
+                        "ratings": info.get('ratings', 0),
+                        "installs": info.get('installs', '?'),
+                        "version": info.get('version', '?'),
+                    }
+                elif cu.startswith("id") and cu[2:].isdigit():
+                    aid = cu[2:]
+                    r2 = requests.get(f"https://itunes.apple.com/lookup?id={aid}&country=tr", timeout=5)
+                    if r2.status_code == 200:
+                        d2 = r2.json()
+                        if d2.get('results'):
+                            rc = d2['results'][0]
+                            nm = rc.get('trackCensoredName', aid)
+                            cmp_meta[nm] = {
+                                "rating": round(float(rc.get('averageUserRating') or 0), 1),
+                                "ratings": rc.get('userRatingCount', 0),
+                                "installs": "App Store",
+                                "version": rc.get('version', '?'),
+                            }
+                elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
+                    info = play_app(u, lang='tr', country='tr')
+                    cmp_meta[info.get('title', u)] = {
+                        "rating": round(float(info.get('score') or 0), 1),
+                        "ratings": info.get('ratings', 0),
+                        "installs": info.get('installs', '?'),
+                        "version": info.get('version', '?'),
+                    }
+            except: pass
+
+        # Meta göster
+        if cmp_meta:
+            meta_cols = st.columns(len(cmp_meta))
+            for mi, (nm, meta) in enumerate(cmp_meta.items()):
+                with meta_cols[mi]:
+                    stars = "★" * int(meta['rating']) + "☆" * (5 - int(meta['rating']))
+                    st.markdown(f"""
+                    <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;
+                                padding:10px 14px;margin-bottom:12px;">
+                        <div style="font-size:0.7rem;font-weight:700;color:#1E293B;
+                                    margin-bottom:8px;white-space:nowrap;overflow:hidden;
+                                    text-overflow:ellipsis;">{nm}</div>
+                        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:700;color:#F59E0B;">{meta['rating']}</div>
+                                <div style="font-size:0.9rem;color:#F59E0B;letter-spacing:-1px;">{stars}</div>
+                                <div style="font-size:0.6rem;color:#94A3B8;">Puan</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.85rem;font-weight:700;color:#6366F1;">
+                                    {f"{meta['ratings']:,}" if isinstance(meta['ratings'], int) else meta['ratings']}
+                                </div>
+                                <div style="font-size:0.6rem;color:#94A3B8;">Değerlendirme</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.85rem;font-weight:700;color:#10b981;">{meta['installs']}</div>
+                                <div style="font-size:0.6rem;color:#94A3B8;">İndirme</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.85rem;font-weight:700;color:#64748B;">v{meta['version']}</div>
+                                <div style="font-size:0.6rem;color:#94A3B8;">Versiyon</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
         best_score = max(v["score"] for v in results_c.values())
 
         for ci, (app_nm, data) in enumerate(results_c.items()):
@@ -1806,7 +1882,7 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 
 
-if comments_to_analyze:
+if comments_to_analyze and not st.session_state.get("_cmp_mode"):
     n = len(comments_to_analyze)
 
     def fmt_time(secs):
