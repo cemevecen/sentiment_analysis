@@ -218,11 +218,9 @@ def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
     threshold_date = now - timedelta(days=days_limit)
     total_requested_secs = (now - threshold_date).total_seconds()
     
-    # For high-traffic apps (like Subway Surfers), limits need to be generous
-    if days_limit <= 30: fetch_limit = 10000
-    elif days_limit <= 90: fetch_limit = 10000
-    elif days_limit <= 180: fetch_limit = 25000
-    else: fetch_limit = 50000
+    # Limits removed to allow actual data counts. 
+    # Safety limit set to 200k (far beyond typical 1-year Turkish review counts) to prevent memory crashes.
+    fetch_limit = 200000 
     
     try:
         fetched = []
