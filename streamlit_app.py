@@ -2186,6 +2186,23 @@ def heuristic_analysis(text, rating=None):
         "get rid of meta",
         "go out see a band",
         "stay off socials",
+        "best app for spending",
+        "best app for anyone who is interested in spending",
+        "roblox is ruined",
+        "you killed a",
+        "kids are dying cuz of",
+        "please destroy the game",
+        "before you destroy the game",
+        "i rated this 5 stars so people can see",
+        "i only put 5 stars so",
+        "i give 5 stars so people",
+        "i put 5 stars because i want people to see",
+        "i'm going to roblox headquarters",
+        "get ur age verified it's not that hard",
+        "ceo needs to be fired",
+        "quit ya jobs",
+        "hope whoever made these updates get",
+        "this game should be studied",
     ]
     sarkasm_hit = any(p in t for p in SARKASM)
 
@@ -2351,6 +2368,70 @@ def heuristic_analysis(text, rating=None):
         "fix this", "fix your app", "fix it",
         "something went wrong",
         "error", "not loading",
+
+        # Game/Platform — Chat & moderation
+        "bring chat back", "chat back", "chat is gone",
+        "chat removed", "no chat", "cant chat", "can't chat",
+        "chat was removed", "remove chat", "took the chat",
+        "taking away chat", "deleted chat", "chat gone",
+        "chat is horrible", "silent servers",
+
+        # Game/Platform — Age verification
+        "age verification", "face verification", "face check",
+        "face scan", "age check", "age group wrong",
+        "ai age check", "persona ai", "scanning faces",
+        "scan my face", "harvesting faces", "data leak",
+        "identity leak", "verification broken",
+        "age check broken", "ai gets age wrong",
+        "thinks i'm", "says i am", "placed me in wrong",
+
+        # Game/Platform — Bans & moderation
+        "got banned for saying", "banned for saying hi",
+        "banned for no reason", "chat suspended",
+        "moderation is horrible", "bad moderation",
+        "report them nothing happens", "hackers don't get banned",
+        "toxic players don't get banned",
+        "got my account deleted", "account got deleted",
+        "voice chat taken", "voice chat removed", "vc removed",
+        "vc disappeared", "vc gone",
+
+        # Game/Platform — Content & updates
+        "ruined roblox", "roblox is ruined", "ruining roblox",
+        "roblox is dying", "platform is dying",
+        "classic faces removed", "removing classic faces",
+        "classic faces gone", "deleted faces",
+        "brainrot games", "all brainrot", "only brainrot",
+        "slop games", "slop farm", "ai generated games",
+        "boring repeats", "money hungry",
+        "pay to upload", "cost robux to upload",
+        "premium just to upload", "need premium to",
+        "expensive now", "getting expensive",
+
+        # Game/Platform — Technical
+        "kicks me out", "kicking me out", "kicked me out",
+        "kick me from", "keeps kicking", "disconnected",
+        "keeps disconnecting", "constant disconnects",
+        "glitch", "glitches", "glitching",
+        "laggy server", "server lag",
+
+        # Game/Platform — Safety
+        "predators", "preds", "pdfs",
+        "inappropriate games", "dating game",
+        "not safe for kids", "unsafe for kids",
+        "grooming", "child predator",
+        "ruining itself", "kill itself",
+        "investors not players",
+
+        # Game/Platform — Robux/scam
+        "robux scam", "robux stolen", "robux vanished",
+        "lost robux", "robux missing", "robux disappeared",
+        "didn't receive robux", "never got robux",
+        "scam", "daylight robbery", "absolute robbery",
+        "items removed without refund", "no refund",
+        "removed without refund",
+        "youtubers are quitting", "players are leaving",
+        "gonna quit", "may quit", "undownloaded", "un-downloaded",
+        "deleted the app", "deleting this app",
 
         # EN — Ek
         "destroyed", "destroying", "destroy",
@@ -2559,6 +2640,21 @@ def heuristic_analysis(text, rating=None):
         # DE — Ek istek
         "bringt zurück", "bitte fügt hinzu",
         "wünsche mir zurück",
+
+        # Game/Platform — İstek
+        "add chat back", "give us chat",
+        "remove age verification", "remove face verification",
+        "remove face check", "remove age check",
+        "classic faces back", "bring back classic faces",
+        "bring back connections", "bring back friends",
+        "fix moderation", "fix the moderation",
+        "fix age check", "fix face verification",
+        "free robux", "give robux",
+        "make it free", "should be free",
+        "listen to players", "listen to us",
+        "listen to your community",
+        "fix glitches", "please fix the glitch",
+        "add voice chat back", "bring vc back",
     ]
 
     # ── 7. KEYWORD SCORING ────────────────────────────────────────────────────
