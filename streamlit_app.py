@@ -113,13 +113,18 @@ if is_bulk:
                         best_col = scores[0][1] if scores else df_upload.columns[0]
                         default_index = list(df_upload.columns).index(best_col)
 
-                        # --- Date Column Detection ---
+                        # --- Date Column Detection (Avoiding numeric ID/millis columns) ---
                         date_keys = ["date", "time", "tarih", "saat", "submit"]
                         date_col = None
-                        for col in df_upload.columns:
-                            if any(dk in col.lower() for dk in date_keys):
-                                date_col = col
-                                break
+                        potential_date_cols = [c for c in df_upload.columns if any(dk in c.lower() for dk in date_keys) and "millis" not in c.lower() and "epoch" not in c.lower()]
+                        
+                        if potential_date_cols:
+                            # Prefer 'date' or 'tarih' keywords
+                            date_col = potential_date_cols[0]
+                            for pc in potential_date_cols:
+                                if "date" in pc.lower() or "tarih" in pc.lower():
+                                    date_col = pc
+                                    break
                         
                         col_name = st.selectbox(
                             f"Analiz edilecek sütun ({uploaded_file.name}):", 
@@ -136,25 +141,26 @@ if is_bulk:
                                 if len(text_str) < 4: return False
                                 if text_lower in ['nan', 'null', 'none', 'tr', 'en']: return False
                                 
-                                # 3. Developer/Owner Reply Patterns (Aggressive)
-                                # These keywords are almost always in store owner/dev replies
-                                reply_keywords = [
+                                # 3. Developer/Owner Reply Patterns (Professional/Turkish Store Language)
+                                reply_patterns = [
                                     "merhaba", "merhabalar", "teşekkür ederiz", "bilginize sunar", 
                                     "iyi günler dileriz", "rica etsek", "geri bildirimleriniz", 
                                     "değerlendirmenizi bekler", "saygılarımızla", "ekibimiz", 
                                     "talebini", "incelemelerimiz sonucunda", "güncellememizi",
-                                    "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında"
+                                    "tarafımıza iletmenizi", "yenilenmiş tasarımı", "uygulamamız yayında",
+                                    "yaşamış olduğunuz", "aksaklık için üzgünüz", "memnun oluruz",
+                                    "bizimle iletişime", "iletmenizi rica ederiz"
                                 ]
                                 
-                                # If any keyword matches, it's very likely a developer reply
-                                if any(rk in text_lower for rk in reply_keywords):
+                                # Highly aggressive check: if any signature pattern exists, it's a dev reply
+                                if any(rp in text_lower for rp in reply_patterns):
                                     return False
                                 
-                                # Filter out sentences that look like titles or formal address
-                                if "bey," in text_lower or "hanım," in text_lower:
+                                # Filter formal addresses "Ad Soyad Bey/Hanım,"
+                                if re.search(r'[a-zçğıöşü]+\s+(bey|hanım),', text_lower):
                                     return False
                                 
-                                # 4. ISO Timestamps or numeric IDs
+                                # 4. Metadata/Numeric IDs
                                 if re.match(r'^\d{4}-\d{2}-\d{2}.*', text_str): return False
                                 if text_str.replace('.', '').replace('-', '').isdigit(): return False
                                 if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text_str): return False
@@ -168,16 +174,20 @@ if is_bulk:
                                     if pd.notnull(val) and is_valid_comment(val):
                                         entry = {"text": str(val).strip()}
                                         if date_col:
-                                            # Robust date parsing
+                                            # Robust parsing & Strict bounds
                                             dt_val = row[date_col]
-                                            parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
-                                            # Precise date range filter (based on user data context)
-                                            # Allow Nov 2025 to April 2026 to be safe
-                                            if pd.notnull(parsed_date):
-                                                year = parsed_date.year
-                                                month = parsed_date.month
-                                                if (year == 2025 and month >= 11) or (year == 2026 and month <= 4):
-                                                    entry["date"] = parsed_date
+                                            # Ensure we don't parse large integers as dates
+                                            if isinstance(dt_val, (int, float)):
+                                                parsed_date = pd.NaT
+                                            else:
+                                                parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                            
+                                            # Limit: Up to Today (Mar 8, 2026)
+                                            today_limit = pd.Timestamp("2026-03-08")
+                                            start_limit = pd.Timestamp("2025-11-01")
+                                            
+                                            if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
+                                                entry["date"] = parsed_date
                                         all_comments.append(entry)
                             
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
