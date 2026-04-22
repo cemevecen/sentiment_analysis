@@ -809,8 +809,8 @@ if comments_to_analyze:
         options=[0, 1],
         format_func=lambda x: ["🚀 Hızlı", "🎯 Yavaş (Daha Tutarlı)"][x],
         captions=[
-            f"Genel değerlendirmeler — tahmini {fmt_time(n * 2)}",
-            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 4)}"
+            f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
+            f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
         ],
         horizontal=True,
         key="analysis_mode"
@@ -999,18 +999,18 @@ if st.button("Analizini Yap", use_container_width=True):
         mode_idx = st.session_state.get("analysis_mode", 0)
         if mode_idx == 0:  # Hızlı
             ANALYSIS_MODEL = 'gemini-2.5-flash'
-            DELAY_SECS = 1
-            RPM_LIMIT = 30
+            DELAY_SECS = 0
+            RPM_LIMIT = 500
         else:  # Yavaş
             ANALYSIS_MODEL = 'gemini-2.5-pro'
-            DELAY_SECS = 3
-            RPM_LIMIT = 15
+            DELAY_SECS = 0  
+            RPM_LIMIT = 300
 
 
 
         start_time = time.time()
         total_items = len(comments_to_analyze)
-        est_total_secs = total_items * DELAY_SECS
+        est_total_secs = total_items * (1 if mode_idx == 0 else 2) # tahmin: hızlıda 1sn, yavaşta 2sn
 
         # JavaScript: sayfadan ayrılmaya karşı uyarı
         components.html(f"""
