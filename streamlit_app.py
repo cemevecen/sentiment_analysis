@@ -1718,18 +1718,70 @@ with tab4:
             st.session_state.cmp_results = {}
             st.rerun()
 
-    if st.session_state.cmp_results:
+    if st.session_state.get("cmp_results"):
         results_c = st.session_state.cmp_results
         n_res = len(results_c)
+        app_colors_sum = ["#818CF8", "#F4A261", "#38BDF8"]
 
-        # Sadece yan yana duygu özeti
+        # Mağaza meta verileri
+        cmp_meta = {}
+        active_valid = [u for u in cmp_inputs if u.strip()]
+        for u in active_valid:
+            try:
+                cu = u.lower().strip()
+                aid_m = ""
+                plat_m = ""
+                if "play.google.com" in u:
+                    plat_m = "google"
+                    m2 = re.search(r"id=([^&/]+)", u)
+                    if m2: aid_m = m2.group(1)
+                elif "apple.com" in u:
+                    plat_m = "apple"
+                    m2 = re.search(r"id(\d+)", u)
+                    if m2: aid_m = m2.group(1)
+                elif cu.startswith("id") and cu[2:].isdigit():
+                    plat_m = "apple"; aid_m = cu[2:]
+                elif cu.isdigit():
+                    plat_m = "apple"; aid_m = cu
+                elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
+                    plat_m = "google"; aid_m = u
+
+                if not aid_m: continue
+
+                if plat_m == "google":
+                    info_m = play_app(aid_m, lang='tr', country='tr')
+                    nm_m = info_m.get('title', aid_m)
+                    cmp_meta[nm_m] = {
+                        "rating": round(float(info_m.get('score') or 0), 1),
+                        "ratings": info_m.get('ratings', 0),
+                        "installs": info_m.get('installs', '?'),
+                        "version": info_m.get('version', '?'),
+                        "store": "Google Play",
+                    }
+                elif plat_m == "apple":
+                    r_m = requests.get(f"https://itunes.apple.com/lookup?id={aid_m}&country=tr", timeout=5)
+                    if r_m.status_code == 200:
+                        d_m = r_m.json()
+                        if d_m.get('results'):
+                            rc_m = d_m['results'][0]
+                            nm_m = rc_m.get('trackCensoredName', aid_m)
+                            cmp_meta[nm_m] = {
+                                "rating": round(float(rc_m.get('averageUserRating') or 0), 1),
+                                "ratings": rc_m.get('userRatingCount', 0),
+                                "installs": "App Store",
+                                "version": rc_m.get('version', '?'),
+                                "store": "App Store",
+                            }
+            except: pass
+
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
         sum_cols = st.columns(n_res)
-        app_colors_sum = ["#818CF8", "#F4A261", "#38BDF8"]
 
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with sum_cols[ci]:
                 accent = app_colors_sum[ci % len(app_colors_sum)]
+                is_best = data["score"] == max(v["score"] for v in results_c.values())
+                badge_html = '<div style="background:rgba(255,255,255,0.25);color:white;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:4px;">EN İYİ</div><br>' if is_best else ""
 
                 if data["pos_pct"] >= 55:
                     tone_title = "Genel olarak olumlu"
@@ -1744,32 +1796,74 @@ with tab4:
                     tone_body = f"Olumlu (%{data['pos_pct']}) ve olumsuz (%{data['neg_pct']}) yorumlar dengeli seyrediyor."
                     bg_col = "#FEFCE8"; bdr_col = "#FDE68A"
 
-                card = f"""<div style="border-radius:12px;overflow:hidden;border:1px solid {bdr_col};height:100%;">
-<div style="background:{accent};padding:10px 14px;">
-<div style="font-size:0.75rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{app_nm}</div>
+                # Mağaza meta
+                meta = cmp_meta.get(app_nm, {})
+                rating_val = meta.get("rating", 0)
+                ratings_cnt = meta.get("ratings", 0)
+                installs_val = meta.get("installs", "")
+                version_val = meta.get("version", "")
+                store_val = meta.get("store", "")
+
+                stars_filled = int(rating_val)
+                star_html = ""
+                for si in range(5):
+                    col_s = "#F59E0B" if si < stars_filled else "#D1D5DB"
+                    star_html += f'<span style="color:{col_s};font-size:0.75rem;">★</span>'
+
+                ratings_str = f"{ratings_cnt:,}" if isinstance(ratings_cnt, int) and ratings_cnt > 0 else "—"
+
+                meta_html = ""
+                if rating_val > 0:
+                    meta_html = f"""
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E2E8F0;">
+  <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
+    <div style="font-size:1rem;font-weight:800;color:#D97706;">{rating_val}</div>
+    <div style="line-height:1;">{star_html}</div>
+    <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Puan</div>
+  </div>
+  <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
+    <div style="font-size:0.82rem;font-weight:700;color:#059669;">{ratings_str}</div>
+    <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Değerlendirme</div>
+  </div>
+  <div style="background:#EFF6FF;border:1px solid #DBEAFE;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
+    <div style="font-size:0.75rem;font-weight:700;color:#2563EB;">{installs_val}</div>
+    <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">İndirme</div>
+  </div>
+  <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
+    <div style="font-size:0.75rem;font-weight:700;color:#475569;">v{version_val}</div>
+    <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Versiyon</div>
+  </div>
+</div>"""
+
+                card = f"""<div style="background:#FFFFFF;border:2px solid #E2E8F0;border-radius:14px;overflow:hidden;">
+<div style="background:{accent};padding:12px 14px;text-align:center;">
+{badge_html}
+<div style="font-size:0.78rem;font-weight:700;color:white;line-height:1.3;margin-bottom:4px;">{app_nm}</div>
+<div style="font-size:2rem;font-weight:800;color:white;line-height:1;">{data['score']}<span style="font-size:0.7rem;opacity:0.75;">/100</span></div>
+<div style="font-size:0.6rem;color:rgba(255,255,255,0.7);margin-top:2px;">{store_val}</div>
 </div>
-<div style="background:{bg_col};padding:16px;">
-<div style="font-size:0.75rem;font-weight:700;color:#1E293B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">{tone_title}</div>
-<p style="font-size:0.85rem;color:#334155;line-height:1.7;margin:0 0 14px 0;">{tone_body}</p>
-<div style="display:flex;gap:6px;flex-wrap:wrap;">
-<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
-<div style="font-size:1.1rem;font-weight:700;color:#10b981;">{data['pos_pct']}%</div>
-<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Olumlu</div>
+<div style="padding:14px;">
+{meta_html}
+<div style="font-size:0.72rem;font-weight:700;color:#1E293B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">{tone_title}</div>
+<p style="font-size:0.82rem;color:#334155;line-height:1.65;margin:0 0 12px 0;">{tone_body}</p>
+<div style="display:flex;flex-direction:column;gap:6px;">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#10b981;font-weight:600;">Olumlu</span><span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div></div></div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#f43f5e;font-weight:600;">Olumsuz</span><span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div></div></div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#818cf8;font-weight:600;">Görüş</span><span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div></div></div>
 </div>
-<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
-<div style="font-size:1.1rem;font-weight:700;color:#f43f5e;">{data['neg_pct']}%</div>
-<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Olumsuz</div>
-</div>
-<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
-<div style="font-size:1.1rem;font-weight:700;color:#818cf8;">{data['neu_pct']}%</div>
-<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Görüş</div>
-</div>
-<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
-<div style="font-size:1.1rem;font-weight:700;color:{accent};">{data['score']}</div>
-<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Skor</div>
-</div>
-</div>
-<div style="margin-top:10px;font-size:0.7rem;color:#94A3B8;text-align:right;">{data['total']} yorum</div>
+<div style="margin-top:10px;font-size:0.7rem;color:#94A3B8;text-align:right;">{data['total']} yorum analiz edildi</div>
 </div>
 </div>"""
                 st.markdown(card, unsafe_allow_html=True)
