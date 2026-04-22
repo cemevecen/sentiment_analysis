@@ -180,11 +180,14 @@ if is_bulk:
                                             if isinstance(dt_val, (int, float)):
                                                 parsed_date = pd.NaT
                                             else:
+                                                # Convert to datetime and strip timezone for safe comparison
                                                 parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                                if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
+                                                    parsed_date = parsed_date.tz_localize(None)
                                             
-                                            # Limit: Up to Today (Mar 8, 2026)
-                                            today_limit = pd.Timestamp("2026-03-08")
-                                            start_limit = pd.Timestamp("2025-11-01")
+                                            # Limit: Up to Today (Mar 8, 2026) - Naive for safe comparison
+                                            today_limit = pd.Timestamp("2026-03-08").tz_localize(None)
+                                            start_limit = pd.Timestamp("2025-11-01").tz_localize(None)
                                             
                                             if pd.notnull(parsed_date) and start_limit <= parsed_date <= today_limit:
                                                 entry["date"] = parsed_date
