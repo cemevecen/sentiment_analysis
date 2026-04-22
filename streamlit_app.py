@@ -1184,6 +1184,9 @@ comments_to_analyze = []
 tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
 
 with tab1:
+    # Karşılaştırma modundan çıkış
+    if st.session_state.get("_cmp_mode"):
+        st.session_state.pop("_cmp_mode", None)
     with st.container(border=True):
         # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
@@ -1709,6 +1712,7 @@ with tab4:
             st.warning("En az 2 uygulama ID'si girin.")
         else:
             st.session_state["_cmp_mode"] = True
+            st.session_state.pop("bulk_results", None)
             st.session_state["_cmp_pending"] = active_inputs
             st.session_state["_cmp_days"] = cmp_days
             st.session_state.cmp_results = {}
@@ -3110,7 +3114,8 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-if st.button("Analizini Yap", type="primary", use_container_width=True):
+_trigger = st.session_state.pop("_trigger_analysis", False)
+if (st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger) and not st.session_state.get("_cmp_mode"):
     # Hızlı Analiz seçiliyse all_fetched_pool'dan tüm yorumları al
     current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
     all_pool = st.session_state.get("all_fetched_pool", [])
@@ -3128,7 +3133,7 @@ if st.button("Analizini Yap", type="primary", use_container_width=True):
         run_bulk_analysis(data_for_run)
 
 
-if "bulk_results" in st.session_state:
+if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
     df = pd.DataFrame(st.session_state.bulk_results)
     counts = df["Baskın Duygu"].value_counts()
     
