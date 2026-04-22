@@ -127,28 +127,28 @@ def get_app_store_reviews(app_id, country='tr'):
         entries = data.get('feed', {}).get('entry', [])
         if not entries: return []
             
-            # If only one entry, it's not a list
-            if isinstance(entries, dict): entries = [entries]
+        # If only one entry, it's not a list
+        if isinstance(entries, dict): entries = [entries]
+        
+        # Entry[0] is often app metadata, others are reviews
+        for entry in entries:
+            # Review content check (metadata doesn't have content.label)
+            content = entry.get('content', {}).get('label')
+            if not content: continue
             
-            # Entry[0] is often app metadata, others are reviews
-            for entry in entries:
-                # Review content check (metadata doesn't have content.label)
-                content = entry.get('content', {}).get('label')
-                if not content: continue
-                
-                updated = entry.get('updated', {}).get('label', '')
-                try:
-                    r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-                    if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
-                except: r_date = None
-                
-                rating = entry.get('im:rating', {}).get('label', '0')
-                
-                reviews.append({
-                    "text": content,
-                    "date": r_date,
-                    "rating": str(rating)
-                })
+            updated = entry.get('updated', {}).get('label', '')
+            try:
+                r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+                if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
+            except: r_date = None
+            
+            rating = entry.get('im:rating', {}).get('label', '0')
+            
+            reviews.append({
+                "text": content,
+                "date": r_date,
+                "rating": str(rating)
+            })
         return reviews
     except Exception as e:
         st.error(f"RSS Fetch Error: {e}")
