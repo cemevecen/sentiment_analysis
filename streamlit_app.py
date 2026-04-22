@@ -1647,21 +1647,28 @@ if active_tab == "Mağaza Linki":
 
                             v_dates_anal = [r.get('date') for r in limited_comments if isinstance(r.get('date'), datetime)]
                             v_dates_pool = [r.get('date') for r in fetched_comments if isinstance(r.get('date'), datetime)]
+                            
+                            # Store metadata for persistent display
+                            st.session_state.fetch_metadata = {
+                                "total_found": total_found,
+                                "AI_LIMIT": AI_LIMIT,
+                                "time_range": time_range
+                            }
                             if v_dates_anal and v_dates_pool:
-                                pool_start = cast(datetime, min(v_dates_pool)).strftime('%d-%m-%Y')
-                                pool_end   = cast(datetime, max(v_dates_pool)).strftime('%d-%m-%Y')
-                                anal_start = cast(datetime, min(v_dates_anal)).strftime('%d-%m-%Y')
-                                anal_end   = cast(datetime, max(v_dates_anal)).strftime('%d-%m-%Y')
-                                st.warning(f"""
-                                    Toplamda **{total_found}** yorum bulundu (Tüm Aralık: {pool_start} - {pool_end}).
-                                    Zengin Analiz kotası için **en güncel {AI_LIMIT} tanesi** seçildi 
-                                    (Analiz Aralığı: {anal_start} - {anal_end}).
-                                """)
+                                st.session_state.fetch_metadata.update({
+                                    "pool_start": cast(datetime, min(v_dates_pool)).strftime('%d-%m-%Y'),
+                                    "pool_end":   cast(datetime, max(v_dates_pool)).strftime('%d-%m-%Y'),
+                                    "anal_start": cast(datetime, min(v_dates_anal)).strftime('%d-%m-%Y'),
+                                    "anal_end":   cast(datetime, max(v_dates_anal)).strftime('%d-%m-%Y'),
+                                })
                         else:
                             # Hızlı Analiz — limit yok, tamamı alınır
                             st.session_state.comments_to_analyze = fetched_comments
-                            if len(fetched_comments) > AI_LIMIT:
-                                st.info(f"Hızlı Analiz modunda tüm **{len(fetched_comments)}** yorum analiz edilecek.")
+                            st.session_state.fetch_metadata = {
+                                "total_found": len(fetched_comments),
+                                "AI_LIMIT": AI_LIMIT,
+                                "time_range": time_range
+                            }
                         
                         # Başarılı URL'yi geçmişe ekle (url + isim birlikte)
                         current_url = store_url.strip()
@@ -1674,7 +1681,7 @@ if active_tab == "Mağaza Linki":
                             })
                             st.session_state.url_history = st.session_state.url_history[:5]
                         
-                        st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
+                        st.session_state.url_history = st.session_state.url_history[:5]
                     else:
                         loading_placeholder.empty()
                         st.info(f"{time_range} kriterine uygun yorum bulunamadı.")
@@ -3312,6 +3319,34 @@ def run_bulk_analysis(data_to_process, is_append=False):
 
 # Karşılaştırma modu açık değilse (sonuç ekranı hariç) ayarları ve butonu göster
 if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", False):
+    
+    # --- PERSISTENT REVIEW INFO BOXES ---
+    if st.session_state.get("all_fetched_pool") and st.session_state.get("fetch_metadata"):
+        meta = st.session_state.fetch_metadata
+        total_found = meta.get("total_found", 0)
+        ai_limit = meta.get("AI_LIMIT", 500)
+        t_range = meta.get("time_range", "Seçili")
+        current_type = st.session_state.get("analysis_type", "Hızlı Analiz")
+
+        # Toplam Yorum Bilgisi (Zengin/Hızlı fark etmeksizin)
+        if current_type == "Zengin Analiz" and total_found > ai_limit:
+            p_start = meta.get("pool_start", "---")
+            p_end   = meta.get("pool_end", "---")
+            a_start = meta.get("anal_start", "---")
+            a_end   = meta.get("anal_end", "---")
+            st.warning(f"""
+                Toplamda **{total_found}** yorum bulundu (Tüm Aralık: {p_start} - {p_end}).
+                Zengin Analiz kotası için **en güncel {ai_limit} tanesi** seçildi 
+                (Analiz Aralığı: {a_start} - {a_end}).
+            """)
+        elif current_type == "Hızlı Analiz" and total_found > ai_limit:
+            st.info(f"Hızlı Analiz modunda tüm **{total_found}** yorum analiz edilecek.")
+        
+        # Genel Başarı Mesajı
+        count_to_anal = len(st.session_state.get("comments_to_analyze", []))
+        if count_to_anal > 0:
+            st.success(f"**{count_to_anal}** adet {t_range} yorumu başarıyla çekildi!")
+    
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### ⚙️ Analiz Ayarları")
     
