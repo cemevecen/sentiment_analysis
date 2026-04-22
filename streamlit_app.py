@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-12-00"  # Fix: search page auto-click, faster scraping, date fallback=None
+CURRENT_VERSION = "2026-03-19-13-00"  # Travel URL: q= param instant extract, no 15s HTTP wait
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -632,8 +632,29 @@ def build_maps_url_from_place_id(place_id: str) -> str:
 def _extract_maps_url_from_travel(travel_url: str) -> Optional[str]:
     """
     Google Travel/Search URL'sinden Maps URL'si çıkarır — Playwright kullanmadan.
-    requests ile sayfayı çekip başlık veya og:title'dan işletme adını alır.
+
+    Katmanlı yaklaşım:
+    1) URL parametrelerinden q= / query= doğrudan oku (anlık, HTTP yok)
+    2) HTTP GET ile yönlendirme veya başlık çıkar (kısa timeout)
     """
+    _junk_names = {"google", "google travel", "google maps", "google haritalar", "google seyahat"}
+
+    # ── Katman 1: q= veya query= parametresi ──────────────────────────
+    try:
+        parsed = urllib.parse.urlparse(travel_url)
+        params = urllib.parse.parse_qs(parsed.query)
+        for key in ("q", "query"):
+            vals = params.get(key)
+            if vals:
+                name = vals[0].strip()
+                if name and name.lower() not in _junk_names:
+                    return "https://www.google.com/maps/search/" + urllib.parse.quote(name)
+    except Exception:
+        pass
+
+    # ── Katman 2: HTTP GET ile başlık / yönlendirme ───────────────────
+    # Google Travel sayfaları JS-render olduğundan başlık genellikle
+    # boş gelir; bu yüzden timeout kısa tutulur, hata olursa geçilir.
     try:
         headers = {
             "User-Agent": (
@@ -644,28 +665,24 @@ def _extract_maps_url_from_travel(travel_url: str) -> Optional[str]:
             "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
-        resp = requests.get(travel_url, headers=headers, timeout=15, allow_redirects=True)
-        # Redirect ile direkt Maps URL'sine geldiyse kullan
+        resp = requests.get(travel_url, headers=headers, timeout=6, allow_redirects=True)
         if "google.com/maps" in resp.url:
             return resp.url
-        # <title> etiketinden işletme adı
         title_m = re.search(r"<title[^>]*>([^<]+)</title>", resp.text, re.IGNORECASE)
         if title_m:
             title = title_m.group(1).strip()
             for sep in [" - Google", " | Google", " – Google", " — Google", " • Google"]:
                 if sep in title:
                     name = title.split(sep)[0].strip()
-                    if name and name.lower() not in ("google", "google travel", "google maps", "google haritalar"):
+                    if name and name.lower() not in _junk_names:
                         return "https://www.google.com/maps/search/" + urllib.parse.quote(name)
-        # og:title meta etiketinden
         og_m = re.search(
             r'property=["\']og:title["\'][^>]*content=["\']([^"\']+)["\']',
-            resp.text,
-            re.IGNORECASE,
+            resp.text, re.IGNORECASE,
         )
         if og_m:
             name = og_m.group(1).strip()
-            if name and name.lower() not in ("google", "google travel", "google maps", "google haritalar"):
+            if name and name.lower() not in _junk_names:
                 return "https://www.google.com/maps/search/" + urllib.parse.quote(name)
     except Exception:
         pass
@@ -843,8 +860,10 @@ def scrape_google_reviews_playwright(
             )
             page = ctx.new_page()
 
-            # Travel URL'leri "commit" ile yükle (JS crash'ini önler);
-            # normal Maps URL'leri için domcontentloaded kullan.
+            # Travel URL'leri için "commit" kullanmak sayfanın neredeyse hiç
+            # yüklenmemesine yol açar — pre-resolve başarılıysa artık Maps URL
+            # üzerindeyiz, doğrudan domcontentloaded kullan.
+            # Hâlâ Travel URL'sindeyse commit ile yükle (crash önleme).
             _goto_wait = "commit" if _is_travel_url_initial else "domcontentloaded"
             try:
                 page.goto(maps_url, timeout=30000, wait_until=_goto_wait)
