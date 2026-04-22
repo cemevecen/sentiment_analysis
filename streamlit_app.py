@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-13-00"  # Travel URL: q= param instant extract, no 15s HTTP wait
+CURRENT_VERSION = "2026-03-19-14-00"  # Fix: robust date extraction + filter None-dates as include
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -981,13 +981,19 @@ def scrape_google_reviews_playwright(
                     except Exception:
                         pass
 
-            # Yorumlar sekmesine git
-            for sel in ['button[data-tab-index="1"]',
-                        'button:has-text("Yorum")',
-                        'button:has-text("Review")']:
+            # Yorumlar sekmesine git — birden fazla selector dene
+            for sel in [
+                'button[data-tab-index="1"]',
+                'button[aria-label*="Yorum"]',
+                'button[aria-label*="Review"]',
+                '[role="tab"]:has-text("Yorum")',
+                '[role="tab"]:has-text("Review")',
+                'button:has-text("Yorum")',
+                'button:has-text("Review")',
+            ]:
                 try:
-                    page.click(sel, timeout=4000)
-                    time.sleep(1)
+                    page.click(sel, timeout=3000)
+                    time.sleep(1.5)
                     break
                 except Exception:
                     continue
@@ -1000,6 +1006,12 @@ def scrape_google_reviews_playwright(
                     break
                 except Exception:
                     continue
+
+            # İlk review kartları yüklenene kadar bekle
+            try:
+                page.wait_for_selector("div[data-review-id]", timeout=8000)
+            except Exception:
+                pass
 
             # Scroll ile yorum yükle
             last_count = 0
@@ -1067,9 +1079,31 @@ def scrape_google_reviews_playwright(
                                 rating = m.group(1)
                             break
 
-                    # Tarih
-                    date_el = card.query_selector(".rsqaWe") or card.query_selector("span.xRkPPb")
-                    date_str = date_el.inner_text().strip() if date_el else ""
+                    # Tarih — birden fazla selector dene, yoksa card metnini tara
+                    date_str = ""
+                    for _ds in [".rsqaWe", "span.xRkPPb", ".DU9Pgb", ".y3Ibjb",
+                                "span[class*='date']", "span[class*='Date']"]:
+                        _d = card.query_selector(_ds)
+                        if _d:
+                            _t = (_d.inner_text() or "").strip()
+                            if _t and re.search(
+                                r'\d|\bönce\b|\bago\b|dün|yesterday', _t, re.I
+                            ):
+                                date_str = _t
+                                break
+                    # Fallback: kartın bütün metninde göreli zaman ifadesi ara
+                    if not date_str:
+                        try:
+                            _m = re.search(
+                                r'\d+\s*(?:dakika|saat|gün|hafta|ay|yıl)\s*önce'
+                                r'|\d+\s*(?:minute|hour|day|week|month|year)s?\s+ago'
+                                r'|dün|yesterday',
+                                card.inner_text(), re.I,
+                            )
+                            if _m:
+                                date_str = _m.group(0)
+                        except Exception:
+                            pass
                     parsed_date = _parse_relative_date(date_str)
 
                     # Kullanıcı
@@ -1340,15 +1374,15 @@ def render_google_business_ui() -> None:
             threshold = datetime.now() - timedelta(days=gb_days)
             filtered  = [
                 r for r in raw_reviews
-                if isinstance(r.get("date"), datetime)
-                and r["date"] >= threshold
+                # date=None (tarih çekilemediyse) → dahil et, atma
+                if (r.get("date") is None or r["date"] >= threshold)
                 and is_valid_comment(r.get("text", ""))
             ]
 
             if filtered:
                 # Tarih sırası
                 filtered.sort(
-                    key=lambda x: x.get("date") or datetime.min, reverse=True
+                    key=lambda x: x.get("date") or datetime.now(), reverse=True
                 )
                 dates = [r["date"] for r in filtered if isinstance(r.get("date"), datetime)]
                 date_start = min(dates).strftime("%d.%m.%Y") if dates else "—"
