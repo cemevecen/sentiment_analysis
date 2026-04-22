@@ -1416,20 +1416,6 @@ if "bulk_results" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("""
-        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
-            <p style="font-size: 0.9rem; font-weight: 600; color: #64748b; margin-bottom: 10px;">Gelecek Özellik Fikirleri (Roadmap)</p>
-            <div class="idea-container">
-                <span class="idea-chip">Neden Analizi</span>
-                <span class="idea-chip">Rakip Kıyaslama</span>
-                <span class="idea-chip">AI Cevap Asistanı</span>
-                <span class="idea-chip">Kelime Bulutu</span>
-                <span class="idea-chip">Hata Erken Uyarı</span>
-                <span class="idea-chip">Puan Simülatörü</span>
-                <span class="idea-chip">Çoklu Mağaza</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
     # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
     if "Puan" in df.columns and df["Puan"].notnull().any():
