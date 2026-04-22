@@ -1150,14 +1150,15 @@ with tab1:
         # Geçmiş chip'leri
         if st.session_state.url_history:
             chips_html = "".join([
-                f'<span onclick="window.parent.document.querySelector(\'[data-testid=\\"stTextInput\\"] input\').value=\'{h}\';" '
+                f'<span onclick="window.parent.document.querySelector(\'[data-testid=\\"stTextInput\\"] input\').value=\'{h["url"] if isinstance(h, dict) else h}\';" '
                 f'style="display:inline-block;cursor:pointer;background:#EEF2FF;border:1px solid #818CF8;'
                 f'color:#4338CA;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;'
                 f'margin:2px 3px;font-family:Poppins,sans-serif;white-space:nowrap;'
                 f'transition:all 0.15s ease;" '
                 f'onmouseover="this.style.background=\'#E0E7FF\'" '
                 f'onmouseout="this.style.background=\'#EEF2FF\'">'
-                f'{h[:22] + "…" if len(h) > 22 else h}</span>'
+                f'{(h["name"] if isinstance(h, dict) else h)[:20] + "…" if len(h["name"] if isinstance(h, dict) else h) > 20 else (h["name"] if isinstance(h, dict) else h)}'
+                f'</span>'
                 for h in st.session_state.url_history[:5]
             ])
             st.markdown(
@@ -1353,10 +1354,15 @@ with tab1:
                             if len(fetched_comments) > AI_LIMIT:
                                 st.info(f"Hızlı Analiz modunda tüm **{len(fetched_comments)}** yorum analiz edilecek.")
                         
-                        # Başarılı URL'yi geçmişe ekle
+                        # Başarılı URL'yi geçmişe ekle (url + isim birlikte)
                         current_url = store_url.strip()
-                        if current_url and current_url not in st.session_state.url_history:
-                            st.session_state.url_history.insert(0, current_url)
+                        current_name = st.session_state.get("detected_app_name", current_url)
+                        existing_urls = [h["url"] if isinstance(h, dict) else h for h in st.session_state.url_history]
+                        if current_url and current_url not in existing_urls:
+                            st.session_state.url_history.insert(0, {
+                                "url": current_url,
+                                "name": current_name
+                            })
                             st.session_state.url_history = st.session_state.url_history[:5]
                         
                         st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
