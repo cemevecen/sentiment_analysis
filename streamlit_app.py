@@ -113,6 +113,14 @@ if is_bulk:
                         best_col = scores[0][1] if scores else df_upload.columns[0]
                         default_index = list(df_upload.columns).index(best_col)
 
+                        # --- Date Column Detection ---
+                        date_keys = ["date", "time", "tarih", "saat", "submit"]
+                        date_col = None
+                        for col in df_upload.columns:
+                            if any(dk in col.lower() for dk in date_keys):
+                                date_col = col
+                                break
+                        
                         col_name = st.selectbox(
                             f"Analiz edilecek sütun ({uploaded_file.name}):", 
                             df_upload.columns, 
@@ -123,26 +131,25 @@ if is_bulk:
                         if col_name:
                             def is_valid_comment(text):
                                 text = str(text).strip()
-                                # 1. Too short
                                 if len(text) < 4: return False
-                                # 2. Common metadata/null values
                                 if text.lower() in ['nan', 'null', 'none', 'tr', 'en']: return False
-                                # 3. ISO Timestamps (e.g. 2026-03-01T...)
                                 if re.match(r'^\d{4}-\d{2}-\d{2}.*', text): return False
-                                # 4. Pure numeric or ID-like values
                                 if text.replace('.', '').replace('-', '').isdigit(): return False
-                                # 5. Simple date patterns (e.g. 01.01.2024 or 2024/01/01)
                                 if re.match(r'^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}$', text): return False
-                                
                                 return True
 
-                            valid_comments = [
-                                str(c).strip() for c in df_upload[col_name].dropna() 
-                                if is_valid_comment(c)
-                            ]
-                            all_comments.extend(valid_comments)
+                            # Store text and date together
+                            for idx, row in df_upload.iterrows():
+                                if col_name in row:
+                                    text = row[col_name]
+                                    if is_valid_comment(text):
+                                        entry = {"text": str(text).strip()}
+                                        if date_col:
+                                            entry["date"] = pd.to_datetime(row[date_col], errors='coerce')
+                                        all_comments.append(entry)
+                            
                             with st.expander(f"👀 {uploaded_file.name} Önizleme (Seçilen: {col_name})"):
-                                st.write(valid_comments[:5])
+                                st.write([c["text"] for c in all_comments[-5:]] if all_comments else [])
                 except Exception as e:
                     st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
             
@@ -152,7 +159,7 @@ if is_bulk:
 else:
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
     if text_input:
-        comments_to_analyze = [text_input]
+        comments_to_analyze = [{"text": text_input}]
 
 def get_gemini_sentiment(text):
     if not HAS_GEMINI:
@@ -236,7 +243,9 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            for i, comment in enumerate(comments_to_analyze):
+            for i, entry in enumerate(comments_to_analyze):
+                comment = entry["text"]
+                date = entry.get("date")
                 status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)})...")
                 res = get_gemini_sentiment(comment) or heuristic_analysis(comment)
                 scores = {"Pozitif": res['positive'], "Negatif": res['negative'], "Nötr": res['neutral']}
@@ -244,7 +253,8 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 
                 bulk_results.append({
                     "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                    "Pozitif %": f"{res['positive']:.2%}", "Nötrlük %": f"{res['neutral']:.2%}", "Negatiflik %": f"{res['negative']:.2%}"
+                    "Pozitif %": f"{res['positive']:.2%}", "Nötrlük %": f"{res['neutral']:.2%}", "Negatiflik %": f"{res['negative']:.2%}",
+                    "Tarih": date
                 })
                 progress_bar.progress((i + 1) / len(comments_to_analyze))
             
@@ -253,7 +263,8 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
         else:
             # Single analysis logic
             with st.spinner("Analiz ediliyor..."):
-                comment = comments_to_analyze[0]
+                entry = comments_to_analyze[0]
+                comment = entry["text"]
                 result = get_gemini_sentiment(comment) or heuristic_analysis(comment)
                 st.session_state.single_result = result
 
@@ -275,14 +286,39 @@ if is_bulk and "bulk_results" in st.session_state:
     </style>
     """, unsafe_allow_html=True)
 
-    _, col_pie, _ = st.columns([1, 2, 1])
+    col_pie, col_trend = st.columns([1, 1.5])
+    
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        fig = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
-                     color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
-        fig.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent+label')
-        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        fig_pie = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.5,
+                      title="Genel Dağılım",
+                      color='Duygu', color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'})
+        fig_pie.update_traces(pull=[0.05, 0.05, 0.05], textinfo='percent')
+        fig_pie.update_layout(height=320, showlegend=True, 
+                             legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
+                             margin={"t": 50, "b": 50, "l": 10, "r": 10})
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with col_trend:
+        # Check if we have valid dates
+        df_dates = df.dropna(subset=["Tarih"])
+        if not df_dates.empty:
+            df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
+            # Group by day and sentiment
+            df_dates['Gün'] = df_dates['Tarih'].dt.date
+            trend_data = df_dates.groupby(['Gün', "Baskın Duygu"]).size().reset_index(name='Adet')
+            
+            fig_trend = px.area(trend_data, x="Gün", y="Adet", color="Baskın Duygu",
+                               title="Zaman İçinde Duygu Gelişimi (Tarihsel)",
+                               color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#3498db'},
+                               line_shape="smooth")
+            
+            fig_trend.update_layout(height=320, margin={"t": 50, "b": 50, "l": 10, "r": 10},
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
+                                   xaxis_title="Tarih", yaxis_title="Yorum Sayısı")
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("📅 Dosyada tarih bilgisi (Review Submit Date vb.) bulunamadığı için tarihsel grafik oluşturulamadı.")
 
     # Comments List
     st.write("### 💬 Yorum Listesi")
