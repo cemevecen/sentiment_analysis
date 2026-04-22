@@ -698,6 +698,12 @@ with tab1:
             # Already fetched, skip to results summary
             pass
         else:
+            # Clear old results to keep UI in sync during new fetch
+            if "bulk_results" in st.session_state:
+                del st.session_state.bulk_results
+            if "comments_to_analyze" in st.session_state:
+                st.session_state.comments_to_analyze = []
+            
             with st.container():
                 loading_placeholder = st.empty()
                 with loading_placeholder.container():
@@ -707,7 +713,9 @@ with tab1:
                     p_bar = st.progress(0, text="Hazırlanıyor...")
                 
                 def update_fetch_progress(p):
-                    p_bar.progress(p, text=f"Veriler indiriliyor: %{int(p*100)}")
+                    # Clamp progress to 100% and avoid re-rendering issues
+                    p_safe = min(max(float(p), 0.0), 1.0)
+                    p_bar.progress(p_safe, text=f"Veriler indiriliyor: %{int(p_safe*100)}")
 
                 fetched_comments = []
                 threshold_date = datetime.now() - timedelta(days=days_limit)
@@ -760,6 +768,10 @@ with tab1:
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
     if uploaded_files:
+        # Clear old state when new files are uploaded
+        if "bulk_results" in st.session_state:
+            del st.session_state.bulk_results
+        
         all_comments = []
         for uploaded_file in uploaded_files:
             df_upload = None
@@ -912,6 +924,10 @@ with tab3:
         key="manual_text_input"
     )
     if text_input.strip():
+        # Clear old analysis when manual text is changed
+        if "bulk_results" in st.session_state:
+            del st.session_state.bulk_results
+            
         raw_lines = text_input.split('\n')
         processed_comments = []
         
