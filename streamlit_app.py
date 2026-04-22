@@ -1682,25 +1682,38 @@ if "bulk_results" in st.session_state:
                     run_bulk_analysis(next_batch, is_append=True)
 
     # Chart & List Logic
-    def render_trend_chart(filtered_df, key, title_suffix=""):
+    def render_trend_chart(filtered_df, key, title_suffix="", freq="Haftalık"):
         df_dates = filtered_df.dropna(subset=["Tarih"]).copy()
         if not df_dates.empty:
             df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
-            df_dates['Hafta'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
-            trend_data = df_dates.groupby(['Hafta', "Baskın Duygu"]).size().reset_index(name='Adet')
             
-            # Custom data for robust selection processing (includes exact Hafta and Sentiment)
-            trend_data['Hafta_str'] = trend_data['Hafta'].astype(str)
-            fig_trend = px.bar(trend_data, x="Hafta", y="Adet", color="Baskın Duygu",
-                               title=f"Haftalık Duygu Dağılımı {title_suffix}",
+            if freq == "Haftalık":
+                df_dates['Grup'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
+                xaxis_title = "Tarih (Haftalık)"
+                chart_title_prefix = "Haftalık"
+            elif freq == "Aylık":
+                df_dates['Grup'] = df_dates['Tarih'].dt.to_period('M').apply(lambda r: r.start_time)
+                xaxis_title = "Tarih (Aylık)"
+                chart_title_prefix = "Aylık"
+            else: # Günlük
+                df_dates['Grup'] = df_dates['Tarih'].dt.date
+                xaxis_title = "Tarih (Günlük)"
+                chart_title_prefix = "Günlük"
+
+            trend_data = df_dates.groupby(['Grup', "Baskın Duygu"]).size().reset_index(name='Adet')
+            
+            # Custom data for robust selection processing (includes exact Grup and Sentiment)
+            trend_data['Grup_str'] = trend_data['Grup'].astype(str)
+            fig_trend = px.bar(trend_data, x="Grup", y="Adet", color="Baskın Duygu",
+                               title=f"{chart_title_prefix} Duygu Dağılımı {title_suffix}",
                                color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'},
                                barmode='group',
                                labels={"Baskın Duygu": ""},
-                               custom_data=["Hafta_str", "Baskın Duygu"])
+                               custom_data=["Grup_str", "Baskın Duygu"])
             
-            fig_trend.update_layout(height=350, margin={"t": 80, "b": 40, "l": 10, "r": 10},
+            fig_trend.update_layout(height=400, margin={"t": 80, "b": 40, "l": 10, "r": 10},
                                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
-                                   xaxis_title="Tarih (Haftalık)", yaxis_title="Yorum Sayısı",
+                                   xaxis_title=xaxis_title, yaxis_title="Yorum Sayısı",
                                    template="plotly_white",
                                    paper_bgcolor="#F0F9FF",
                                    plot_bgcolor="#F0F9FF",
@@ -1716,20 +1729,20 @@ if "bulk_results" in st.session_state:
             
             if selection and "selection" in selection and selection["selection"]["points"]:
                 point = selection["selection"]["points"][0]
-                # Use Hafta directly from custom_data for 100% precision
-                sel_week_str = point["customdata"][0]
-                sel_week = pd.to_datetime(sel_week_str).tz_localize(None)
+                # Use Grup directly from custom_data for 100% precision
+                sel_grup_str = point["customdata"][0]
+                sel_grup = pd.to_datetime(sel_grup_str).tz_localize(None)
                 sel_sentiment = str(point["customdata"][1]).strip()
                 
-                # Standardize database weeks for comparison
-                df_dates['Hafta_compare'] = pd.to_datetime(df_dates['Hafta']).dt.tz_localize(None)
+                # Standardize database groups for comparison
+                df_dates['Grup_compare'] = pd.to_datetime(df_dates['Grup']).dt.tz_localize(None)
                 
                 final_filtered = df_dates[
-                    (df_dates['Hafta_compare'] == sel_week) & 
+                    (df_dates['Grup_compare'] == sel_grup) & 
                     (df_dates['Baskın Duygu'] == sel_sentiment)
                 ]
                 
-                st.info(f"Filtrelendi: **{sel_week.strftime('%d.%m.%Y')}** haftası - **{sel_sentiment}** yorumlar")
+                st.info(f"Filtrelendi: **{sel_grup.strftime('%d.%m.%Y')}** periyodu - **{sel_sentiment}** yorumlar")
                 if st.button("Filtreyi Temizle", key=f"clear_{key}"):
                     st.rerun()
                 return final_filtered
@@ -1831,6 +1844,10 @@ if "bulk_results" in st.session_state:
     # --- Tabs and Unified Display ---
     st.write("### Yorum Listesi")
     
+    # Frequency Selector for Trend Chart
+    yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
     t_pos = counts.get('Olumlu', 0)
     t_neg = counts.get('Olumsuz', 0)
     t_neu = counts.get('İstek/Görüş', 0)
@@ -1844,22 +1861,22 @@ if "bulk_results" in st.session_state:
     ])
 
     with tab_all:
-        f_df = render_trend_chart(analysis_df, "all", "(Genel)")
+        f_df = render_trend_chart(analysis_df, "all", "(Genel)", freq=yorum_freq)
         display_comments(f_df, "all", highlight=False)
     
     with tab_pos:
         pos_df = df[df["Baskın Duygu"] == "Olumlu"]
-        f_df = render_trend_chart(pos_df, "pos", "(Olumlu)")
+        f_df = render_trend_chart(pos_df, "pos", "(Olumlu)", freq=yorum_freq)
         display_comments(f_df, "pos")
         
     with tab_neg:
         neg_df = df[df["Baskın Duygu"] == "Olumsuz"]
-        f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)")
+        f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)", freq=yorum_freq)
         display_comments(f_df, "neg")
         
     with tab_neu:
         neu_df = df[df["Baskın Duygu"] == "İstek/Görüş"]
-        f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)")
+        f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)", freq=yorum_freq)
         display_comments(f_df, "neu")
 
     # Excel Download
