@@ -3785,7 +3785,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
         
         st.write("### Puan Dağılımı")
         st.markdown('<div class="no-print">', unsafe_allow_html=True)
-        freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
+        freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=0, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
