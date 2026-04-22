@@ -1870,106 +1870,94 @@ with tab4:
 </div>"""
                 st.markdown(card, unsafe_allow_html=True)
 
-        # Duygu derinlik analizi — yan yana
+        # Duygu derinlik analizi
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
         depth_cols = st.columns(n_res)
 
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with depth_cols[ci]:
-                accent = app_colors_sum[ci % len(app_colors_sum)]
-                total_d = data["total"] or 1
+                _acc   = app_colors_sum[ci % len(app_colors_sum)]
+                _pos   = data["pos_pct"]
+                _neg   = data["neg_pct"]
+                _neu   = data["neu_pct"]
+                _sc    = data["score"]
+                _tot   = data["total"]
 
-                pos_p = data["pos_pct"]
-                neg_p = data["neg_pct"]
-                neu_p = data["neu_pct"]
-                score = data["score"]
-
-                # Güçlü yönler
-                if pos_p >= 70:
-                    strength = "Kullanıcı tabanının büyük çoğunluğu uygulamadan memnun. Sadakat ve önerme oranı yüksek seyrediyor."
-                elif pos_p >= 55:
-                    strength = "Kullanıcıların çoğunluğu olumlu deneyim bildiriyor. Temel işlevler beğeni topluyor."
+                if _pos >= 70:
+                    _strength = "Kullanıcı tabanının büyük çoğunluğu memnun. Sadakat ve önerme oranı yüksek."
+                elif _pos >= 55:
+                    _strength = "Kullanıcıların çoğunluğu olumlu deneyim bildiriyor. Temel işlevler beğeni topluyor."
                 else:
-                    strength = "Olumlu geri bildirimler mevcut ancak baskın değil. Belirli özellikler öne çıkıyor."
+                    _strength = "Olumlu geri bildirimler mevcut ancak baskın değil."
 
-                # Zayıf yönler
-                if neg_p >= 50:
-                    weakness = "Olumsuz yorumlar baskın. Teknik sorunlar veya kullanıcı beklentilerinin karşılanmaması kritik risk."
-                elif neg_p >= 30:
-                    weakness = "Kayda değer sayıda olumsuz geri bildirim var. Teknik sorunlar veya UX eksiklikleri gündemde."
+                if _neg >= 50:
+                    _weakness = "Olumsuz yorumlar baskın. Teknik sorunlar veya beklenti karşılanmaması kritik risk."
+                elif _neg >= 30:
+                    _weakness = "Kayda değer olumsuz geri bildirim var. Teknik sorunlar veya UX eksiklikleri gündemde."
                 else:
-                    weakness = "Olumsuz yorumlar sınırlı düzeyde. Mevcut şikayetler izole sorunlar niteliğinde."
+                    _weakness = "Olumsuz yorumlar sınırlı. Mevcut şikayetler izole sorunlar niteliğinde."
 
-                # İstek/görüş yorumu
-                if neu_p >= 20:
-                    request_text = "Kullanıcıların önemli bir kısmı yeni özellik veya iyileştirme talep ediyor. Ürün geliştirme için değerli veri kaynağı."
-                elif neu_p >= 10:
-                    request_text = "Orta düzeyde özellik talebi mevcut. Önceliklendirilmesi gereken belirli istekler öne çıkıyor."
+                if _neu >= 20:
+                    _req = "Kullanıcıların önemli bir kısmı yeni özellik talep ediyor. Ürün geliştirme için değerli veri."
+                elif _neu >= 10:
+                    _req = "Orta düzeyde özellik talebi mevcut. Belirli istekler öne çıkıyor."
                 else:
-                    request_text = "İstek ve görüş yorumları düşük oranda. Kullanıcılar mevcut yapıdan genel olarak memnun görünüyor."
+                    _req = "İstek yorumları düşük oranda. Kullanıcılar mevcut yapıdan genel olarak memnun görünüyor."
 
-                # Genel skor yorumu
-                if score >= 75:
-                    verdict_text = "Güçlü"
-                    verdict_color = "#10b981"
-                elif score >= 50:
-                    verdict_text = "Orta"
-                    verdict_color = "#f59e0b"
+                if _sc >= 75:
+                    _vtext = "Güçlü"
+                    _vcol  = "#10b981"
+                elif _sc >= 50:
+                    _vtext = "Orta"
+                    _vcol  = "#f59e0b"
                 else:
-                    verdict_text = "Zayıf"
-                    verdict_color = "#f43f5e"
+                    _vtext = "Zayıf"
+                    _vcol  = "#f43f5e"
 
-                st.markdown(f"""
-<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
-  <div style="background:{accent};opacity:0.9;padding:8px 14px;">
-    <div style="font-size:0.72rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:0.8px;">
-      Duygu Derinlik Analizi
-    </div>
-  </div>
-  <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-      <span style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Genel Karar</span>
-      <span style="font-size:0.85rem;font-weight:800;color:{{verdict_color}};">{{verdict_text}} · {{score}}/100</span>
-    </div>
-
-    <div style="background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #10b981;">
-      <div style="font-size:0.65rem;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">💚 Güçlü Yön</div>
-      <div style="font-size:0.8rem;color:#334155;line-height:1.55;">{{strength}}</div>
-    </div>
-
-    <div style="background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #f43f5e;">
-      <div style="font-size:0.65rem;color:#f43f5e;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">🔴 Zayıf Yön</div>
-      <div style="font-size:0.8rem;color:#334155;line-height:1.55;">{{weakness}}</div>
-    </div>
-
-    <div style="background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #818cf8;">
-      <div style="font-size:0.65rem;color:#818cf8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">💜 İstek & Görüş</div>
-      <div style="font-size:0.8rem;color:#334155;line-height:1.55;">{{request_text}}</div>
-    </div>
-
-    <div style="display:flex;gap:6px;margin-top:2px;">
-      <div style="flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;">
-        <div style="font-size:1rem;font-weight:800;color:#10b981;">{{pos_p}}%</div>
-        <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;">Olumlu</div>
-      </div>
-      <div style="flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;">
-        <div style="font-size:1rem;font-weight:800;color:#f43f5e;">{{neg_p}}%</div>
-        <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;">Olumsuz</div>
-      </div>
-      <div style="flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;">
-        <div style="font-size:1rem;font-weight:800;color:#818cf8;">{{neu_p}}%</div>
-        <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;">Görüş</div>
-      </div>
-      <div style="flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;">
-        <div style="font-size:1rem;font-weight:800;color:{{accent}};">{{data['total']}}</div>
-        <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;">Yorum</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-                """, unsafe_allow_html=True)
+                _html = (
+                    "<div style='background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;'>"
+                    "<div style='background:" + _acc + ";padding:8px 14px;'>"
+                    "<div style='font-size:0.72rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:0.8px;'>Duygu Derinlik Analizi</div>"
+                    "</div>"
+                    "<div style='padding:14px;display:flex;flex-direction:column;gap:10px;'>"
+                    "<div style='display:flex;align-items:center;justify-content:space-between;'>"
+                    "<span style='font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;'>Genel Karar</span>"
+                    "<span style='font-size:0.85rem;font-weight:800;color:" + _vcol + ";'>" + _vtext + " · " + str(_sc) + "/100</span>"
+                    "</div>"
+                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #10b981;'>"
+                    "<div style='font-size:0.65rem;color:#10b981;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>Güçlü Yön</div>"
+                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _strength + "</div>"
+                    "</div>"
+                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #f43f5e;'>"
+                    "<div style='font-size:0.65rem;color:#f43f5e;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>Zayıf Yön</div>"
+                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _weakness + "</div>"
+                    "</div>"
+                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #818cf8;'>"
+                    "<div style='font-size:0.65rem;color:#818cf8;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>İstek & Görüş</div>"
+                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _req + "</div>"
+                    "</div>"
+                    "<div style='display:flex;gap:6px;'>"
+                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
+                    "<div style='font-size:1rem;font-weight:800;color:#10b981;'>" + str(_pos) + "%</div>"
+                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Olumlu</div>"
+                    "</div>"
+                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
+                    "<div style='font-size:1rem;font-weight:800;color:#f43f5e;'>" + str(_neg) + "%</div>"
+                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Olumsuz</div>"
+                    "</div>"
+                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
+                    "<div style='font-size:1rem;font-weight:800;color:#818cf8;'>" + str(_neu) + "%</div>"
+                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Görüş</div>"
+                    "</div>"
+                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
+                    "<div style='font-size:1rem;font-weight:800;color:" + _acc + ";'>" + str(_tot) + "</div>"
+                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Yorum</div>"
+                    "</div>"
+                    "</div>"
+                    "</div>"
+                    "</div>"
+                )
+                st.markdown(_html, unsafe_allow_html=True)
 
 
 comments_to_analyze = st.session_state.comments_to_analyze
