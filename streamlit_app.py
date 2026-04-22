@@ -1732,9 +1732,6 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 
 if comments_to_analyze:
-    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="no-print" style="margin-bottom:5px;"><h2 style="font-size:2rem;font-weight:700;color:#1E293B;">Analiz Ayarları</h2></div>', unsafe_allow_html=True)
-    
     n = len(comments_to_analyze)
 
     def fmt_time(secs):
