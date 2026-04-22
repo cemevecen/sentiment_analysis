@@ -1147,26 +1147,34 @@ with tab1:
         )
         st.session_state.app_url = store_url
 
-        # Geçmiş butonları
+        # Geçmiş chip'leri
         if st.session_state.url_history:
+            chips_html = "".join([
+                f'<span onclick="window.parent.document.querySelector(\'[data-testid=\\"stTextInput\\"] input\').value=\'{h}\';" '
+                f'style="display:inline-block;cursor:pointer;background:#EEF2FF;border:1px solid #818CF8;'
+                f'color:#4338CA;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;'
+                f'margin:2px 3px;font-family:Poppins,sans-serif;white-space:nowrap;'
+                f'transition:all 0.15s ease;" '
+                f'onmouseover="this.style.background=\'#E0E7FF\'" '
+                f'onmouseout="this.style.background=\'#EEF2FF\'">'
+                f'{h[:22] + "…" if len(h) > 22 else h}</span>'
+                for h in st.session_state.url_history[:5]
+            ])
             st.markdown(
-                '<div style="font-size:0.75rem;color:#94A3B8;font-weight:600;'
-                'text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 4px 0;">'
-                'Son Aramalar</div>',
+                f'<div style="margin:4px 0 6px 0;">'
+                f'<div style="font-size:0.7rem;color:#94A3B8;font-weight:700;'
+                f'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Son Aramalar</div>'
+                f'<div>{chips_html}</div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
-            cols_h = st.columns(len(st.session_state.url_history[:5]))
+            # Gerçek tıklama için gizli seçim mekanizması
             for ci, hist_url in enumerate(st.session_state.url_history[:5]):
-                with cols_h[ci]:
-                    label = hist_url if len(hist_url) <= 18 else hist_url[:16] + "…"
-                    if st.button(
-                        label,
-                        key=f"hist_{ci}",
-                        help=hist_url,
-                        use_container_width=True
-                    ):
-                        st.session_state["_url_pick"] = hist_url
-                        st.rerun()
+                if st.session_state.get(f"_hist_sel_{ci}"):
+                    st.session_state["_url_pick"] = hist_url
+                    del st.session_state[f"_hist_sel_{ci}"]
+                    st.rerun()
+
 
         time_range = st.selectbox(
             "Tarih Aralığı Seçin:",
