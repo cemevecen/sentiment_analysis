@@ -548,9 +548,10 @@ if st.button("Analizini Yap", use_container_width=True):
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
         bulk_results = []
+        time_display = st.empty()  # MOVED: Immediately below button
         progress_bar = st.progress(0)
         status_text = st.empty()
-        quota_info = st.empty()  # Single placeholder for quota warnings
+        quota_info = st.empty()
         st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
         st.session_state['_quota_hits'] = 0
             
@@ -568,7 +569,6 @@ if st.button("Analizini Yap", use_container_width=True):
 
 
         start_time = time.time()
-        time_display = st.empty()  # For side-by-side time display
         total_items = len(comments_to_analyze)
         est_total_secs = total_items * DELAY_SECS
 
