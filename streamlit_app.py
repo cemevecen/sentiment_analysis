@@ -1699,6 +1699,46 @@ if active_tab == "Mağaza Linki":
                     # Show search results with native Streamlit components
                     results_to_display = all_results[:displayed_count]
                     
+                    # Style select_app buttons ONCE - outside the loop to avoid duplication
+                    st.markdown("""
+                    <style>
+                    /* Container for select_app button - make it compact */
+                    [data-testid="stButton"]:has(> button[key*="select_app"]) {
+                        width: auto !important;
+                        display: inline-block !important;
+                    }
+                    
+                    /* Only style select_app buttons as material design chips */
+                    [data-testid="stButton"] > button[key*="select_app"] {
+                        width: auto !important;
+                        padding: 3px 9px !important;
+                        border-radius: 16px !important;
+                        background-color: #818CF8 !important;
+                        color: white !important;
+                        border: none !important;
+                        font-size: 10px !important;
+                        font-weight: 600 !important;
+                        font-family: 'Poppins', sans-serif !important;
+                        height: 20px !important;
+                        min-height: 20px !important;
+                        line-height: 20px !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                    [data-testid="stButton"] > button[key*="select_app"] > span {
+                        line-height: 1 !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        white-space: nowrap !important;
+                    }
+                    [data-testid="stButton"] > button[key*="select_app"]:hover {
+                        background-color: #6366F1 !important;
+                        transition: all 0.2s ease !important;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
                     for idx, result in enumerate(results_to_display):
                         app_name = result.get('title', 'Bilinmiyor')[:50]
                         app_id = result.get('appId', '')
@@ -1724,46 +1764,6 @@ if active_tab == "Mağaza Linki":
                         
                         # Display select button as chip
                         with col_btn:
-                            # Styling ONLY for select_app buttons - NO platform button styles here
-                            st.markdown("""
-                            <style>
-                            /* Container for select_app button - make it compact */
-                            [data-testid="stButton"]:has(> button[key*="select_app"]) {
-                                width: auto !important;
-                                display: inline-block !important;
-                            }
-                            
-                            /* Only style select_app buttons as material design chips */
-                            [data-testid="stButton"] > button[key*="select_app"] {
-                                width: auto !important;
-                                padding: 3px 9px !important;
-                                border-radius: 16px !important;
-                                background-color: #818CF8 !important;
-                                color: white !important;
-                                border: none !important;
-                                font-size: 10px !important;
-                                font-weight: 600 !important;
-                                font-family: 'Poppins', sans-serif !important;
-                                height: 20px !important;
-                                min-height: 20px !important;
-                                line-height: 20px !important;
-                                display: inline-flex !important;
-                                align-items: center !important;
-                                justify-content: center !important;
-                            }
-                            [data-testid="stButton"] > button[key*="select_app"] > span {
-                                line-height: 1 !important;
-                                display: flex !important;
-                                align-items: center !important;
-                                white-space: nowrap !important;
-                            }
-                            [data-testid="stButton"] > button[key*="select_app"]:hover {
-                                background-color: #6366F1 !important;
-                                transition: all 0.2s ease !important;
-                            }
-                            </style>
-                            """, unsafe_allow_html=True)
-                            
                             button_key = f"select_app_{idx}_{app_id}"
                             if st.button("Seç", key=button_key, width='content'):
                                 st.session_state._selected_app_id = app_id
