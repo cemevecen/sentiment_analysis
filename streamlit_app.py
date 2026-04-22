@@ -2048,12 +2048,9 @@ if "bulk_results" in st.session_state:
                 <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
                 <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
                 <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
-                <div class="u-btn u-fb" onclick="doUltimateAction('fb')"><i class="fa-brands fa-facebook-f"></i></div>
                 <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
                 <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="u-btn u-rd"><i class="fa-brands fa-reddit-alien"></i></a>
                 <a href="slack://share?text={encoded_text}" class="u-btn u-sl"><i class="fa-brands fa-slack"></i></a>
-                <div class="u-btn u-gc" onclick="doUltimateAction('gc')"><i class="fa-solid fa-comment-dots"></i></div>
-                <div class="u-btn u-pic" onclick="doUltimateAction('pic')"><i class="fa-solid fa-camera"></i></div>
             </div>
             
             <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
@@ -2065,71 +2062,44 @@ if "bulk_results" in st.session_state:
             <script>
                 (function() {{
                     const summary = {summary_escaped};
-                    const fbUrl = "{fb_share_url}" + encodeURIComponent(summary);
                     const filename = "{image_name}";
 
                     window.doUltimateAction = function(type) {{
-                        console.log("Ultimate Action:", type);
-                        
-                        const pushNotif = (msg) => {{
-                            const n = document.getElementById('uNotif');
-                            const m = document.getElementById('uMsg');
-                            if(!n || !m) return;
-                            m.innerText = msg;
-                            n.style.opacity = '1';
-                            n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                            setTimeout(() => {{ 
-                                n.style.opacity = '0';
-                                n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                            }}, 3000);
-                        }};
-
-                        if (type === 'gc') {{
-                            window.open('https://chat.google.com', '_blank');
-                            navigator.clipboard.writeText(summary).then(() => {{
-                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                            }}).catch(() => {{
-                                const el = document.createElement('textarea');
-                                el.value = summary; document.body.appendChild(el); el.select();
-                                document.execCommand('copy'); document.body.removeChild(el);
-                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                            }});
-                        }} else if (type === 'fb' || type === 'pic' || type === 'dl') {{
+                        if (type === 'dl') {{
                             const target = document.getElementById('nlp-report-card');
-                            if(!target) {{ console.error("Target not found"); return; }}
+                            if(!target) return;
                             
-                            if (type === 'fb') window.open(fbUrl, '_blank');
+                            const pushNotif = (msg) => {{
+                                const n = document.getElementById('uNotif');
+                                const m = document.getElementById('uMsg');
+                                if(!n || !m) return;
+                                m.innerText = msg;
+                                n.style.opacity = '1';
+                                n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                                setTimeout(() => {{ 
+                                    n.style.opacity = '0';
+                                    n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                                }}, 3000);
+                            }};
 
                             if (typeof html2canvas === 'undefined') {{
                                 pushNotif("Sistem Hazırlanıyor... ⏳");
                                 return;
                             }}
 
-                            pushNotif(type === 'dl' ? "Görsel Hazırlanıyor... ⏳" : (type === 'fb' ? "Kart Kopyalanıyor & Facebook Açılıyor... ⏳" : "Kart Kopyalanıyor... ⏳"));
+                            pushNotif("Görsel Hazırlanıyor... ⏳");
 
                             html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF' }}).then(canvas => {{
-                                if (type === 'dl') {{
-                                    const link = document.createElement('a');
-                                    link.download = filename;
-                                    link.href = canvas.toDataURL('image/png');
-                                    link.click();
-                                    pushNotif("İndirme Başlatıldı! ⬇️");
-                                }} else {{
-                                    canvas.toBlob(blob => {{
-                                        try {{
-                                            const data = [new ClipboardItem({{ [blob.type]: blob }})];
-                                            navigator.clipboard.write(data).then(() => {{
-                                                pushNotif(type === 'fb' ? "Görsel Panoda! ✅ Facebook'ta Yapıştırın" : "Görsel Kopyalandı! ✅");
-                                            }}).catch(() => {{ throw new Error(); }});
-                                        }} catch(e) {{
-                                            pushNotif(type === 'fb' ? "Görsel Kopyalanamadı, Manuel Deneyin." : "Görsel Kopyalanamadı.");
-                                        }}
-                                    }}, 'image/png');
-                                }}
+                                const link = document.createElement('a');
+                                link.download = filename;
+                                link.href = canvas.toDataURL('image/png');
+                                link.click();
+                                pushNotif("İndirme Başlatıldı! ⬇️");
+                            }}).catch(err => {{
+                                console.error("html2canvas error:", err);
                             }});
                         }}
                     }};
-                    console.log("Ultimate functions loaded on window");
                 }})();
             </script>
         """).strip()
