@@ -822,33 +822,51 @@ def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel(model_name)
-        prompt = f"""
-Sen bir uygulama yorumu duygu analizi uzmanısın.
-Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
+        # temperature=0 → deterministik, tutarlı sonuçlar
+        generation_config = genai.types.GenerationConfig(temperature=0)
+        model = genai.GenerativeModel(model_name, generation_config=generation_config)
+        prompt = f"""Sen bir Türkçe uygulama yorumu duygu analizi uzmanısın.
+Aşağıdaki yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
-Kategoriler:
-- olumlu: Kullanıcı memnun, teşekkür ediyor, övüyor. Örn: "harika uygulama", "5 yıldız", "teşekkürler"
-- olumsuz: Kullanıcı şikayetçi, sorun var. Örn: "açılmıyor", "donuyor", "kapanıyor", "zor giriyor", "silinmiş", "yaramaz", "bozuk"
-- istek_gorus: Tarafsız öneri veya soru. Örn: "şu özellik gelse", "reklamdan kurtulabilir miyiz?"
+KATEGORİLER:
+- olumlu: Kullanıcı memnun, övüyor, teşekkür ediyor, tavsiye ediyor.
+- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, kızgın, hayal kırıklığı var.
+- istek_gorus: Tarafsız öneri, soru, beklenti. Olumlu da olumsuz da değil.
 
-Önemli kurallar:
-1. Yorumun SON cümlesi / son edit bölümü en belirleyicidir.
-2. "Teşekkürler ama problem devam ediyor" → olumsuz
-3. "Sorun vardı ama çözdüler, harika" → olumlu
-4. "Şu özellik gelse iyi olur" → istek_gorus
-5. Kısa ama net şikayetler (örn: "girilmiyor", "yaramaz", "kapanıyor") → olumsuz
-6. Kısa ama net övgüler (örn: "iyi gidiyor", "güzel", "süper") → olumlu
+KARAR KURALLARI (önem sırasına göre):
+1. Son cümle/edit baskındır. Başta şikayet, sonda çözüm varsa → olumlu.
+2. Başta iltifat, sonda şikayet varsa → olumsuz.
+3. Ironi/alaycılık: "Helal olsun uygulama çöküyor yine" → olumsuz.
+4. Karışık ama net şikayet sonuçlanıyorsa → olumsuz.
+5. Karışık ama net memnuniyet sonuçlanıyorsa → olumlu.
 
-SADECE JSON döndür:
-{{"olumlu": puan, "olumsuz": puan, "istek_gorus": puan}}
-Toplam 1.0 olmalı.
+SOMUT ÖRNEKLER (few-shot):
+"harika uygulama teşekkürler" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"çok güzel bir uygulama" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"süper, 5 yıldız hak ediyor" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
+"uygulama açılmıyor, düzeltin" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"donuyor ve kapanıyor, berbat" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"giremiyor musun sen de? ben de yaşıyorum bu sorunu" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
+"yaramaz bu uygulama" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"güncelleme sonrası düzeldi sağolun" → {{"olumlu":0.88,"olumsuz":0.07,"istek_gorus":0.05}}
+"sorun vardı ama hallettiniz teşekkürler" → {{"olumlu":0.85,"olumsuz":0.10,"istek_gorus":0.05}}
+"iyiydi ama son güncellemeden sonra bozuldu" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
+"teşekkürler ama hâlâ açılmıyor" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
+"şu özelliği ekleseniz çok iyi olur" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
+"reklam çok fazla, azaltabilir misiniz?" → {{"olumlu":0.05,"olumsuz":0.15,"istek_gorus":0.80}}
+"neden bu özellik yok ki?" → {{"olumlu":0.05,"olumsuz":0.10,"istek_gorus":0.85}}
+"helal olsun, yine çöktü" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
+"işe yarıyor" → {{"olumlu":0.80,"olumsuz":0.10,"istek_gorus":0.10}}
+"fena değil" → {{"olumlu":0.65,"olumsuz":0.15,"istek_gorus":0.20}}
+
+ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
+{{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
 
 Yorum: "{text}"
 """
         response = model.generate_content(prompt)
         content = response.text
-        match = re.search(r'\{.*\}', content, re.DOTALL)
+        match = re.search(r'\{.*?\}', content, re.DOTALL)
         if match:
             data = json.loads(match.group())
             p = float(data.get("olumlu", 0))
@@ -860,12 +878,12 @@ Yorum: "{text}"
     except Exception as e:
         err_str = str(e)
         if "429" in err_str or "quota" in err_str.lower():
-            # Track count silently, let the caller display the message
             st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
         else:
             st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
         return None
     return None
+
 
 
 
