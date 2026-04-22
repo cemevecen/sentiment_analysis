@@ -1723,49 +1723,36 @@ with tab4:
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with res_cols[ci]:
                 is_best = data["score"] == best_score
-                border_c = "#818CF8" if is_best else "#E2E8F0"
-                badge = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else ""
+                border_col = "#818CF8" if is_best else "#E2E8F0"
+                score_col  = "#818CF8" if is_best else "#475569"
+                badge_html = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else ""
 
-                st.markdown(f"""
-                <div style="background:#FFFFFF;border:2px solid {border_c};border-radius:14px;padding:16px;text-align:center;">
-                    {badge}
-                    <div style="font-size:0.85rem;font-weight:700;color:#1E293B;margin-bottom:12px;line-height:1.3;">{app_nm}</div>
-                    <div style="font-size:2.2rem;font-weight:800;color:{'#818CF8' if is_best else '#475569'};line-height:1;">{data['score']}</div>
-                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;margin-bottom:14px;">/100 skor</div>
-                    <div style="display:flex;flex-direction:column;gap:6px;text-align:left;">
-                        <div>
-                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-                                <span style="color:#10b981;font-weight:600;">Olumlu</span>
-                                <span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span>
-                            </div>
-                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-                                <div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-                                <span style="color:#f43f5e;font-weight:600;">Olumsuz</span>
-                                <span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span>
-                            </div>
-                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-                                <div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-                                <span style="color:#818cf8;font-weight:600;">Görüş</span>
-                                <span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span>
-                            </div>
-                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-                                <div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:0.7rem;color:#94A3B8;">
-                        {data['total']} yorum analiz edildi
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                card = f"""<div style="background:#FFFFFF;border:2px solid {border_col};border-radius:14px;padding:16px;text-align:center;">
+{badge_html}
+<div style="font-size:0.85rem;font-weight:700;color:#1E293B;margin-bottom:12px;line-height:1.3;">{app_nm}</div>
+<div style="font-size:2.2rem;font-weight:800;color:{score_col};line-height:1;">{data['score']}</div>
+<div style="font-size:0.65rem;color:#94A3B8;font-weight:600;margin-bottom:14px;">/100 skor</div>
+<div style="display:flex;flex-direction:column;gap:6px;text-align:left;">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#10b981;font-weight:600;">Olumlu</span><span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div></div></div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#f43f5e;font-weight:600;">Olumsuz</span><span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div></div></div>
+<div>
+<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+<span style="color:#818cf8;font-weight:600;">Görüş</span><span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span></div>
+<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+<div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div></div></div>
+</div>
+<div style="margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:0.7rem;color:#94A3B8;">{data['total']} yorum analiz edildi</div>
+</div>"""
+
+                st.markdown(card, unsafe_allow_html=True)
 
         # Radar / özet bar chart
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
