@@ -211,68 +211,72 @@ def get_app_store_reviews(app_id: str, country: str = 'tr', _progress_callback: 
     except Exception as e:
         return reviews
 
-def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
-    """Cached Google Play fetcher with timeframe-based progress sync"""
+def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
+    """Fetcher that splits requests by score to bypass the 3k limit per sort"""
     from google_play_scraper import Sort, reviews as play_reviews
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
-    total_requested_secs = (now - threshold_date).total_seconds()
     
-    # Limits removed to allow actual data counts. 
-    # Safety limit set to 200k (far beyond typical 1-year Turkish review counts) to prevent memory crashes.
+    # Safety limit (200k) to prevent memory crashes, but normally we go until threshold
     fetch_limit = 200000 
+    all_fetched_map = {} # Using map for easy deduplication
+    
+    scores = [1, 2, 3, 4, 5]
+    total_scores = len(scores)
     
     try:
-        fetched = []
-        continuation_token = None
-        max_requests = (fetch_limit // 199) + 1
-        
-        for i in range(max_requests):
-            result, continuation_token = play_reviews(
-                app_id,
-                lang='tr', country='tr',
-                sort=Sort.NEWEST, count=199,
-                continuation_token=continuation_token
-            )
-            if not result: break
+        for s_idx, score in enumerate(scores):
+            continuation_token = None
+            # For each score, we can theoretically pull up to 3000+ per Google's internal limit
+            # max_requests_per_score set high enough to reach the wall or the date threshold
+            max_requests_per_score = 50 
             
-            batch_dates = []
-            for r in result:
-                r_at = r.get('at')
-                if r_at and r_at >= threshold_date:
-                    content = str(r.get('content', ''))
-                    if is_valid_comment(content):
-                        fetched.append({"text": content, "date": r_at, "rating": str(r.get('score', ''))})
-                if r_at: batch_dates.append(r_at)
-            
-            if _progress_callback and batch_dates:
-                # Sync progress bar with both timeline and count coverage
-                min_batch_dt = min(batch_dates)
-                elapsed_secs = (now - min_batch_dt).total_seconds()
-                date_prog = min(elapsed_secs / total_requested_secs, 1.0)
+            for i in range(max_requests_per_score):
+                result, continuation_token = play_reviews(
+                    app_id,
+                    lang='tr', country='tr',
+                    sort=Sort.NEWEST, count=199,
+                    score=score,
+                    continuation_token=continuation_token
+                )
+                if not result: break
                 
-                # Count progress: how many we've fetched vs the upper limit for this range
-                count_prog = min(float(len(fetched)) / float(fetch_limit), 1.0)
+                batch_dates = []
+                for r in result:
+                    r_at = cast(datetime, r.get('at'))
+                    if r_at and r_at >= threshold_date:
+                        content = str(r.get('content', ''))
+                        # For scraper, we skip metadata/length-60-month-check which are for copy-pastes
+                        if content and len(content.strip()) >= 2:
+                            r_id = r.get('reviewId', content) # fallback to content as key
+                            all_fetched_map[r_id] = {"text": content, "date": r_at, "rating": str(score)}
+                    if r_at: batch_dates.append(r_at)
                 
-                # Iteration progress: how many batches we've done vs max planned
-                iter_prog = float(i + 1) / float(max_requests)
-                
-                # Use whichever is most advanced for a steadier feel
-                prog = max(date_prog, count_prog, iter_prog)
-                _progress_callback(min(prog, 0.99)) # Keep a tiny bit for the final jump
+                if _progress_callback:
+                    # Progress calculation: current score progress + overall progress
+                    # Each score accounts for 1/5th of the total task
+                    base_prog = s_idx / total_scores
+                    score_prog = (i + 1) / max_requests_per_score
+                    combined_p = base_prog + (score_prog / total_scores)
+                    _progress_callback(min(combined_p, 0.99))
 
-            if batch_dates and min(batch_dates) < threshold_date:
+                if batch_dates and min(batch_dates) < threshold_date:
+                    break
+                if not continuation_token:
+                    break
+                if len(all_fetched_map) >= fetch_limit:
+                    break
+            
+            if len(all_fetched_map) >= fetch_limit:
                 break
-            if not continuation_token:
-                break
-            if len(fetched) >= fetch_limit:
-                break
-                
+
         if _progress_callback: 
             _progress_callback(1.0)
-        return fetched
+            
+        final_list = list(all_fetched_map.values())
+        return final_list
     except:
-        return []
+        return list(all_fetched_map.values())
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
