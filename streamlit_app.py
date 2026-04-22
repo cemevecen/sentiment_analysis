@@ -1942,7 +1942,14 @@ if "bulk_results" in st.session_state:
         encoded_text = urllib.parse.quote(summary_text)
 
         # --- DIGITAL REPORT CARD (SVG 3D) ---
-        card_html = textwrap.dedent(f"""
+        def clean_html(h):
+            return "\n".join([line.strip() for line in h.split('\n') if line.strip()])
+        
+        # Sanitize summary for card display (remove formatting that might break HTML)
+        display_summary = st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')
+        display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
+
+        card_html = clean_html(f"""
             <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
                 <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
                     <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
@@ -1969,7 +1976,6 @@ if "bulk_results" in st.session_state:
 
                 <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
                     <div style="width: 140px; height: 140px; position: relative;">
-                        <!-- Depth simulate (More reliable for capture) -->
                         <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
                         <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
                             <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
@@ -1989,14 +1995,14 @@ if "bulk_results" in st.session_state:
                         <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
                     </div>
                     <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
-                        {st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')}
+                        {display_summary}
                     </div>
                 </div>
                 <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
                     📊 AI SENTIMENT INTELLIGENCE
                 </div>
             </div>
-        """).strip()
+        """)
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
@@ -2006,7 +2012,7 @@ if "bulk_results" in st.session_state:
         # --- PREMIUM SHARE TRAY & NOTIFICATION ---
         summary_text_js = summary_text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         
-        share_html = textwrap.dedent(f"""
+        share_html = clean_html(f"""
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <style>
                 .share-tray {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; }}
@@ -2114,7 +2120,7 @@ if "bulk_results" in st.session_state:
                     }});
                 }};
             </script>
-        """).strip()
+        """)
         st.markdown(share_html, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         import streamlit.components.v1 as components
