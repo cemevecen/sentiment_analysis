@@ -1723,9 +1723,9 @@ with tab4:
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with res_cols[ci]:
                 is_best = data["score"] == best_score
-                border_col = "#818CF8" if is_best else "#E2E8F0"
-                score_col  = "#818CF8" if is_best else "#475569"
-                badge_html = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else ""
+                border_col = "#E2E8F0"
+                score_col  = "#1E293B"
+                badge_html = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else '<div style="height:20px;margin-bottom:6px;"></div>'
 
                 card = f"""<div style="background:#FFFFFF;border:2px solid {border_col};border-radius:14px;padding:16px;text-align:center;">
 {badge_html}
@@ -1757,28 +1757,46 @@ with tab4:
         # Radar / özet bar chart
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
         import plotly.graph_objects as go_cmp
+        app_colors = ["#818CF8", "#F4A261", "#38BDF8"]
         fig_cmp = go_cmp.Figure()
-        colors_cmp = ["#818CF8", "#10b981", "#F4A261"]
+
         for idx, (app_nm, data) in enumerate(results_c.items()):
+            c = app_colors[idx % len(app_colors)]
             fig_cmp.add_trace(go_cmp.Bar(
                 name=app_nm,
-                x=["Olumlu %", "Olumsuz %", "Görüş %", "Skor"],
+                x=["Olumlu", "Olumsuz", "Görüş", "Skor"],
                 y=[data["pos_pct"], data["neg_pct"], data["neu_pct"], data["score"]],
-                marker_color=colors_cmp[idx % len(colors_cmp)],
-                text=[f"{data['pos_pct']}%", f"{data['neg_pct']}%", f"{data['neu_pct']}%", str(data['score'])],
-                textposition="outside"
+                marker_color=[
+                    "#10b981",   # Olumlu → her zaman yeşil
+                    "#f43f5e",   # Olumsuz → her zaman kırmızı
+                    "#818cf8",   # Görüş → her zaman mor
+                    c,           # Skor → uygulamaya özgü renk
+                ],
+                text=[f"{data['pos_pct']}%", f"{data['neg_pct']}%",
+                      f"{data['neu_pct']}%", str(data['score'])],
+                textposition="outside",
+                textfont=dict(
+                    family="Poppins, sans-serif",
+                    size=12,
+                    color="#1E293B"
+                ),
             ))
 
         fig_cmp.update_layout(
             barmode="group",
-            height=340,
-            margin={"t": 30, "b": 20, "l": 10, "r": 10},
+            height=360,
+            margin={"t": 40, "b": 20, "l": 10, "r": 10},
             paper_bgcolor="#F0F9FF",
             plot_bgcolor="#F0F9FF",
-            font={"color": "#000000", "family": "Poppins, sans-serif"},
-            legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "center", "x": 0.5},
-            yaxis={"range": [0, 115]},
-            bargap=0.2,
+            font=dict(family="Poppins, sans-serif", color="#1E293B", size=12),
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02,
+                xanchor="center", x=0.5,
+                font=dict(family="Poppins, sans-serif", size=12, color="#1E293B")
+            ),
+            yaxis=dict(range=[0, 115], tickfont=dict(color="#1E293B", size=11)),
+            xaxis=dict(tickfont=dict(color="#1E293B", size=12)),
+            bargap=0.25,
             bargroupgap=0.05
         )
         st.plotly_chart(fig_cmp, use_container_width=True, config={"displayModeBar": False})
