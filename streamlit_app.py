@@ -552,6 +552,56 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 1px;
     }
+
+    /* Tab Styling - Chips/Pill Design */
+    div[data-testid="stTabList"] {
+        border-bottom: none !important;
+        gap: 12px !important;
+        margin-bottom: 10px !important;
+    }
+    button[data-testid="stTab"] {
+        background-color: #FFFFFF !important;
+        color: #1E293B !important;
+        border-radius: 50px !important;
+        padding: 8px 20px !important;
+        border: 1px solid #E2E8F0 !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        height: auto !important;
+    }
+    button[data-testid="stTab"]:hover {
+        background-color: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
+    }
+    button[data-testid="stTab"][aria-selected="true"] {
+        background-color: #6366F1 !important;
+        color: white !important;
+        border-color: #6366F1 !important;
+        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2) !important;
+        font-weight: 600 !important;
+    }
+    /* Hide the default Streamlit selector bar */
+    div[data-testid="stTabList"] > div:last-child {
+        display: none !important;
+    }
+
+    /* Idea Chips Styling */
+    .idea-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 15px;
+    }
+    .idea-chip {
+        background-color: #F0F9FF;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: default;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1335,6 +1385,21 @@ if "bulk_results" in st.session_state:
             st.error(f"Dikkat çeken **Olumsuz** bir eğilim var. ({m_olumsuz} yorum) Analiz edilen veri setinde kullanıcıların çok ciddi hayal kırıklıkları ve sistemsel şikayetleri olduğu açıkça görülmektedir. Özellikle kilitlenme, yavaşlık veya beklenen özelliklerin çalışmaması gibi kronikleşmiş teknik problemler kullanıcı deneyimini ciddi oranda baltalıyor. İade sorunları, müşteri hizmetlerinin ulaşılamaz olması veya vaat edilenle karşılaşılan hizmetin uyuşmaması gibi temel şikayetler marka imajına an itibariyle zarar veriyor. Kullanıcılar uygulamanın temel fonksiyonlarını bile kullanırken pürüzlerle karşılaştıkları için platformu terk etme veya rakiplere yönelme potansiyeline sahipler. Acil ve agresif bir hata ayıklama (bug-fixing) sürecine gidilmeli, müşteri destek hattının kapasitesi artırılmalı ve kullanıcılardan gelen yapısal eleştiriler bir an önce yazılım geliştirme döngüsüne entegre edilmelidir.")
         else:
             st.info(f"Kullanıcılar yoğun şekilde **İstek ve Görüş** paylaşıyor. ({m_istek} yorum) Kullanıcı tabanı şu anda markaya veya uygulamaya karşı keskin bir öfke yahut aşırı bir coşku beslemek yerine, daha akılcı ve beklenti odaklı bir tutum içinde. Yorumların geneli, sistemin temel ihtiyaçları karşıladığını ancak modern standartlara veya rakiplere kıyasla eksik bazı ufak tefek özellikler veya yaşam kalitesi (QoL) güncellemeleri barındırdığına işaret ediyor. Kullanıcılar aslında uygulamanın potansiyelinin farkında ve bu potansiyeli maksimize edecek yenilikler (örneğin karanlık mod, daha geniş dil desteği, pratik menü tasarımları vb.) görmek istiyorlar. Bu grup sadık bir kitleye dönüşmeye oldukça yakın; geliştirici ekip eğer bu geri bildirimleri dikkate alıp istenen özellikleri sisteme entegre ederse, tarafsız duran bu kitle çok hızlı bir şekilde savunucu ve sadık kullanıcılara (olumlu) evrilecektir.")
+        
+        st.markdown("""
+        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+            <p style="font-size: 0.9rem; font-weight: 600; color: #64748b; margin-bottom: 10px;">Gelecek Özellik Fikirleri (Roadmap)</p>
+            <div class="idea-container">
+                <span class="idea-chip">Neden Analizi</span>
+                <span class="idea-chip">Rakip Kıyaslama</span>
+                <span class="idea-chip">AI Cevap Asistanı</span>
+                <span class="idea-chip">Kelime Bulutu</span>
+                <span class="idea-chip">Hata Erken Uyarı</span>
+                <span class="idea-chip">Puan Simülatörü</span>
+                <span class="idea-chip">Çoklu Mağaza</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
     if "Puan" in df.columns and df["Puan"].notnull().any():
