@@ -48,9 +48,14 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
     
-    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, span, div {
+    p, label, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stButton, .stTextInput, .stTextArea {
         font-family: 'Poppins', sans-serif !important;
         color: #1E293B !important;
+    }
+    
+    /* Ensure Icons stay as icons, not text names */
+    [data-testid="stIcon"], [class*="stIcon"], svg {
+        font-family: inherit !important;
     }
 
     /* Fix Selectbox & Inputs to WHITE with DARK TEXT */
@@ -74,15 +79,29 @@ st.markdown("""
         border-color: #FFE4D6 !important;
     }
     
-    /* Ensure no dark boxes in Expanders */
-    [data-testid="stExpander"] {
+    /* Ensure no dark boxes in Expanders - Aggressive Fix */
+    [data-testid="stExpander"], 
+    [data-testid="stExpander"] summary, 
+    [data-testid="stExpander"] section {
         background-color: #FFFFFF !important;
-        border: 1px solid #FFE4D6 !important;
-        border-radius: 12px !important;
+        background: #FFFFFF !important;
+        border-color: #FFE4D6 !important;
     }
     
     [data-testid="stExpander"] summary {
+        border-radius: 12px !important;
+        padding: 5px 15px !important;
+    }
+    
+    [data-testid="stExpander"] summary * {
         font-family: 'Poppins', sans-serif !important;
+        color: #1E293B !important;
+        background-color: transparent !important;
+    }
+
+    /* Target Streamlit's internal header containers for expanders */
+    .st-emotion-cache-p5mtransition, .st-emotion-cache-1vt4y6f {
+        background-color: #FFFFFF !important;
         color: #1E293B !important;
     }
     
