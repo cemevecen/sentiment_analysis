@@ -1132,8 +1132,42 @@ tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin 
 
 with tab1:
     with st.container(border=True):
-        store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.instagram.android veya 1500198745", disabled=False)
+        # Geçmiş başlatma
+        if "url_history" not in st.session_state:
+            st.session_state.url_history = []
+
+        # Geçmişten seçim yapıldıysa input'a yükle
+        if st.session_state.get("_url_pick"):
+            st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
+
+        store_url = st.text_input(
+            "Uygulama linki veya ID girin:",
+            placeholder="Örn: com.instagram.android veya 1500198745",
+            key="_store_url_input"
+        )
         st.session_state.app_url = store_url
+
+        # Geçmiş butonları
+        if st.session_state.url_history:
+            st.markdown(
+                '<div style="font-size:0.75rem;color:#94A3B8;font-weight:600;'
+                'text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 4px 0;">'
+                'Son Aramalar</div>',
+                unsafe_allow_html=True
+            )
+            cols_h = st.columns(len(st.session_state.url_history[:5]))
+            for ci, hist_url in enumerate(st.session_state.url_history[:5]):
+                with cols_h[ci]:
+                    label = hist_url if len(hist_url) <= 18 else hist_url[:16] + "…"
+                    if st.button(
+                        label,
+                        key=f"hist_{ci}",
+                        help=hist_url,
+                        use_container_width=True
+                    ):
+                        st.session_state["_url_pick"] = hist_url
+                        st.rerun()
+
         time_range = st.selectbox(
             "Tarih Aralığı Seçin:",
             options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl", "Son 2 Yıl", "Son 3 Yıl"],
@@ -1144,6 +1178,7 @@ with tab1:
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
         days_limit = range_map[time_range]
         st.markdown('<div class="no-print" style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+
 
 
     if store_url.strip():
@@ -1309,6 +1344,12 @@ with tab1:
                             st.session_state.comments_to_analyze = fetched_comments
                             if len(fetched_comments) > AI_LIMIT:
                                 st.info(f"Hızlı Analiz modunda tüm **{len(fetched_comments)}** yorum analiz edilecek.")
+                        
+                        # Başarılı URL'yi geçmişe ekle
+                        current_url = store_url.strip()
+                        if current_url and current_url not in st.session_state.url_history:
+                            st.session_state.url_history.insert(0, current_url)
+                            st.session_state.url_history = st.session_state.url_history[:5]
                         
                         st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
