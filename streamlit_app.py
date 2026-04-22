@@ -1190,6 +1190,14 @@ with tab1:
         )
         st.session_state.app_url = store_url
 
+        # Yenile butonu
+        col_refresh = st.columns([4, 1])
+        with col_refresh[1]:
+            if st.button("🔄 Yenile", key="refresh_btn", use_container_width=True):
+                st.session_state.pop("last_fetch_key", None)
+                st.session_state.pop("all_fetched_pool", None)
+                st.rerun()
+
         # Geçmiş chip'leri — components.html ile render (onclick çalışır)
         if st.session_state.url_history:
             chips_data = [
@@ -1316,7 +1324,9 @@ with tab1:
                 app_id = u
 
         
-        fetch_key = f"{platform}_{app_id}_{time_range}_{country}"
+        # Bugünün tarihi + saati (saatlik cache) fetch_key'e ekleniyor
+        _now_hour = datetime.now().strftime("%Y%m%d_%H")
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_hour}"
         
         if not platform or not app_id:
             if store_url.strip():
