@@ -2367,6 +2367,15 @@ if active_tab == "Mağaza Linki":
             color: #1F2937 !important;
             border: 2px solid #E5E7EB !important;
         }
+        
+        /* Mobile: platform buttons responsive */
+        @media (max-width: 768px) {
+            [data-testid="stButton"] > button[key*="platform_"] {
+                height: 36px !important;
+                font-size: 13px !important;
+                padding: 4px 12px !important;
+            }
+        }
         </style>
         """, unsafe_allow_html=True)
         
@@ -2532,6 +2541,18 @@ if active_tab == "Mağaza Linki":
                         background-color: #6366F1 !important;
                         transition: all 0.2s ease !important;
                     }
+                    
+                    /* Mobile: search result columns responsive */
+                    @media (max-width: 768px) {
+                        /* Ensure search result rows don't overflow */
+                        [data-testid="stHorizontalBlock"]:has([key*="select_app"]) {
+                            gap: 4px !important;
+                        }
+                        /* Make app name text smaller on mobile */
+                        [data-testid="stHorizontalBlock"]:has([key*="select_app"]) [data-testid="stMarkdown"] {
+                            font-size: 12px !important;
+                        }
+                    }
                     </style>
                     """, unsafe_allow_html=True)
                     
@@ -2540,23 +2561,23 @@ if active_tab == "Mağaza Linki":
                         app_id = result.get('appId', '')
                         app_icon = result.get('icon', '').strip() if result.get('icon') else ''
                         
-                        # Create a row for each search result - compact layout
-                        col_icon, col_info, col_btn = st.columns([0.08, 0.75, 0.17])
+                        # Create a row for each search result - compact layout (mobile-friendly ratios)
+                        col_icon, col_info, col_btn = st.columns([0.12, 0.65, 0.23], gap="small")
                         
                         # Display icon as CIRCLE
                         with col_icon:
                             if app_icon and app_icon.startswith('http'):
-                                # Valid icon URL - circular
-                                icon_html = f'<div style="width: 38px; height: 38px;"><img src="{app_icon}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;" /></div>'
+                                # Valid icon URL - circular (responsive size)
+                                icon_html = f'<div style="width: 38px; height: 38px; min-width: 32px; flex-shrink: 0;"><img src="{app_icon}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;" /></div>'
                             else:
-                                # No icon - circular emoji box
-                                icon_html = '<div style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; font-size: 18px; color: white; font-weight: bold;">📱</div>'
+                                # No icon - circular emoji box (responsive size)
+                                icon_html = '<div style="width: 38px; height: 38px; min-width: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; font-size: 18px; color: white; font-weight: bold;">📱</div>'
                             st.markdown(icon_html, unsafe_allow_html=True)
                         
-                        # Display app name and ID - compact
+                        # Display app name and ID - compact (overflow-safe for mobile)
                         with col_info:
-                            st.markdown(f'<div style="font-weight: 700; color: #1F2937; font-size: 13px; font-family: \'Poppins\', sans-serif; margin-bottom: 1px; line-height: 1.2; margin-top: 2px;">{app_name}</div>', unsafe_allow_html=True)
-                            st.markdown(f'<div style="font-size: 10px; color: #9CA3AF; font-family: \'Poppins\', sans-serif; margin-bottom: 0px; line-height: 1;">{app_id}</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="font-weight: 700; color: #1F2937; font-size: 13px; font-family: \'Poppins\', sans-serif; margin-bottom: 1px; line-height: 1.2; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{app_name}</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="font-size: 10px; color: #9CA3AF; font-family: \'Poppins\', sans-serif; margin-bottom: 0px; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{app_id}</div>', unsafe_allow_html=True)
                         
                         # Display select button as chip
                         with col_btn:
