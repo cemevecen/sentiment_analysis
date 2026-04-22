@@ -152,19 +152,36 @@ st.markdown("""
         transform: scale(1.02);
     }
     
-    /* File Uploader Button - Restored */
-    [data-testid="stFileUploader"] button {
+    /* File Uploader Button - Restored & Refined */
+    [data-testid="stFileUploader"] button[kind="secondary"] {
         background-color: #FFB067 !important;
         color: white !important;
         border: none !important;
         font-size: 0px !important;
         border-radius: 8px !important;
     }
-    [data-testid="stFileUploader"] button::after {
+    [data-testid="stFileUploader"] button[kind="secondary"]::after {
         content: "Dosya Yukle";
         font-size: 14px !important;
         font-weight: 600;
         visibility: visible;
+    }
+    
+    /* Target the 'Clear' buttons in the file list */
+    [data-testid="stFileUploaderDeleteBtn"] {
+        width: auto !important;
+        padding: 0 10px !important;
+        background-color: #FFF5F5 !important;
+        border: 1px solid #F87171 !important;
+        border-radius: 6px !important;
+        margin-left: 10px !important;
+    }
+    [data-testid="stFileUploaderDeleteBtn"]::after {
+        content: "Dosyayi Cikar";
+        font-size: 11px !important;
+        margin-left: 5px !important;
+        color: #B91C1C !important;
+        font-weight: 600 !important;
     }
     
     /* Custom divider */
@@ -556,64 +573,55 @@ if "bulk_results" in st.session_state:
     counts = df["Baskın Duygu"].value_counts()
     
     st.markdown("""
-    /* Results WHITE Swipe */
-    .neon-pos { border: 2px solid #34D399; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
-    .neon-neg { border: 2px solid #F87171; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
-    .neon-neu { border: 2px solid #60A5FA; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
-    .normal-card { border: 1px solid #E2E8F0; padding: 12px; border-radius: 12px; margin: 8px 0; background: #FFFFFF; }
-    
-    .metric-container {
-        display: flex;
-        justify-content: space-around;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-    }
-    .metric-card {
-        background: #FFFFFF !important;
-        border: 2px solid #FFE4D6 !important;
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
-        text-align: center;
-        flex: 1;
-        min-width: 150px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .metric-value {
-        font-size: 2.5em;
-        font-weight: bold;
-        line-height: 1.2;
-    }
-    .metric-label {
-        font-size: 0.9em;
-        color: #64748b;
-        margin-top: 0.3rem;
-    }
-    .glass-card {
-        background: #FFFFFF !important;
-        border: 2px solid #F1F5F9 !important;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        color: #1E293B !important;
-    }
-    
-    .sentiment-indicator {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.85em;
-        margin-right: 8px;
-        background-color: #FFFFFF !important; /* Fills must be white */
-    }
-    .sentiment-indicator.positive { border: 1px solid #10b981; color: #10b981; }
-    .sentiment-indicator.negative { border: 1px solid #f43f5e; color: #f43f5e; }
-    .sentiment-indicator.neutral { border: 1px solid #3b82f6; color: #3b82f6; }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+/* Results Card Styling */
+.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; }
+
+.metric-container {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.metric-card {
+    background: #FFFFFF !important;
+    border: 2px solid #FFE4D6 !important;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+    flex: 1;
+    min-width: 150px;
+}
+.metric-value { font-size: 2.5em; font-weight: bold; line-height: 1.2; }
+.metric-label { font-size: 0.9em; color: #64748b; margin-top: 0.3rem; }
+
+.glass-card {
+    background: #FFFFFF !important;
+    border: 2px solid #F1F5F9 !important;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 25px;
+    color: #1E293B !important;
+}
+
+.sentiment-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85em;
+    margin-right: 8px;
+}
+.sentiment-indicator.positive { border: 1px solid #10b981; color: #10b981; }
+.sentiment-indicator.negative { border: 1px solid #f43f5e; color: #f43f5e; }
+.sentiment-indicator.neutral { border: 1px solid #3b82f6; color: #3b82f6; }
+</style>
+""", unsafe_allow_html=True)
 
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### 📊 Analiz Özeti")
