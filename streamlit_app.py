@@ -1240,23 +1240,75 @@ st.markdown(f"""
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
 
+if 'bulk_results' not in st.session_state:
+    st.session_state.bulk_results = None
+
 if 'cmp_results' not in st.session_state:
     st.session_state.cmp_results = {}
 
+# --- TAB STATE MANAGEMENT ---
+# Initialize persistent results for each tab
+tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
+if 'tab_states' not in st.session_state:
+    st.session_state.tab_states = {
+        tab: {
+            "comments": [],
+            "results": None,
+            "pool": []
+        } for tab in tabs
+    }
+
+if '_last_tab' not in st.session_state:
+    st.session_state._last_tab = "Mağaza Linki"
+
 # --- TAB NAVIGATION ---
 def on_tab_change():
-    """Reset inputs and fetched data when switching tabs (unless analysis is active)."""
-    # Clear current fetching states
-    if "comments_to_analyze" in st.session_state:
-        st.session_state.comments_to_analyze = []
-    if "all_fetched_pool" in st.session_state:
-        st.session_state.all_fetched_pool = []
-    # Clear specific input keys to 'zero' the screen
+    """Manage state transitions when switching chips."""
+    new_tab = st.session_state.get("active_tab")
+    prev_tab = st.session_state.get("_last_tab")
+    
+    # 1. Save current global state into the previous tab's slot
+    if prev_tab and prev_tab in st.session_state.tab_states:
+        st.session_state.tab_states[prev_tab]["comments"] = st.session_state.get("comments_to_analyze", [])
+        st.session_state.tab_states[prev_tab]["results"] = st.session_state.get("bulk_results")
+        st.session_state.tab_states[prev_tab]["pool"] = st.session_state.get("all_fetched_pool", [])
+
+    # 2. Load the new tab's previously saved state into global pointers
+    # 'Sıfır ekran' rule: If no results exist for the new tab, keep it fresh (empty comments)
+    if new_tab and new_tab in st.session_state.tab_states:
+        tab_data = st.session_state.tab_states[new_tab]
+        if tab_data.get("results") is not None:
+            st.session_state.comments_to_analyze = tab_data["comments"]
+            st.session_state.bulk_results = tab_data["results"]
+            st.session_state.all_fetched_pool = tab_data["pool"]
+        else:
+            # No analysis done yet, show a clean screen
+            st.session_state.comments_to_analyze = []
+            st.session_state.bulk_results = None
+            st.session_state.all_fetched_pool = []
+
+    # 3. Clear ONLY input-specific keys
     st.session_state["_store_url_input"] = ""
     st.session_state["manual_text_input"] = ""
-    # Reset file uploader by changing its key (indirectly) or just trusting it clears
     if "last_files_key" in st.session_state:
         st.session_state.last_files_key = ""
+    
+    # 4. Exit comparison/global modes if switching to single analysis tabs
+    if new_tab != "Karşılaştır":
+        st.session_state["_cmp_mode"] = False
+        st.session_state.pop("_cmp_pending", None)
+    
+    st.session_state["_cost_warned"] = False # Reset for new context
+    st.session_state._last_tab = new_tab
+
+def clear_current_tab_data():
+    """Manual reset for the active tab's processed data."""
+    cur = st.session_state.get("active_tab")
+    if cur and cur in st.session_state.tab_states:
+        st.session_state.tab_states[cur] = {"comments": [], "results": None, "pool": []}
+    st.session_state.comments_to_analyze = []
+    st.session_state.bulk_results = None
+    st.session_state.all_fetched_pool = []
 
 tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
 active_tab = st.radio(
@@ -3164,6 +3216,13 @@ def run_bulk_analysis(data_to_process, is_append=False):
             progress_bar.progress(completed_count / total_items)
 
     st.session_state.bulk_results = sorted(bulk_results, key=lambda x: x["No"])
+    
+    # Mirror to tab_states immediately
+    cur_t = st.session_state.get("active_tab")
+    if cur_t and cur_t in st.session_state.tab_states:
+        st.session_state.tab_states[cur_t]["results"] = st.session_state.bulk_results
+        st.session_state.tab_states[cur_t]["comments"] = st.session_state.get("comments_to_analyze", [])
+
     status_text.success("Analiz Başarıyla Tamamlandı!")
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
