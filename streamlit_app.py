@@ -823,5 +823,5 @@ elif not is_bulk and "single_result" in st.session_state:
 
 # Footer
 st.divider()
-st.caption("Geliştiren: Cem Evecen | Streamlit Cloud Deployment Ready")
+st.caption("Geliştiren: Cem Evecen")
 
