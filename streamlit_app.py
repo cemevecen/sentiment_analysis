@@ -299,7 +299,7 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
                 if not entries: break
                 if isinstance(entries, dict): entries = [entries]
                 
-                found_old = False
+                found_old = 0
                 for entry in entries:
                     content = entry.get('content', {}).get('label', '')
                     if not content or len(content.strip()) < 2: continue
@@ -315,9 +315,9 @@ def get_app_store_reviews(app_id: str, _progress_callback: Any = None, _days_lim
                         rating = str(entry.get('im:rating', {}).get('label', '0'))
                         country_reviews.append({"id": r_id, "text": content, "date": r_date, "rating": rating})
                     else:
-                        found_old = True
+                        found_old += 1
                 
-                if found_old: break
+                if found_old >= 5: break  # 5 eski yorum görünce dur
             except: break
         return country_reviews
 
@@ -380,6 +380,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     def fetch_channel(sort_type, score, lang, country):
         channel_data = []
         token = None
+        old_streak = 0  # arka arkaya kaç eski yorum geldi
         for _ in range(30):
             try:
                 result, token = play_reviews(
@@ -389,7 +390,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                     continuation_token=token
                 )
                 if not result: break
-                out_of_range = False
+                page_has_new = False
                 for r in result:
                     r_at_raw = r.get('at')
                     if r_at_raw:
@@ -406,18 +407,26 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                                     "rating": str(score),
                                     "lang": lang
                                 })
+                            page_has_new = True
+                            old_streak = 0
                         else:
-                            if sort_type == Sort.NEWEST: out_of_range = True
-                if out_of_range or not token: break
+                            if sort_type == Sort.NEWEST:
+                                old_streak += 1
+                if sort_type == Sort.NEWEST and not page_has_new:
+                    old_streak += 1
+                # 3 sayfa üst üste eski gelirse dur
+                if sort_type == Sort.NEWEST and old_streak >= 3:
+                    break
+                if not token: break
             except: break
         return channel_data
 
     # ── Filtresiz hızlı çekim (en taze yorumlar için) ──────────────
     def fetch_unfiltered(lang, country):
-        """filter_score_with olmadan çeker — en güncel yorumlar burada"""
         fresh_data = []
         token = None
-        for _ in range(5):
+        old_streak = 0
+        for _ in range(20):
             try:
                 result, token = play_reviews(
                     app_id, lang=lang, country=country,
@@ -425,7 +434,7 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                     continuation_token=token
                 )
                 if not result: break
-                out_of_range = False
+                page_has_new = False
                 for r in result:
                     r_at_raw = r.get('at')
                     if r_at_raw:
@@ -443,9 +452,15 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                                     "rating": rating,
                                     "lang": lang
                                 })
+                            page_has_new = True
+                            old_streak = 0
                         else:
-                            out_of_range = True
-                if out_of_range or not token: break
+                            old_streak += 1
+                if not page_has_new:
+                    old_streak += 1
+                if old_streak >= 3:
+                    break
+                if not token: break
             except: break
         return fresh_data
 
