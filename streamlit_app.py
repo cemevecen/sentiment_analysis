@@ -486,6 +486,9 @@ st.markdown("""
         height: 50px !important;
         font-weight: 600 !important;
     }
+    .stDownloadButton > button * {
+        color: #FFFFFF !important;
+    }
     .stDownloadButton > button:hover {
         background-color: #81C784 !important;
         color: #FFFFFF !important;
@@ -1851,8 +1854,6 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
         action_cols = st.columns(2)
         
         with action_cols[0]:
-            # Space to align with the iframe iframe margin
-            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
             st.download_button(
                 label="Sonuçları Excel Olarak İndir", 
                 data=output.getvalue(), 
@@ -1864,12 +1865,13 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
         with action_cols[1]:
             import streamlit.components.v1 as components
             components.html("""
-                <div style='text-align: center; font-family: sans-serif;'>
-                    <button onclick='window.parent.print()' style='width: 100%; background: #F4A261; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem; height: 50px;'>
+                <style>body { margin: 0; padding: 0; overflow: hidden; }</style>
+                <div style='text-align: center; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 50px;'>
+                    <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem;'>
                         Raporu PDF Olarak İndir / Yazdır
                     </button>
                 </div>
-            """, height=70)
+            """, height=50)
 
                     
     except Exception as e:
