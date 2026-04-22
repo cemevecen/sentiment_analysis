@@ -41,12 +41,12 @@ else:
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Gabarito:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
     /* Global Overrides */
     .stApp {
         background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 100%);
-        font-family: 'Inter', sans-serif;
+        font-family: 'Poppins', sans-serif;
     }
     
     /* Header Card */
@@ -61,7 +61,7 @@ st.markdown("""
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
     .header-title {
-        font-family: 'Gabarito', sans-serif;
+        font-family: 'Poppins', sans-serif;
         font-size: 3.5rem;
         font-weight: 700;
         background: linear-gradient(to right, #a78bfa, #f472b6);
