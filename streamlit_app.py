@@ -188,14 +188,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- Analysis Configuration Section ---
-is_bulk = st.checkbox("Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın / Dosya yükleyin)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
-
-# Input Section
+# --- Input Section ---
 comments_to_analyze = []
 
-if is_bulk:
-    st.divider()
+tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
     tab1, tab2 = st.tabs(["✍️ Metin Girişi", "📁 Dosya Yükle (CSV/Excel)"])
     
     with tab1:
@@ -328,17 +324,12 @@ if is_bulk:
                     st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
             
             if all_comments:
-                comments_to_analyze = all_comments
-                st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
-else:
-    st.divider()
-    text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Güzel uygulama. Elinize sağlık!")
-    if text_input:
-        comments_to_analyze = [{"text": text_input.strip()}]
+    comments_to_analyze = all_comments
+    st.success(f"📋 Toplam **{len(comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 
-# ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
-if is_bulk and comments_to_analyze:
+# ── Analiz Yapılandırması ──────────────────────
+if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
     st.markdown("### ⚙️ Analiz Yapılandırması")
     
@@ -450,13 +441,12 @@ if st.button("Analizini Yap", use_container_width=True):
     if not comments_to_analyze:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
-        if is_bulk:
-            bulk_results = []
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            quota_info = st.empty()  # Single placeholder for quota warnings
-            st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
-            st.session_state['_quota_hits'] = 0
+        bulk_results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        quota_info = st.empty()  # Single placeholder for quota warnings
+        st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
+        st.session_state['_quota_hits'] = 0
             
             # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
             mode_idx = st.session_state.get("analysis_mode", 0)
@@ -541,20 +531,11 @@ if st.button("Analizini Yap", use_container_width=True):
             
             st.session_state.bulk_results = bulk_results
             status_text.success("✅ Analiz Başarıyla Tamamlandı!")
-            time_display.empty()
-            # Sayfadan ayrılma uyarısını kaldır
-            components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
-
-        else:
-            # Single analysis logic
-            with st.spinner("Analiz ediliyor..."):
-                entry = comments_to_analyze[0]
-                comment = entry["text"]
-                result = get_gemini_sentiment(comment) or heuristic_analysis(comment)
-                st.session_state.single_result = result
+        # Sayfadan ayrılma uyarısını kaldır
+        components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
 
 # --- Persistent Results Display ---
-if is_bulk and "bulk_results" in st.session_state:
+if "bulk_results" in st.session_state:
     df = pd.DataFrame(st.session_state.bulk_results)
     counts = df["Baskın Duygu"].value_counts()
     
