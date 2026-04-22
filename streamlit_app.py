@@ -1849,14 +1849,15 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                 else:
                     st.link_button(name, link, use_container_width=True)
                     
-        # Optional PDF/Print Trigger
-        st.markdown("""
-            <div style='text-align: center; margin-top: 20px;'>
-                <button onclick='window.print()' style='background: #000000; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: Poppins; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem;'>
-                    📄 Raporu PDF Olarak İndir / Yazdır
+        # Optional PDF/Print Trigger (Using Components for JS execution)
+        import streamlit.components.v1 as components
+        components.html("""
+            <div style='text-align: center; margin-top: 20px; font-family: sans-serif;'>
+                <button onclick='window.parent.print()' style='background: #000000; color: #FFFFFF; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem;'>
+                    Raporu PDF Olarak İndir / Yazdır
                 </button>
             </div>
-        """, unsafe_allow_html=True)
+        """, height=80)
                     
     except Exception as e:
         st.error(f"Paylaşım aracı hazırlanırken hata: {e}")
