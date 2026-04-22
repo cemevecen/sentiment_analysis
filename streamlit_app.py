@@ -818,13 +818,14 @@ if comments_to_analyze:
 
 
 
-def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
+def get_gemini_sentiment(text, model_name='gemini-2.0-flash-lite'):
     if not HAS_GEMINI:
         return None
     
-    # Fallback zinciri: seçilen model çalışmazsa gemini-2.0-flash'e geç
-    FALLBACK_MODEL = 'gemini-2.0-flash'
-    models_to_try = [model_name] if model_name == FALLBACK_MODEL else [model_name, FALLBACK_MODEL]
+    # Fallback zinciri: yeni API key'lerde eski modeller çalışmayabilir
+    # Sırayla dene: seçilen model → gemini-2.0-flash-lite → gemini-1.5-flash
+    fallback_chain = ['gemini-2.0-flash-lite', 'gemini-1.5-flash']
+    models_to_try = [model_name] + [m for m in fallback_chain if m != model_name]
     
     for current_model in models_to_try:
         try:
@@ -1040,9 +1041,9 @@ if st.button("Analizini Yap", use_container_width=True):
             DELAY_SECS = 1
             RPM_LIMIT = 30
         else:  # Yavaş
-            ANALYSIS_MODEL = 'gemini-2.5-pro-exp-03-25'
-            DELAY_SECS = 5
-            RPM_LIMIT = 10
+            ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
+            DELAY_SECS = 3
+            RPM_LIMIT = 15
 
 
 
