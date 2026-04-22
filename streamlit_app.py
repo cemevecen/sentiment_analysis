@@ -816,39 +816,6 @@ st.markdown("""
     [data-testid="stButton"] {
         width: 100% !important;
     }
-    /* Yeniden çek — input'un içine yerleşik, sağ taraf */
-    .refresh-wrap {
-        position: relative;
-        margin-bottom: 0;
-    }
-    .refresh-wrap [data-testid="stTextInput"] {
-        margin-bottom: 0 !important;
-    }
-    .refresh-wrap [data-testid="stButton"] {
-        position: absolute !important;
-        right: 8px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        width: auto !important;
-        z-index: 10 !important;
-    }
-    .refresh-wrap button[key="refresh_btn"] {
-        width: auto !important;
-        min-width: 0 !important;
-        height: 22px !important;
-        font-size: 0.62rem !important;
-        padding: 0 8px !important;
-        border-radius: 6px !important;
-        box-shadow: none !important;
-        background: #EEF2FF !important;
-        border: 1px solid #818CF8 !important;
-        color: #6366F1 !important;
-        font-weight: 600 !important;
-    }
-    .refresh-wrap button[key="refresh_btn"]:hover {
-        background: #E0E7FF !important;
-        transform: none !important;
-    }
 
     .stButton > button[kind="primary"] {
         background-color: #F4A261 !important; /* Pastel Orange */
@@ -1255,6 +1222,14 @@ with tab1:
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
+        # 3. Giriş alanı
+        store_url = st.text_input(
+            "Uygulama linki veya ID girin:",
+            placeholder="Örn: com.instagram.android veya 1500198745",
+            key="_store_url_input"
+        )
+        st.session_state.app_url = store_url
+
         # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
         if st.session_state.url_history:
             chips_data = [
@@ -1297,21 +1272,6 @@ with tab1:
                 }})();
                 </script>
             """, height=60, scrolling=False)
-
-        st.markdown('<div class="refresh-wrap">', unsafe_allow_html=True)
-        store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
-            key="_store_url_input"
-        )
-        st.session_state.app_url = store_url
-        if st.button("↺ yeniden çek", key="refresh_btn"):
-            st.session_state["_refresh_token"] = int(time.time())
-            for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                       "comments_to_analyze", "ai_summary", "last_results_len"]:
-                st.session_state.pop(_k, None)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
         # 6. Tarih aralığı
         time_range = st.selectbox(
@@ -1358,9 +1318,9 @@ with tab1:
                 app_id = u
 
         
-        # Bugünün tarihi + saati (saatlik cache) fetch_key'e ekleniyor
-        _refresh_token = st.session_state.get("_refresh_token", 0)
-        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_refresh_token}"
+        # Saatlik cache key
+        _now_hour = datetime.now().strftime("%Y%m%d_%H")
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_hour}"
         
         if not platform or not app_id:
             if store_url.strip():
