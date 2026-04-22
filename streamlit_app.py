@@ -1184,6 +1184,7 @@ comments_to_analyze = []
 tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
 
 with tab1:
+    st.session_state["_on_cmp_tab"] = False
     # Karşılaştırma modundan çıkış
     if st.session_state.get("_cmp_mode"):
         st.session_state.pop("_cmp_mode", None)
@@ -1466,6 +1467,7 @@ with tab1:
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
+    st.session_state["_on_cmp_tab"] = False
     uploaded_files = st.file_uploader("Dosya Yükle", type=["csv", "xlsx"], accept_multiple_files=True, label_visibility="collapsed")
     if uploaded_files:
         # Use a list of file info as a key to detect if files changed
@@ -1626,6 +1628,7 @@ with tab2:
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
+    st.session_state["_on_cmp_tab"] = False
     text_input = st.text_area(
         "Yorumları alt alta girin:",
         height=200,
@@ -1688,7 +1691,8 @@ with tab3:
 
 with tab4:
     st.markdown("### Uygulama Karşılaştırma")
-    st.markdown('<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">2 veya 3 uygulamayı yan yana karşılaştır. Her biri için ID veya link gir.</div>', unsafe_allow_html=True)
+    st.session_state["_on_cmp_tab"] = True
+    st.markdown('<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">2 uygulama için de ID veya link gir.</div>', unsafe_allow_html=True)
 
     if "cmp_results" not in st.session_state:
         st.session_state.cmp_results = {}
@@ -3099,7 +3103,11 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-_is_cmp = st.session_state.get("_cmp_mode", False) or bool(st.session_state.get("cmp_results"))
+_is_cmp = (
+    st.session_state.get("_cmp_mode", False)
+    or bool(st.session_state.get("cmp_results"))
+    or st.session_state.get("_on_cmp_tab", False)
+)
 _trigger = st.session_state.pop("_trigger_analysis", False)
 if (st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger) and not _is_cmp:
     # Hızlı Analiz seçiliyse all_fetched_pool'dan tüm yorumları al
