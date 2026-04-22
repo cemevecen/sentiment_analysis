@@ -4,6 +4,7 @@ import os
 import json
 import re
 import pandas as pd
+import plotly.express as px
 import io
 from dotenv import load_dotenv
 
@@ -157,13 +158,31 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 counts = df["Baskın Duygu"].value_counts()
                 
                 st.subheader("📊 Genel Dağılım Özeti")
-                sum_col1, sum_col2, sum_col3 = st.columns(3)
+                sum_col1, sum_col2 = st.columns([1, 1])
+                
                 with sum_col1:
+                    st.write("#### Sayısal Dağılım")
                     st.metric("Toplam Pozitif", counts.get("Pozitif", 0))
-                with sum_col2:
                     st.metric("Toplam Nötr", counts.get("Nötr", 0))
-                with sum_col3:
                     st.metric("Toplam Negatif", counts.get("Negatif", 0))
+                
+                with sum_col2:
+                    st.write("#### Görsel Dağılım")
+                    # Prepare data for pie chart
+                    pie_data = pd.DataFrame({
+                        "Duygu": counts.index,
+                        "Sayı": counts.values
+                    })
+                    fig = px.pie(
+                        pie_data, 
+                        values='Sayı', 
+                        names='Duygu',
+                        color='Duygu',
+                        color_discrete_map={'Pozitif':'#2ecc71', 'Negatif':'#e74c3c', 'Nötr':'#95a5a6'},
+                        hole=0.4
+                    )
+                    fig.update_layout(showlegend=True, margin=dict(t=0, b=0, l=0, r=0))
+                    st.plotly_chart(fig, use_container_width=True)
                 
                 st.divider()
                 
