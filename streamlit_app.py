@@ -1718,168 +1718,61 @@ with tab4:
             st.session_state.cmp_results = {}
             st.rerun()
 
-    # Sonuçları göster
     if st.session_state.cmp_results:
         results_c = st.session_state.cmp_results
         n_res = len(results_c)
-        res_cols = st.columns(n_res)
-        # Mağaza meta verilerini çek
-        cmp_meta = {}
-        for u in [cmp_inputs[i] for i in range(num_apps) if cmp_inputs[i]]:
-            try:
-                cu = u.lower().strip()
-                if "play.google.com" in u:
-                    m = re.search(r"id=([^&/]+)", u)
-                    aid = m.group(1) if m else u
-                    info = play_app(aid, lang='tr', country='tr')
-                    cmp_meta[info.get('title', aid)] = {
-                        "rating": round(float(info.get('score') or 0), 1),
-                        "ratings": info.get('ratings', 0),
-                        "installs": info.get('installs', '?'),
-                        "version": info.get('version', '?'),
-                    }
-                elif cu.startswith("id") and cu[2:].isdigit():
-                    aid = cu[2:]
-                    r2 = requests.get(f"https://itunes.apple.com/lookup?id={aid}&country=tr", timeout=5)
-                    if r2.status_code == 200:
-                        d2 = r2.json()
-                        if d2.get('results'):
-                            rc = d2['results'][0]
-                            nm = rc.get('trackCensoredName', aid)
-                            cmp_meta[nm] = {
-                                "rating": round(float(rc.get('averageUserRating') or 0), 1),
-                                "ratings": rc.get('userRatingCount', 0),
-                                "installs": "App Store",
-                                "version": rc.get('version', '?'),
-                            }
-                elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
-                    info = play_app(u, lang='tr', country='tr')
-                    cmp_meta[info.get('title', u)] = {
-                        "rating": round(float(info.get('score') or 0), 1),
-                        "ratings": info.get('ratings', 0),
-                        "installs": info.get('installs', '?'),
-                        "version": info.get('version', '?'),
-                    }
-            except: pass
 
-        # Meta göster
-        if cmp_meta:
-            meta_cols = st.columns(len(cmp_meta))
-            for mi, (nm, meta) in enumerate(cmp_meta.items()):
-                with meta_cols[mi]:
-                    stars = "★" * int(meta['rating']) + "☆" * (5 - int(meta['rating']))
-                    st.markdown(f"""
-                    <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;
-                                padding:10px 14px;margin-bottom:12px;">
-                        <div style="font-size:0.7rem;font-weight:700;color:#1E293B;
-                                    margin-bottom:8px;white-space:nowrap;overflow:hidden;
-                                    text-overflow:ellipsis;">{nm}</div>
-                        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:1.1rem;font-weight:700;color:#F59E0B;">{meta['rating']}</div>
-                                <div style="font-size:0.9rem;color:#F59E0B;letter-spacing:-1px;">{stars}</div>
-                                <div style="font-size:0.6rem;color:#94A3B8;">Puan</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.85rem;font-weight:700;color:#6366F1;">
-                                    {f"{meta['ratings']:,}" if isinstance(meta['ratings'], int) else meta['ratings']}
-                                </div>
-                                <div style="font-size:0.6rem;color:#94A3B8;">Değerlendirme</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.85rem;font-weight:700;color:#10b981;">{meta['installs']}</div>
-                                <div style="font-size:0.6rem;color:#94A3B8;">İndirme</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.85rem;font-weight:700;color:#64748B;">v{meta['version']}</div>
-                                <div style="font-size:0.6rem;color:#94A3B8;">Versiyon</div>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        best_score = max(v["score"] for v in results_c.values())
+        # Sadece yan yana duygu özeti
+        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+        sum_cols = st.columns(n_res)
+        app_colors_sum = ["#818CF8", "#F4A261", "#38BDF8"]
 
         for ci, (app_nm, data) in enumerate(results_c.items()):
-            with res_cols[ci]:
-                is_best = data["score"] == best_score
-                border_col = "#E2E8F0"
-                score_col  = "#1E293B"
-                badge_html = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else '<div style="height:20px;margin-bottom:6px;"></div>'
+            with sum_cols[ci]:
+                accent = app_colors_sum[ci % len(app_colors_sum)]
 
-                card = f"""<div style="background:#FFFFFF;border:2px solid {border_col};border-radius:14px;padding:16px;text-align:center;">
-{badge_html}
-<div style="font-size:0.85rem;font-weight:700;color:#1E293B;margin-bottom:12px;line-height:1.3;">{app_nm}</div>
-<div style="font-size:2.2rem;font-weight:800;color:{score_col};line-height:1;">{data['score']}</div>
-<div style="font-size:0.65rem;color:#94A3B8;font-weight:600;margin-bottom:14px;">/100 skor</div>
-<div style="display:flex;flex-direction:column;gap:6px;text-align:left;">
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#10b981;font-weight:600;">Olumlu</span><span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div></div></div>
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#f43f5e;font-weight:600;">Olumsuz</span><span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div></div></div>
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#818cf8;font-weight:600;">Görüş</span><span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div></div></div>
+                if data["pos_pct"] >= 55:
+                    tone_title = "Genel olarak olumlu"
+                    tone_body = f"Kullanıcıların %{data['pos_pct']}'i uygulamadan memnun. Olumlu yorumlar baskın seyrediyor."
+                    bg_col = "#F0FDF4"; bdr_col = "#BBF7D0"
+                elif data["neg_pct"] >= 50:
+                    tone_title = "Dikkat: olumsuz eğilim"
+                    tone_body = f"Yorumların %{data['neg_pct']}'i olumsuz. Teknik sorunlar öne çıkıyor."
+                    bg_col = "#FEF2F2"; bdr_col = "#FECDD3"
+                else:
+                    tone_title = "Dengeli kullanıcı deneyimi"
+                    tone_body = f"Olumlu (%{data['pos_pct']}) ve olumsuz (%{data['neg_pct']}) yorumlar dengeli seyrediyor."
+                    bg_col = "#FEFCE8"; bdr_col = "#FDE68A"
+
+                card = f"""<div style="border-radius:12px;overflow:hidden;border:1px solid {bdr_col};height:100%;">
+<div style="background:{accent};padding:10px 14px;">
+<div style="font-size:0.75rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{app_nm}</div>
 </div>
-<div style="margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:0.7rem;color:#94A3B8;">{data['total']} yorum analiz edildi</div>
+<div style="background:{bg_col};padding:16px;">
+<div style="font-size:0.75rem;font-weight:700;color:#1E293B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">{tone_title}</div>
+<p style="font-size:0.85rem;color:#334155;line-height:1.7;margin:0 0 14px 0;">{tone_body}</p>
+<div style="display:flex;gap:6px;flex-wrap:wrap;">
+<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
+<div style="font-size:1.1rem;font-weight:700;color:#10b981;">{data['pos_pct']}%</div>
+<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Olumlu</div>
+</div>
+<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
+<div style="font-size:1.1rem;font-weight:700;color:#f43f5e;">{data['neg_pct']}%</div>
+<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Olumsuz</div>
+</div>
+<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
+<div style="font-size:1.1rem;font-weight:700;color:#818cf8;">{data['neu_pct']}%</div>
+<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Görüş</div>
+</div>
+<div style="background:white;border-radius:8px;padding:8px 10px;text-align:center;flex:1;min-width:48px;border:1px solid #E2E8F0;">
+<div style="font-size:1.1rem;font-weight:700;color:{accent};">{data['score']}</div>
+<div style="font-size:0.62rem;color:#94A3B8;font-weight:600;">Skor</div>
+</div>
+</div>
+<div style="margin-top:10px;font-size:0.7rem;color:#94A3B8;text-align:right;">{data['total']} yorum</div>
+</div>
 </div>"""
-
                 st.markdown(card, unsafe_allow_html=True)
-
-        # Radar / özet bar chart
-        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-        import plotly.graph_objects as go_cmp
-        app_colors = ["#818CF8", "#F4A261", "#38BDF8"]
-        fig_cmp = go_cmp.Figure()
-
-        for idx, (app_nm, data) in enumerate(results_c.items()):
-            c = app_colors[idx % len(app_colors)]
-            fig_cmp.add_trace(go_cmp.Bar(
-                name=app_nm,
-                x=["Olumlu", "Olumsuz", "Görüş", "Skor"],
-                y=[data["pos_pct"], data["neg_pct"], data["neu_pct"], data["score"]],
-                marker_color=[
-                    "#10b981",   # Olumlu → her zaman yeşil
-                    "#f43f5e",   # Olumsuz → her zaman kırmızı
-                    "#818cf8",   # Görüş → her zaman mor
-                    c,           # Skor → uygulamaya özgü renk
-                ],
-                text=[f"{data['pos_pct']}%", f"{data['neg_pct']}%",
-                      f"{data['neu_pct']}%", str(data['score'])],
-                textposition="outside",
-                textfont=dict(
-                    family="Poppins, sans-serif",
-                    size=12,
-                    color="#1E293B"
-                ),
-            ))
-
-        fig_cmp.update_layout(
-            barmode="group",
-            height=360,
-            margin={"t": 40, "b": 20, "l": 10, "r": 10},
-            paper_bgcolor="#F0F9FF",
-            plot_bgcolor="#F0F9FF",
-            font=dict(family="Poppins, sans-serif", color="#1E293B", size=12),
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02,
-                xanchor="center", x=0.5,
-                font=dict(family="Poppins, sans-serif", size=12, color="#1E293B")
-            ),
-            yaxis=dict(range=[0, 115], tickfont=dict(color="#1E293B", size=11)),
-            xaxis=dict(tickfont=dict(color="#1E293B", size=12)),
-            bargap=0.25,
-            bargroupgap=0.05
-        )
-        st.plotly_chart(fig_cmp, use_container_width=True, config={"displayModeBar": False})
 
 
 comments_to_analyze = st.session_state.comments_to_analyze
