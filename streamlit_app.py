@@ -3287,9 +3287,14 @@ if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", Fal
 
 
 
-if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
+if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"):
     df = pd.DataFrame(st.session_state.bulk_results)
-    counts = df["Baskın Duygu"].value_counts()
+    
+    # Check if DataFrame is empty or missing the required column
+    if df.empty or "Baskın Duygu" not in df.columns:
+        st.info("📊 Henüz analiz sonucu bulunmuyor. Lütfen yukarıdan analizi başlatın.")
+    else:
+        counts = df["Baskın Duygu"].value_counts()
     
     st.markdown("""
 <style>
@@ -3698,6 +3703,7 @@ if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
                         "Bu durum, uygulamanın bazı kullanıcı kesimlerini memnun ederken diğerlerinde ciddi sorunlara yol açtığına işaret ediyor."
                     )
                     grad_bg, border_c = "#fef9c3", "#eab308"
+# End of safe results block
                 elif pos_p >= 55:
                     summary_title = "Topluluk genel olarak Olumlu"
                     tone_intro = (
