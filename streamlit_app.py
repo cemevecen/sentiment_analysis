@@ -1912,7 +1912,7 @@ if "bulk_results" in st.session_state:
 <div style="background: #F8FAFC; border-radius: 12px; padding: 20px; border-left: 4px solid #6366F1;">
 <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">💡 Stratejik Özet</div>
 <div style="color: #334155; font-size: 0.9rem; line-height: 1.6;">
-{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')[:300]}...
+{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
 </div>
 </div>
 <div style="margin-top: 25px; text-align: center; font-size: 0.8rem; color: #94A3B8;">
@@ -1961,7 +1961,7 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                     
                     window.parent.html2canvas(target, {scale: 2, backgroundColor: '#FFFFFF', useCORS: true}).then(canvas => {
                         var link = pDoc.createElement('a');
-                        link.download = 'nlp_analiz_raporu.png';
+                        link.download = '{app_name.replace(" ", "_").lower()}_{store_type.replace(" ", "_").lower()}_yorum_analizi.png';
                         link.href = canvas.toDataURL("image/png");
                         link.click();
                         btn.innerText = oldText;
