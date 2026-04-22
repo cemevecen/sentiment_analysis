@@ -1414,6 +1414,8 @@ if "bulk_results" in st.session_state:
 
     with col_summary:
         st.write("#### Yapay Zeka Görüşü")
+        # Calculate summary counts
+        total_all = m_olumlu + m_olumsuz + m_istek
         # Determine Colors and Summary Text based on dominant sentiment
         if total_all == 0:
             grad_bg = "#F8FAFC"
