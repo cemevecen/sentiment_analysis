@@ -2006,180 +2006,151 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- UNIFIED PREMIUM SHARE & DOWNLOAD SYSTEM (Parent Frame) ---
+        # --- ULTIMATE UNIFIED SHARE & DOWNLOAD SYSTEM (Parent Frame) ---
         import textwrap
         import json
         summary_escaped = json.dumps(summary_text)
-        
-        # Load external dependencies once in parent
-        st.markdown(textwrap.dedent(f"""
+        fb_share_url = f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote="
+        image_name = f"{app_name} ai sentiment report.png".replace(" ", "_")
+
+        ultimate_share_html = textwrap.dedent(f"""
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        """), unsafe_allow_html=True)
 
-        unified_tray_html = textwrap.dedent(f"""
-            <div id="trayNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
-                <span id="trayMsg">Kopyalandı!</span>
+            <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
+                <span id="uMsg">Kopyalandı!</span>
             </div>
 
             <style>
-                .share-tray-container {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
-                .share-btn {{
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
+                .u-btn {{
                     width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
                     display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
                     transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
                 }}
-                .share-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
-                .btn-wa {{ color: #25D366; }} .btn-li {{ color: #0077B5; }} .btn-x {{ color: #000000; }}
-                .btn-tg {{ color: #0088CC; }} .btn-fb {{ color: #1877F2; }} .btn-mail {{ color: #D44638; }}
-                .btn-rd {{ color: #FF4500; }} .btn-sl {{ color: #4A154B; }} .btn-gc {{ color: #00897B; }}
-                .btn-pic {{ color: #8B5CF6; }}
+                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
+                .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
+                .u-tg {{ color: #0088CC; }} .u-fb {{ color: #1877F2; }} .u-mail {{ color: #D44638; }}
+                .u-rd {{ color: #FF4500; }} .u-sl {{ color: #4A154B; }} .u-gc {{ color: #00897B; }}
+                .u-pic {{ color: #8B5CF6; }}
                 
-                .dl-main-btn {{
-                    width: 100%; max-width: 600px; margin: 0 auto; min-height: 50px; background: #6366F1; color: #FFFFFF; 
+                .u-dl-btn {{
+                    width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #6366F1; color: #FFFFFF; 
                     border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
                     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transition: all 0.2s;
                     display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
                 }}
-                .dl-main-btn:hover {{ background: #4F46E5; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); }}
+                .u-dl-btn:hover {{ background: #4F46E5; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); }}
             </style>
 
-            <div class="share-tray-container">
-                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn btn-wa"><i class="fa-brands fa-whatsapp"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg"><i class="fa-brands fa-telegram"></i></a>
-                <div id="u-btn-fb" class="share-btn btn-fb"><i class="fa-brands fa-facebook-f"></i></div>
-                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail"><i class="fa-solid fa-envelope"></i></a>
-                <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd"><i class="fa-brands fa-reddit-alien"></i></a>
-                <a href="slack://share?text={encoded_text}" class="share-btn btn-sl"><i class="fa-brands fa-slack"></i></a>
-                <div id="u-btn-gc" class="share-btn btn-gc"><i class="fa-solid fa-comment-dots"></i></div>
-                <div id="u-btn-pic" class="share-btn btn-pic"><i class="fa-solid fa-camera"></i></div>
+            <div class="u-tray">
+                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
+                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
+                <div class="u-btn u-fb" onclick="doUltimateAction('fb')"><i class="fa-brands fa-facebook-f"></i></div>
+                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
+                <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="u-btn u-rd"><i class="fa-brands fa-reddit-alien"></i></a>
+                <a href="slack://share?text={encoded_text}" class="u-btn u-sl"><i class="fa-brands fa-slack"></i></a>
+                <div class="u-btn u-gc" onclick="doUltimateAction('gc')"><i class="fa-solid fa-comment-dots"></i></div>
+                <div class="u-btn u-pic" onclick="doUltimateAction('pic')"><i class="fa-solid fa-camera"></i></div>
             </div>
             
-            <div style="max-width: 600px; margin: 15px auto;">
-                <button id="u-btn-dl" class="dl-main-btn">
+            <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
+                <button class="u-dl-btn" onclick="doUltimateAction('dl')">
                     <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
                 </button>
             </div>
 
             <script>
                 (function() {{
-                    const summaryTxt = {summary_escaped};
-                    const fbShareUrl = "https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote=" + encodeURIComponent(summaryTxt);
-                    const filename = "{f"{app_name} ai sentiment report.png".replace(" ", "_")}";
+                    const summary = {summary_escaped};
+                    const fbUrl = "{fb_share_url}" + encodeURIComponent(summary);
+                    const filename = "{image_name}";
 
-                    const pushNotif = (msg) => {{
-                        const n = document.getElementById('trayNotif');
-                        const m = document.getElementById('trayMsg');
-                        if(!n || !m) return;
-                        m.innerText = msg;
-                        n.style.opacity = '1';
-                        n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                        setTimeout(() => {{ 
-                            n.style.opacity = '0';
-                            n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                        }}, 3500);
-                    }};
-
-                    const copyTextAction = (txt, plat) => {{
-                        if(plat === 'Google Chat') window.open('https://chat.google.com', '_blank');
+                    window.doUltimateAction = function(type) {{
+                        console.log("Ultimate Action:", type);
                         
-                        navigator.clipboard.writeText(txt).then(() => {{
-                            if(plat === 'Google Chat') {{
-                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                            }} else {{
-                                pushNotif(plat + " Metni Kopyalandı! ✅");
-                            }}
-                        }}).catch(() => {{
-                            const el = document.createElement('textarea');
-                            el.value = txt; document.body.appendChild(el); el.select();
-                            document.execCommand('copy'); document.body.removeChild(el);
-                            if(plat === 'Google Chat') {{
-                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
-                            }} else {{
-                                pushNotif(plat + " Metni Kopyalandı! ✅");
-                            }}
-                        }});
-                    }};
+                        const pushNotif = (msg) => {{
+                            const n = document.getElementById('uNotif');
+                            const m = document.getElementById('uMsg');
+                            if(!n || !m) return;
+                            m.innerText = msg;
+                            n.style.opacity = '1';
+                            n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                            setTimeout(() => {{ 
+                                n.style.opacity = '0';
+                                n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                            }}, 3000);
+                        }};
 
-                    const canvasAction = (mode, platUrl = '', platName = '') => {{
-                        const target = document.getElementById('nlp-report-card');
-                        if(!target) return;
-                        
-                        if(typeof html2canvas === 'undefined') {{
-                            pushNotif("Sistem Hazırlanıyor... ⏳");
-                            if(platUrl) window.open(platUrl, '_blank');
-                            return;
+                        if (type === 'gc') {{
+                            window.open('https://chat.google.com', '_blank');
+                            navigator.clipboard.writeText(summary).then(() => {{
+                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                            }}).catch(() => {{
+                                const el = document.createElement('textarea');
+                                el.value = summary; document.body.appendChild(el); el.select();
+                                document.execCommand('copy'); document.body.removeChild(el);
+                                pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                            }});
+                        }} else if (type === 'fb' || type === 'pic' || type === 'dl') {{
+                            const target = document.getElementById('nlp-report-card');
+                            if(!target) {{ console.error("Target not found"); return; }}
+                            
+                            if (type === 'fb') window.open(fbUrl, '_blank');
+
+                            if (typeof html2canvas === 'undefined') {{
+                                pushNotif("Sistem Hazırlanıyor... ⏳");
+                                return;
+                            }}
+
+                            pushNotif(type === 'dl' ? "Görsel Hazırlanıyor... ⏳" : (type === 'fb' ? "Kart Kopyalanıyor & Facebook Açılıyor... ⏳" : "Kart Kopyalanıyor... ⏳"));
+
+                            html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF' }}).then(canvas => {{
+                                if (type === 'dl') {{
+                                    const link = document.createElement('a');
+                                    link.download = filename;
+                                    link.href = canvas.toDataURL('image/png');
+                                    link.click();
+                                    pushNotif("İndirme Başlatıldı! ⬇️");
+                                }} else {{
+                                    canvas.toBlob(blob => {{
+                                        try {{
+                                            const data = [new ClipboardItem({{ [blob.type]: blob }})];
+                                            navigator.clipboard.write(data).then(() => {{
+                                                pushNotif(type === 'fb' ? "Görsel Panoda! ✅ Facebook'ta Yapıştırın" : "Görsel Kopyalandı! ✅");
+                                            }}).catch(() => {{ throw new Error(); }});
+                                        }} catch(e) {{
+                                            pushNotif(type === 'fb' ? "Görsel Kopyalanamadı, Manuel Deneyin." : "Görsel Kopyalanamadı.");
+                                        }}
+                                    }}, 'image/png');
+                                }}
+                            }});
                         }}
-
-                        if(platUrl) window.open(platUrl, '_blank');
-                        pushNotif(mode === 'dl' ? "Görsel Hazırlanıyor... ⏳" : "Görsel Hazırlanıyor... ⏳");
-
-                        html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
-                            if(mode === 'dl') {{
-                                const link = document.createElement('a');
-                                link.download = filename;
-                                link.href = canvas.toDataURL('image/png');
-                                link.click();
-                                pushNotif("İndirme Başlatıldı! ⬇️");
-                            }} else {{
-                                canvas.toBlob(blob => {{
-                                    try {{
-                                        const data = [new ClipboardItem({{ [blob.type]: blob }})];
-                                        navigator.clipboard.write(data).then(() => {{
-                                            pushNotif(platUrl ? "Görsel Panoda! ✅ " + platName + "'da Yapıştırın" : "Görsel Kopyalandı! ✅");
-                                        }}).catch(() => {{ throw new Error(); }});
-                                    }} catch(e) {{
-                                        pushNotif(platUrl ? "Görsel Kopyalanamadı, Manuel Deneyin." : "Görsel Kopyalandı.");
-                                    }}
-                                }}, 'image/png');
-                            }}
-                        }});
                     }};
-
-                    // Attach Listeners
-                    const bind = (id, fn) => {{
-                        const el = document.getElementById(id);
-                        if(el) el.addEventListener('click', fn);
-                    }};
-
-                    bind('u-btn-gc', () => copyTextAction(summaryTxt, 'Google Chat'));
-                    bind('u-btn-fb', () => canvasAction('copy', fbShareUrl, 'Facebook'));
-                    bind('u-btn-pic', () => canvasAction('copy'));
-                    bind('u-btn-dl', () => canvasAction('dl'));
+                    console.log("Ultimate functions loaded on window");
                 }})();
             </script>
         """).strip()
-        st.markdown(unified_tray_html, unsafe_allow_html=True)
+        st.markdown(ultimate_share_html, unsafe_allow_html=True)
         
-        # Actions Row: Excel and PDF triggers side-by-side
+        # Excel & PDF Row
         st.markdown("<br>", unsafe_allow_html=True)
-        action_cols = st.columns(2)
-        
-        with action_cols[0]:
-            st.download_button(
-                label="Sonuçları Excel Olarak İndir", 
-                data=output.getvalue(), 
-                file_name=f"{app_name} ai sentiment report.xlsx".replace(" ", "_"), 
-                key="bulk_dl", 
-                use_container_width=True
-            )
-            
-        with action_cols[1]:
+        btn_cols = st.columns(2)
+        with btn_cols[0]:
+            st.download_button("Sonuçları Excel Olarak İndir", output.getvalue(), f"{image_name.replace('.png', '.xlsx')}", key="xl_dl", use_container_width=True)
+        with btn_cols[1]:
             import streamlit.components.v1 as components
-            components.html("""
-                <style>body { margin: 0; padding: 0; overflow: hidden; }</style>
-                <div style='text-align: center; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 50px;'>
-                    <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 400; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.95rem;'>
-                        Raporu PDF Olarak İndir / Yazdır
-                    </button>
-                </div>
-            """, height=50)
-
+            components.html(f"""
+                <style>body {{ margin: 0; padding: 0; overflow: hidden; }}</style>
+                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                    Raporu PDF Olarak İndir / Yazdır
+                </button>
+            """, height=53)
                     
     except Exception as e:
-        st.error(f"Paylaşım aracı hazırlanırken hata: {e}")
+        st.error(f"Paylaşım aracı hatası: {e}")
 
 # Footer
 st.divider()
