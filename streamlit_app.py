@@ -2019,19 +2019,87 @@ if "bulk_results" in st.session_state:
 
         st.info("💡 Yukarıdaki kartı ekran görüntüsü alarak veya aşağıdaki butonlarla paylaşabilirsiniz.")
         
-        # --- SHARE BUTTONS ---
-        s_cols = st.columns(5)
-        for i, (name, link) in enumerate(share_data):
-            idx = i % 5
-            with s_cols[idx]:
-                if name in ["Kopyala", "Google Chat"]:
-                    if st.button(name, key=f"copy_{i}", use_container_width=True):
-                        st.success(f"{name} için metin kopyalanmaya hazır! İstediğiniz yere yapıştırabilirsiniz.")
-                        st.text_area("Kopyalanacak Metin", link, height=100)
-                        if name == "Google Chat":
-                            st.info("Kopyaladıktan sonra [Google Chat](https://chat.google.com)'e gidip mesaja yapıştırabilirsiniz.")
-                else:
-                    st.link_button(name, link, use_container_width=True)
+        # --- PREMIUM SHARE TRAY ---
+        st.markdown("""
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <style>
+            .share-tray {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                justify-content: center;
+                margin: 20px 0;
+            }
+            .share-icon {
+                width: 50px;
+                height: 50px;
+                background: white;
+                border: 1px solid #E2E8F0;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.4rem;
+                cursor: pointer;
+                transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                text-decoration: none;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            }
+            .share-icon:hover {
+                transform: translateY(-5px) scale(1.05);
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+                border-color: #CBD5E1;
+            }
+            .icon-wa { color: #25D366; } .icon-wa:hover { background: #25D366; color: white; }
+            .icon-li { color: #0077B5; } .icon-li:hover { background: #0077B5; color: white; }
+            .icon-x { color: #000000; } .icon-x:hover { background: #000000; color: white; }
+            .icon-tg { color: #0088CC; } .icon-tg:hover { background: #0088CC; color: white; }
+            .icon-fb { color: #1877F2; } .icon-fb:hover { background: #1877F2; color: white; }
+            .icon-mail { color: #D44638; } .icon-mail:hover { background: #D44638; color: white; }
+            .icon-rd { color: #FF4500; } .icon-rd:hover { background: #FF4500; color: white; }
+            .icon-sl { color: #4A154B; } .icon-sl:hover { background: #4A154B; color: white; }
+            .icon-gc { color: #00897B; } .icon-gc:hover { background: #00897B; color: white; }
+            .icon-cp { color: #6366F1; } .icon-cp:hover { background: #6366F1; color: white; }
+            
+            .copy-notif {
+                position: fixed; top: 20px; right: 20px; background: #10B981; color: white; 
+                padding: 12px 24px; border-radius: 8px; font-weight: 600; 
+                opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 9999;
+            }
+        </style>
+        <div id="copyNotif" class="copy-notif">Kopyalandı! ✅</div>
+        <script>
+            function copyToClip(text, isChat = false) {
+                const el = document.createElement('textarea');
+                el.value = text;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                
+                const notif = document.getElementById('copyNotif');
+                notif.innerText = isChat ? "Google Chat için Metin Kopyalandı! ✅" : "Metin Kopyalandı! ✅";
+                notif.style.opacity = '1';
+                setTimeout(() => { notif.style.opacity = '0'; }, 3000);
+            }
+        </script>
+        """, unsafe_allow_html=True)
+
+        icons_html = f"""
+        <div class="share-tray">
+            <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-icon icon-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-icon icon-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-icon icon-x" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-icon icon-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-icon icon-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}" class="share-icon icon-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
+            <a href="https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}" target="_blank" class="share-icon icon-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
+            <a href="slack://share?text={encoded_text}" class="share-icon icon-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
+            <div onclick="copyToClip(`{summary_text}`, true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
+            <div onclick="copyToClip(`{summary_text}`)" class="share-icon icon-cp" title="Kopyala"><i class="fa-solid fa-copy"></i></div>
+        </div>
+        """
+        st.markdown(icons_html, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         import streamlit.components.v1 as components
         components.html(f"""
