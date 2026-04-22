@@ -380,7 +380,6 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     def fetch_channel(sort_type, score, lang, country):
         channel_data = []
         token = None
-        
         for _ in range(30):
             try:
                 result, token = play_reviews(
@@ -390,32 +389,70 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
                     continuation_token=token
                 )
                 if not result: break
-                
                 out_of_range = False
                 for r in result:
                     r_at_raw = r.get('at')
                     if r_at_raw:
                         r_at = cast(datetime, r_at_raw)
                         if r_at.tzinfo: r_at = r_at.replace(tzinfo=None)
-                        
                         if r_at >= threshold_date:
                             content = str(r.get('content', ''))
                             if content and len(content.strip()) >= 2:
                                 r_id = r.get('reviewId', content)
-                                # Global reviewId is unique enough; removing suffix to allow deduplication
                                 channel_data.append({
-                                    "id": r_id, 
-                                    "text": content, 
-                                    "date": r_at, 
+                                    "id": r_id,
+                                    "text": content,
+                                    "date": r_at,
                                     "rating": str(score),
                                     "lang": lang
                                 })
                         else:
                             if sort_type == Sort.NEWEST: out_of_range = True
-                
                 if out_of_range or not token: break
             except: break
         return channel_data
+
+    # ── Filtresiz hızlı çekim (en taze yorumlar için) ──────────────
+    def fetch_unfiltered(lang, country):
+        """filter_score_with olmadan çeker — en güncel yorumlar burada"""
+        fresh_data = []
+        token = None
+        for _ in range(5):
+            try:
+                result, token = play_reviews(
+                    app_id, lang=lang, country=country,
+                    sort=Sort.NEWEST, count=200,
+                    continuation_token=token
+                )
+                if not result: break
+                out_of_range = False
+                for r in result:
+                    r_at_raw = r.get('at')
+                    if r_at_raw:
+                        r_at = cast(datetime, r_at_raw)
+                        if r_at.tzinfo: r_at = r_at.replace(tzinfo=None)
+                        if r_at >= threshold_date:
+                            content = str(r.get('content', ''))
+                            if content and len(content.strip()) >= 2:
+                                r_id = r.get('reviewId', content)
+                                rating = str(r.get('score', '0'))
+                                fresh_data.append({
+                                    "id": r_id,
+                                    "text": content,
+                                    "date": r_at,
+                                    "rating": rating,
+                                    "lang": lang
+                                })
+                        else:
+                            out_of_range = True
+                if out_of_range or not token: break
+            except: break
+        return fresh_data
+
+    # Önce filtresiz taze çekim — tr/tr + en/us için
+    for _lang, _country in [('tr', 'tr'), ('en', 'us'), ('de', 'de'), ('ru', 'ru')]:
+        for r in fetch_unfiltered(_lang, _country):
+            all_fetched_map[r['id']] = r
 
     total_channels = len(channels)
     completed_channels = 0
