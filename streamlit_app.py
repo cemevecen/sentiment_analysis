@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import io
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
-from app_store_scraper import AppStore
+# Removed app-store-scraper due to dependency conflicts with streamlit
 from dotenv import load_dotenv
 
 # Load environment variables (for local testing)
@@ -112,6 +112,44 @@ def is_valid_comment(text):
         return False
 
     return True
+
+def get_app_store_reviews(app_id, country='tr'):
+    """Fetch reviews using App Store RSS Feed (More reliable than outdated libraries)"""
+    url = f"https://itunes.apple.com/{country}/rss/customerreviews/id={app_id}/sortBy=mostRecent/json"
+    reviews = []
+    try:
+        response = requests.get(url, timeout=12)
+        if response.status_code == 200:
+            data = response.json()
+            entries = data.get('feed', {}).get('entry', [])
+            if not entries: return []
+            
+            # If only one entry, it's not a list
+            if isinstance(entries, dict): entries = [entries]
+            
+            # Entry[0] is often app metadata, others are reviews
+            for entry in entries:
+                # Review content check (metadata doesn't have content.label)
+                content = entry.get('content', {}).get('label')
+                if not content: continue
+                
+                updated = entry.get('updated', {}).get('label', '')
+                try:
+                    r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+                    if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
+                except: r_date = None
+                
+                rating = entry.get('im:rating', {}).get('label', '0')
+                
+                reviews.append({
+                    "text": content,
+                    "date": r_date,
+                    "rating": str(rating)
+                })
+        return reviews
+    except Exception as e:
+        st.error(f"RSS Fetch Error: {e}")
+        return []
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
 st.markdown("""
@@ -655,9 +693,9 @@ with tab3:
             match = re.search(r"/id(\d+)", store_url)
             if match: app_id = match.group(1)
             
-            # Extract app name from URL (needed by the library)
-            app_name_match = re.search(r"/app/([^/]+)/id", store_url)
-            app_name = app_name_match.group(1) if app_name_match else "app"
+            # Extract country code (tr, us, etc.) from URL
+            country_match = re.search(r"apple\.com/([^/]+)/app", store_url)
+            country = country_match.group(1) if country_match else "tr"
 
         if not platform or not app_id:
             st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
@@ -689,20 +727,18 @@ with tab3:
                                     })
                                     
                     elif platform == "apple":
-                        # App Store Scraping
-                        as_app = AppStore(country='tr', app_name=app_name, app_id=app_id)
-                        as_app.review(how_many=500)
+                        # App Store RSS Scraping
+                        results = get_app_store_reviews(app_id, country)
+                        # If URL was 'us' let's also try 'tr' as fallback for Turkish apps
+                        if not results and country != 'tr':
+                            results = get_app_store_reviews(app_id, 'tr')
                         
-                        for r in as_app.reviews:
+                        for r in results:
                             r_date = r.get('date')
                             if r_date and r_date >= one_month_ago:
-                                content = str(r.get('review', ''))
-                                if is_valid_comment(content):
-                                    fetched_comments.append({
-                                        "text": content,
-                                        "date": r_date,
-                                        "rating": str(r.get('rating', ''))
-                                    })
+                                text = r.get('text', '')
+                                if is_valid_comment(text):
+                                    fetched_comments.append(r)
 
                     if fetched_comments:
                         comments_to_analyze = fetched_comments
