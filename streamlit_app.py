@@ -2276,9 +2276,10 @@ if active_tab == "Mağaza Linki":
 
         # 3. Giriş alanı
         store_url = st.text_input(
-            "",
+            "Uygulama arama girişi",
             placeholder="🔍 Uygulama ismi, linki veya ID girerek arama yapın",
-            key="_store_url_input"
+            key="_store_url_input",
+            label_visibility="collapsed"
         )
         st.session_state.app_url = store_url
 
@@ -3238,7 +3239,7 @@ elif active_tab == "Karşılaştır":
     for ci in range(2):
         with cmp_cols[ci]:
             st.markdown(f'<div style="font-size:0.8rem;font-weight:600;color:#6366F1;margin-bottom:4px;">Uygulama {ci+1}</div>', unsafe_allow_html=True)
-            url_val = st.text_input("", placeholder="com.example veya id123...", key=f"cmp_url_{ci}", label_visibility="collapsed")
+            url_val = st.text_input(f"Uygulama {ci+1} ID veya link", placeholder="com.example veya id123...", key=f"cmp_url_{ci}", label_visibility="collapsed")
             cmp_inputs.append(url_val.strip())
 
     cmp_range = st.selectbox("Tarih Aralığı:", ["Son 1 Hafta", "Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"], key="cmp_range")
