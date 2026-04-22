@@ -703,13 +703,16 @@ if st.button("Analizini Yap", use_container_width=True):
             # Update Ticker
             ticker_date = ""
             if date:
-                try: ticker_date = f" | 📅 {date.strftime('%d-%m-%Y')}"
+                try: ticker_date = f"📅 {date.strftime('%d-%m-%Y')}"
                 except: pass
 
             ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
             ticker_placeholder.markdown(f"""
             <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
-                <div style="font-size: 0.85em; color: #64748b; margin-bottom: 5px;">⚡ ŞU AN ANALİZ EDİLİYOR (#{i+1}{ticker_date})</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
+                    <span>⚡ ŞU AN ANALİZ EDİLİYOR (#{i+1})</span>
+                    <span>{ticker_date}</span>
+                </div>
                 <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
                 <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
                     {verdict.upper()}
@@ -990,21 +993,25 @@ if "bulk_results" in st.session_state:
             if highlight:
                 cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
             
-            # Format extra info (Date & Rating)
+            # Format extra info (Rating)
             extra_info = ""
-            if "Tarih" in row and pd.notnull(row["Tarih"]):
-                try:
-                    d = pd.to_datetime(row["Tarih"])
-                    extra_info += f" | 📅 {d.strftime('%d-%m-%Y')}"
-                except: pass
-            
             if "Puan" in row and pd.notnull(row["Puan"]):
                 extra_info += f" | ⭐ {row['Puan']}"
+            
+            date_tag = ""
+            if "Tarih" in row and pd.notnull(row["Tarih"]):
+                try: 
+                    d = pd.to_datetime(row["Tarih"])
+                    date_tag = f"📅 {d.strftime('%d-%m-%Y')}"
+                except: pass
 
             st.markdown(f"""
             <div class="{cls}">
-                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}{extra_info}</span><br>
-                {row['Yorum']}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment}{extra_info}</span>
+                    <span style="font-size: 0.8em; color: #94a3b8;">{date_tag}</span>
+                </div>
+                <div style="color: #1E293B; line-height: 1.5;">{row['Yorum']}</div>
             </div>
             """, unsafe_allow_html=True)
 
