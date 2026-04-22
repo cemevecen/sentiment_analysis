@@ -1780,8 +1780,7 @@ with tab4:
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with sum_cols[ci]:
                 accent = app_colors_sum[ci % len(app_colors_sum)]
-                is_best = data["score"] == max(v["score"] for v in results_c.values())
-                badge_html = '<div style="background:rgba(255,255,255,0.25);color:white;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:4px;">EN İYİ</div><br>' if is_best else ""
+                badge_html = ""
 
                 if data["pos_pct"] >= 55:
                     tone_title = "Genel olarak olumlu"
@@ -1815,32 +1814,31 @@ with tab4:
                 meta_html = ""
                 if rating_val > 0:
                     meta_html = f"""
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E2E8F0;">
-  <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
+<div style="display:flex;gap:6px;flex-wrap:nowrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E2E8F0;">
+  <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 4px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;">
     <div style="font-size:1rem;font-weight:800;color:#D97706;">{rating_val}</div>
     <div style="line-height:1;">{star_html}</div>
     <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Puan</div>
   </div>
-  <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
-    <div style="font-size:0.82rem;font-weight:700;color:#059669;">{ratings_str}</div>
+  <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:6px 4px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;">
+    <div style="font-size:0.78rem;font-weight:700;color:#059669;word-break:break-all;">{ratings_str}</div>
     <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Değerlendirme</div>
   </div>
-  <div style="background:#EFF6FF;border:1px solid #DBEAFE;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
-    <div style="font-size:0.75rem;font-weight:700;color:#2563EB;">{installs_val}</div>
+  <div style="background:#EFF6FF;border:1px solid #DBEAFE;border-radius:8px;padding:6px 4px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;">
+    <div style="font-size:0.75rem;font-weight:700;color:#2563EB;word-break:break-all;">{installs_val}</div>
     <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">İndirme</div>
   </div>
-  <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;text-align:center;flex:1;min-width:52px;">
-    <div style="font-size:0.75rem;font-weight:700;color:#475569;">v{version_val}</div>
+  <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 4px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;">
+    <div style="font-size:0.75rem;font-weight:700;color:#475569;word-break:break-all;">v{version_val}</div>
     <div style="font-size:0.58rem;color:#94A3B8;font-weight:600;margin-top:2px;">Versiyon</div>
   </div>
 </div>"""
 
                 card = f"""<div style="background:#FFFFFF;border:2px solid #E2E8F0;border-radius:14px;overflow:hidden;">
-<div style="background:{accent};padding:12px 14px;text-align:center;">
-{badge_html}
-<div style="font-size:0.78rem;font-weight:700;color:white;line-height:1.3;margin-bottom:4px;">{app_nm}</div>
+<div style="background:{accent};padding:14px;text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;">
+<div style="font-size:0.78rem;font-weight:700;color:white;line-height:1.3;">{app_nm}</div>
 <div style="font-size:2rem;font-weight:800;color:white;line-height:1;">{data['score']}<span style="font-size:0.7rem;opacity:0.75;">/100</span></div>
-<div style="font-size:0.6rem;color:rgba(255,255,255,0.7);margin-top:2px;">{store_val}</div>
+<div style="font-size:0.62rem;color:rgba(255,255,255,0.75);">{store_val}</div>
 </div>
 <div style="padding:14px;">
 {meta_html}
