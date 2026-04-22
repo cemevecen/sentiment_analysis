@@ -2093,6 +2093,20 @@ if "bulk_results" in st.session_state:
                         }}, 'image/png');
                     }});
                 }};
+
+                // --- ROBUST MESSAGE LISTENER ---
+                window.addEventListener('message', function(event) {{
+                    const data = event.data;
+                    if (!data || !data.type) return;
+                    
+                    if (data.type === 'copyText') {{
+                        window.doCopyText(data.text, data.platform);
+                    }} else if (data.type === 'copyCard') {{
+                        window.doCopyCard();
+                    }} else if (data.type === 'socialShare') {{
+                        window.doSocialImageShare(data.url, data.platform);
+                    }}
+                }});
             </script>
         """).strip()
         st.markdown(global_scripts, unsafe_allow_html=True)
@@ -2135,14 +2149,18 @@ if "bulk_results" in st.session_state:
                 const summaryTxt = {summary_escaped};
                 const fbUrl = "https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote=" + encodeURIComponent(summaryTxt);
                 
+                function sendCmd(type, extra = {{}}) {{
+                    window.parent.postMessage({{ type: type, ...extra }}, '*');
+                }}
+
                 document.getElementById('btn-gc').addEventListener('click', () => {{
-                    window.parent.doCopyText(summaryTxt, 'Google Chat');
+                    sendCmd('copyText', {{ text: summaryTxt, platform: 'Google Chat' }});
                 }});
                 document.getElementById('btn-fb').addEventListener('click', () => {{
-                    window.parent.doSocialImageShare(fbUrl, 'Facebook');
+                    sendCmd('socialShare', {{ url: fbUrl, platform: 'Facebook' }});
                 }});
                 document.getElementById('btn-pic').addEventListener('click', () => {{
-                    window.parent.doCopyCard();
+                    sendCmd('copyCard');
                 }});
             </script>
         """).strip()
