@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-11-00"  # Travel URL pre-resolve + crash-safe Playwright goto
+CURRENT_VERSION = "2026-03-19-12-00"  # Fix: search page auto-click, faster scraping, date fallback=None
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -606,7 +606,16 @@ def _parse_relative_date(date_str: str) -> Optional[datetime]:
             if unit == "months": return now - timedelta(days=n * 30)
             if unit == "years":  return now - timedelta(days=n * 365)
 
-    return now
+    # Bir onceki yıl/geçen yıl gibi sayısız ifadeler
+    if "geçen yıl" in s or "last year" in s:
+        return now - timedelta(days=365)
+    if "geçen ay" in s or "last month" in s:
+        return now - timedelta(days=30)
+    if "geçen hafta" in s or "last week" in s:
+        return now - timedelta(weeks=1)
+
+    # Tanınmayan format — None döndür (now değil), filtreden düşmesi için
+    return None
 
 
 def build_maps_url_from_query(query: str) -> str:
@@ -775,6 +784,7 @@ def scrape_google_reviews_playwright(
     maps_url: str,
     max_reviews: int = 300,
     _progress_callback=None,
+    days_hint: int = 365,
 ) -> List[Dict[str, Any]]:
     """
     Playwright (Chromium headless) ile Google Maps sayfasından yorumları çeker.
@@ -922,6 +932,36 @@ def scrape_google_reviews_playwright(
                         except Exception:
                             continue
 
+            # Eğer hâlâ /maps/search/ sayfasındaysak (listeleme), ilk sonuca tıkla
+            _current_url = page.url
+            if "/maps/search/" in _current_url or "/maps/search?" in _current_url:
+                _clicked_result = False
+                for _res_sel in [
+                    'a.hfpxzc',
+                    'div[role="feed"] a[href*="/maps/place/"]',
+                    '[jsaction*="mouseover:pane"] a[href*="/maps/place/"]',
+                ]:
+                    try:
+                        _res_el = page.wait_for_selector(_res_sel, timeout=5000)
+                        if _res_el:
+                            _res_el.click()
+                            time.sleep(2)
+                            _clicked_result = True
+                            break
+                    except Exception:
+                        continue
+                if not _clicked_result:
+                    # Son çare: sayfadaki ilk /maps/place/ linkine git
+                    try:
+                        _place_link = page.query_selector('a[href*="/maps/place/"]')
+                        if _place_link:
+                            _href = _place_link.get_attribute("href") or ""
+                            if _href:
+                                page.goto(_href, timeout=30000, wait_until="domcontentloaded")
+                                time.sleep(2)
+                    except Exception:
+                        pass
+
             # Yorumlar sekmesine git
             for sel in ['button[data-tab-index="1"]',
                         'button:has-text("Yorum")',
@@ -945,7 +985,8 @@ def scrape_google_reviews_playwright(
             # Scroll ile yorum yükle
             last_count = 0
             no_new = 0
-            for _ in range(120):
+            _date_threshold_scroll = datetime.now() - timedelta(days=days_hint * 2)
+            for _ in range(80):
                 if last_count >= max_reviews:
                     break
                 try:
@@ -953,18 +994,18 @@ def scrape_google_reviews_playwright(
                     if panel:
                         panel.evaluate("el => el.scrollTop = el.scrollHeight")
                     else:
-                        page.evaluate("window.scrollBy(0, 1200)")
+                        page.evaluate("window.scrollBy(0, 1500)")
                 except Exception:
                     pass
 
-                time.sleep(1.5)
+                time.sleep(0.8)
 
                 # "Daha fazla" butonları
                 try:
                     for btn in page.query_selector_all("button.w8nwRe")[:5]:
                         try:
                             btn.click()
-                            time.sleep(0.2)
+                            time.sleep(0.15)
                         except Exception:
                             pass
                 except Exception:
@@ -975,7 +1016,7 @@ def scrape_google_reviews_playwright(
                     _progress_callback(min(current / max_reviews, 0.9))
                 if current == last_count:
                     no_new += 1
-                    if no_new >= 5:
+                    if no_new >= 3:
                         break
                 else:
                     no_new = 0
@@ -1267,6 +1308,7 @@ def render_google_business_ui() -> None:
                     maps_url=active_url,
                     max_reviews=300,
                     _progress_callback=_cb,
+                    days_hint=gb_days,
                 )
 
             loading_ph.empty()
