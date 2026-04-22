@@ -3169,6 +3169,63 @@ def run_bulk_analysis(data_to_process, is_append=False):
     st.rerun()
 
 
+# --- ANALİZ AYARLARI VE BAŞLATMA ---
+
+# Karşılaştırma modu açık değilse (sonuç ekranı hariç) ayarları ve butonu göster
+if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", False):
+    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### ⚙️ Analiz Ayarları")
+    
+    # Seçenekler için iki kolon
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        a_type = st.radio(
+            "Analiz Yöntemi:",
+            ["Hızlı Analiz", "Zengin Analiz"],
+            key="final_method_sel",
+            index=0 if st.session_state.get("analysis_type") == "Hızlı Analiz" else 1
+        )
+        st.session_state.analysis_type = a_type
+
+    with c2:
+        if st.session_state.analysis_type == "Zengin Analiz":
+            a_mode = st.radio(
+                "Analiz Derinliği:",
+                [0, 1],
+                format_func=lambda x: ["Standart (Genel)", "Gelişmiş (Derin)"][x],
+                key="final_mode_sel"
+            )
+            st.session_state.analysis_mode = a_mode
+        else:
+            st.session_state.analysis_mode = 0
+
+    # Bilgi Kutusu
+    if st.session_state.analysis_type == "Zengin Analiz":
+        st.info("🤖 **Zengin Analiz**: Yapay zeka tüm yorumları semantik olarak analiz eder. Günlük kotanızı tüketebilir.")
+    else:
+        st.info("⚡ **Hızlı Analiz**: İstatistiksel algoritmalarla saniyeler içinde sonuç üretir.")
+
+    # ANA BUTON
+    if st.button("🚀 ANALİZİ BAŞLAT", type="primary", use_container_width=True):
+        # State'den verileri tazele
+        data_to_run = st.session_state.get("comments_to_analyze", [])
+        
+        if not data_to_run:
+            st.error("⚠️ Analiz edilecek veri bulunamadı! Lütfen bir uygulama linki girin veya dosya yükleyin.")
+        else:
+            # Hızlı analizde eğer tüm havuz varsa onu kullan
+            if st.session_state.analysis_type == "Hızlı Analiz" and st.session_state.get("all_fetched_pool"):
+                data_to_run = st.session_state.all_fetched_pool
+                
+            # Analiz fonksiyonunu çağır
+            run_bulk_analysis(data_to_run)
+
+
+
+
+
+
 
 
 if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
@@ -4505,59 +4562,6 @@ if st.session_state.get("_cmp_pending"):
                 st.error(f"{name_c} çekilemedi: {e}")
 
     st.rerun()
-
-# --- ANALİZ AYARLARI VE BAŞLATMA ---
-
-# Karşılaştırma modu açık değilse (sonuç ekranı hariç) ayarları ve butonu göster
-if not st.session_state.get("_cmp_mode", False):
-    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("### ⚙️ Analiz Ayarları")
-    
-    # Seçenekler için iki kolon
-    c1, c2 = st.columns(2)
-    
-    with c1:
-        a_type = st.radio(
-            "Analiz Yöntemi:",
-            ["Hızlı Analiz", "Zengin Analiz"],
-            key="final_method_sel",
-            index=0 if st.session_state.get("analysis_type") == "Hızlı Analiz" else 1
-        )
-        st.session_state.analysis_type = a_type
-
-    with c2:
-        if st.session_state.analysis_type == "Zengin Analiz":
-            a_mode = st.radio(
-                "Analiz Derinliği:",
-                [0, 1],
-                format_func=lambda x: ["Standart (Genel)", "Gelişmiş (Derin)"][x],
-                key="final_mode_sel"
-            )
-            st.session_state.analysis_mode = a_mode
-        else:
-            st.session_state.analysis_mode = 0
-
-    # Bilgi Kutusu
-    if st.session_state.analysis_type == "Zengin Analiz":
-        st.info("🤖 **Zengin Analiz**: Yapay zeka tüm yorumları semantik olarak analiz eder. Günlük kotanızı tüketebilir.")
-    else:
-        st.info("⚡ **Hızlı Analiz**: İstatistiksel algoritmalarla saniyeler içinde sonuç üretir.")
-
-    # ANA BUTON
-    if st.button("🚀 ANALİZİ BAŞLAT", type="primary", use_container_width=True):
-        # State'den verileri tazele
-        data_to_run = st.session_state.get("comments_to_analyze", [])
-        
-        if not data_to_run:
-            st.error("⚠️ Analiz edilecek veri bulunamadı! Lütfen bir uygulama linki girin veya dosya yükleyin.")
-        else:
-            # Hızlı analizde eğer tüm havuz varsa onu kullan
-            if st.session_state.analysis_type == "Hızlı Analiz" and st.session_state.get("all_fetched_pool"):
-                data_to_run = st.session_state.all_fetched_pool
-                
-            # Analiz fonksiyonunu çağır
-            run_bulk_analysis(data_to_run)
-
 
 st.divider()
 st.caption("Geliştiren: ivicin")
