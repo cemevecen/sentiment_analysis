@@ -664,6 +664,72 @@ def scrape_google_reviews_playwright(
                 except Exception:
                     continue
 
+            # ── Google Travel / Search URL → Maps URL dönüşümü ──────────
+            _is_travel_url = (
+                "google.com/travel" in maps_url
+                or (
+                    "google.com/search" in maps_url
+                    and "google.com/maps" not in maps_url
+                )
+            )
+            if _is_travel_url:
+                resolved_maps_url = None
+                # 1. Sayfadaki Maps linkini ara
+                for _sel in [
+                    'a[href*="google.com/maps"]',
+                    'a[href*="maps.google.com"]',
+                    '[data-url*="google.com/maps"]',
+                ]:
+                    try:
+                        _el = page.query_selector(_sel)
+                        if _el:
+                            _href = _el.get_attribute("href") or _el.get_attribute("data-url") or ""
+                            if "google.com/maps" in _href or "maps.google.com" in _href:
+                                resolved_maps_url = _href
+                                break
+                    except Exception:
+                        pass
+                # 2. Sayfa başlığından işletme adı çıkar
+                if not resolved_maps_url:
+                    try:
+                        _title = page.title()
+                        for _sep in [" - Google", " | Google", " – Google", " — Google"]:
+                            if _sep in _title:
+                                _name = _title.split(_sep)[0].strip()
+                                if _name:
+                                    resolved_maps_url = (
+                                        "https://www.google.com/maps/search/"
+                                        + urllib.parse.quote(_name)
+                                    )
+                                break
+                    except Exception:
+                        pass
+                # 3. og:title meta etiketinden dene
+                if not resolved_maps_url:
+                    try:
+                        _meta = page.query_selector('meta[property="og:title"]')
+                        if _meta:
+                            _name = (_meta.get_attribute("content") or "").strip()
+                            if _name:
+                                resolved_maps_url = (
+                                    "https://www.google.com/maps/search/"
+                                    + urllib.parse.quote(_name)
+                                )
+                    except Exception:
+                        pass
+                if resolved_maps_url:
+                    maps_url = resolved_maps_url
+                    page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+                    time.sleep(2)
+                    # Çerez onayı tekrar
+                    for _txt in ["Tümünü kabul et", "Accept all", "Kabul et"]:
+                        try:
+                            page.click(f'button:has-text("{_txt}")', timeout=2500)
+                            time.sleep(0.5)
+                            break
+                        except Exception:
+                            continue
+
             # Yorumlar sekmesine git
             for sel in ['button[data-tab-index="1"]',
                         'button:has-text("Yorum")',
@@ -837,7 +903,13 @@ def render_google_business_ui() -> None:
                 st.session_state.gb_selected_place = None
                 st.session_state.gb_show_search = True
 
-        is_maps_url = "google.com/maps" in gb_input or "maps.app.goo.gl" in gb_input
+        is_maps_url = (
+            "google.com/maps" in gb_input
+            or "maps.app.goo.gl" in gb_input
+            or "goo.gl/maps" in gb_input
+            or "google.com/travel" in gb_input
+            or "google.com/search" in gb_input
+        )
         is_selected = st.session_state.gb_selected_place is not None
         is_search = (
             gb_input.strip()
@@ -940,7 +1012,7 @@ def render_google_business_ui() -> None:
 
         st.markdown(
             '<div style="margin-top:4px;font-size:0.85rem;color:#64748b;">'
-            'Google Maps linki veya işletme adı ile arama yapabilirsiniz.</div>',
+            'Google Maps, Google Travel linki veya işletme adı ile arama yapabilirsiniz.</div>',
             unsafe_allow_html=True,
         )
 
