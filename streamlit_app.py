@@ -212,74 +212,76 @@ def get_app_store_reviews(app_id: str, country: str = 'tr', _progress_callback: 
         return reviews
 
 def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: Any = None) -> List[Dict[str, Any]]:
-    """Fetcher that splits requests by score to bypass the 3k limit per sort"""
+    """Deep fetcher that scans multiple countries to bypass Google's 3k limit per store"""
     from google_play_scraper import Sort, reviews as play_reviews
     now = datetime.now()
     threshold_date = now - timedelta(days=days_limit)
     
-    # Safety limit (200k) to prevent memory crashes, but normally we go until threshold
-    fetch_limit = 200000 
-    all_fetched_map = {} # Using map for easy deduplication
+    all_fetched_map = {} 
     
+    # We scan multiple countries with lang='tr' because Turkish users are everywhere.
+    # Each country provides its own ~3000 review pagination limit.
+    scan_countries = ['tr', 'us', 'de', 'az', 'gb', 'fr', 'at', 'nl']
     scores = [1, 2, 3, 4, 5]
-    total_scores = len(scores)
+    
+    total_steps = len(scan_countries) * len(scores)
+    current_step = 0
     
     try:
-        for s_idx, score in enumerate(scores):
-            continuation_token = None
-            # For each score, we can theoretically pull up to 3000+ per Google's internal limit
-            # max_requests_per_score set high enough to reach the wall or the date threshold
-            max_requests_per_score = 50 
-            
-            for i in range(max_requests_per_score):
-                result, continuation_token = play_reviews(
-                    app_id,
-                    lang='tr', country='tr',
-                    sort=Sort.NEWEST, count=199,
-                    filter_score_with=score,
-                    continuation_token=continuation_token
-                )
-                if not result: break
+        for country in scan_countries:
+            for score in scores:
+                current_step += 1
+                continuation_token = None
                 
-                batch_dates = []
-                for r in result:
-                    r_at_raw = r.get('at')
-                    if r_at_raw:
-                        # Ensure date is naive for safe comparison
-                        r_at = cast(datetime, r_at_raw)
-                        if r_at.tzinfo is not None:
-                            r_at = r_at.replace(tzinfo=None)
-                        
-                        if r_at >= threshold_date:
-                            content = str(r.get('content', ''))
-                            if content and len(content.strip()) >= 2:
-                                r_id = r.get('reviewId', content)
-                                all_fetched_map[r_id] = {"text": content, "date": r_at, "rating": str(score)}
-                        batch_dates.append(r_at)
+                # For high-traffic apps, we go up to 25 batches (approx 5k reviews) per score/country combo
+                for i in range(25):
+                    result, continuation_token = play_reviews(
+                        app_id,
+                        lang='tr',
+                        country=country,
+                        sort=Sort.NEWEST,
+                        count=200,
+                        filter_score_with=score,
+                        continuation_token=continuation_token
+                    )
+                    if not result: break
+                    
+                    reached_threshold = False
+                    for r in result:
+                        r_at_raw = r.get('at')
+                        if r_at_raw:
+                            r_at = cast(datetime, r_at_raw)
+                            if r_at.tzinfo is not None:
+                                r_at = r_at.replace(tzinfo=None)
+                            
+                            if r_at >= threshold_date:
+                                content = str(r.get('content', ''))
+                                if content and len(content.strip()) >= 2:
+                                    r_id = r.get('reviewId', content)
+                                    # Store with metadata for analysis
+                                    all_fetched_map[r_id] = {
+                                        "text": content, 
+                                        "date": r_at, 
+                                        "rating": str(score),
+                                        "country": country
+                                    }
+                            else:
+                                reached_threshold = True
+                    
+                    if _progress_callback:
+                        # Progress: (Completed steps / total steps) + (current batch progress / total steps)
+                        base_p = (current_step - 1) / total_steps
+                        batch_p = (i + 1) / 25
+                        overall_p = base_p + (batch_p / total_steps)
+                        _progress_callback(min(overall_p, 0.99))
+
+                    if reached_threshold: break
+                    if not continuation_token: break
                 
-                if _progress_callback:
-                    # Progress calculation: current score progress + overall progress
-                    # Each score accounts for 1/5th of the total task
-                    base_prog = s_idx / total_scores
-                    score_prog = (i + 1) / max_requests_per_score
-                    combined_p = base_prog + (score_prog / total_scores)
-                    _progress_callback(min(combined_p, 0.99))
-
-                if batch_dates and min(batch_dates) < threshold_date:
-                    break
-                if not continuation_token:
-                    break
-                if len(all_fetched_map) >= fetch_limit:
-                    break
-            
-            if len(all_fetched_map) >= fetch_limit:
-                break
-
         if _progress_callback: 
             _progress_callback(1.0)
             
-        final_list = list(all_fetched_map.values())
-        return final_list
+        return list(all_fetched_map.values())
     except:
         return list(all_fetched_map.values())
 
