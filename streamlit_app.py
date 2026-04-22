@@ -129,6 +129,7 @@ GROQ_CLIENT = setup_groq()
 HAS_GROQ = GROQ_CLIENT is not None
 
 
+COST_LIMIT_TL = 150.0
 API_TRACKER = {"cost_tl": 0.0}
 
 
@@ -1288,6 +1289,16 @@ with tab1:
                 </script>
             """, height=60, scrolling=False)
 
+        # Yenile butonu — sağa hizalı, küçük
+        _, col_ref = st.columns([5, 1])
+        with col_ref:
+            if st.button("↺ yenile", key="refresh_btn", use_container_width=True):
+                st.session_state["_refresh_token"] = int(time.time())
+                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                           "comments_to_analyze", "ai_summary", "last_results_len"]:
+                    st.session_state.pop(_k, None)
+                st.rerun()
+
         # 6. Tarih aralığı
         time_range = st.selectbox(
             "Tarih Aralığı Seçin:",
@@ -1334,8 +1345,8 @@ with tab1:
 
         
         # Saatlik cache key
-        _now_hour = datetime.now().strftime("%Y%m%d_%H")
-        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_hour}"
+        _refresh_token = st.session_state.get("_refresh_token", 0)
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_refresh_token}"
         
         if not platform or not app_id:
             if store_url.strip():
@@ -2215,7 +2226,6 @@ def heuristic_analysis(text, rating=None):
         "çok ucuz bu",
         "hem ücretli üyelik yapıyorsunuz hem programla ilgilenmiyorsunuz",
         "ne yapıyorsunuz bu ara",
-        "erişilebilirliğe dikkat edin",  # bu istek aslında
     ]
     sarkasm_hit = any(p in t for p in SARKASM)
 
@@ -2466,7 +2476,6 @@ def heuristic_analysis(text, rating=None):
         "kicks me out", "kicking me out", "kicked me out",
         "kick me from", "keeps kicking", "disconnected",
         "keeps disconnecting", "constant disconnects",
-        "glitch", "glitches", "glitching",
         "laggy server", "server lag",
 
         # Game/Platform — Safety
@@ -2489,22 +2498,7 @@ def heuristic_analysis(text, rating=None):
         "deleted the app", "deleting this app",
 
         # EN — Ek
-        "destroyed", "destroying", "destroy",
-        "where is my account", "give me my account",
-        "can't deactivate", "cannot deactivate",
-        "disabling my account", "disabling accounts",
         "falsely banned", "falsely suspended",
-        "false cse", "accused of cse",
-        "too many bugs", "so many bugs",
-        "fix your app", "fix the app", "fix this app",
-        "taken my account", "took my account",
-        "lost my account", "account taken",
-        "permanently disabled",
-        "still filled with",
-        "turned into a platform for ads",
-        "more ads than posts",
-        "full of bots",
-        "note expiring",
 
         # DE — Ek
         "stocken", "stockt", "ruckelt",
@@ -2524,7 +2518,6 @@ def heuristic_analysis(text, rating=None):
         "indirilemiyor",
 
         # RU — Ek
-        "stocken",
         "постоянно вылетает", "вылетает приложение",
         "не работает с vpn", "vpn не работает",
         "удалили музыку", "убрали музыку",
@@ -2823,20 +2816,12 @@ def run_bulk_analysis(data_to_process, is_append=False):
     progress_bar = st.progress(0)
     status_text = st.empty()
     ticker_placeholder = st.empty() 
-    quota_info = st.empty()
     st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
     st.session_state['_quota_hits'] = 0
             
     analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
     mode_idx = st.session_state.get("analysis_mode", 0)
     
-    if mode_idx == 0:
-        ANALYSIS_MODEL = 'models/gemini-2.0-flash-lite'
-        RPM_LIMIT = 500
-    else:
-        ANALYSIS_MODEL = 'models/gemini-2.5-flash'
-        RPM_LIMIT = 300
-
     start_time = time.time()
     
     
@@ -3874,6 +3859,21 @@ if "bulk_results" in st.session_state:
         display_summary = re.sub(r' {2,}', ' ', display_summary)
         
         display_summary = display_summary.replace('\n', '<br>')
+
+        def _pie_path(start_pct, end_pct, color):
+            import math as _math
+            if end_pct - start_pct <= 0: return ""
+            if end_pct - start_pct >= 99.9:
+                return f'<path d="M70,18 A52,52 0 1,1 69.99,18 Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
+            r, cx, cy = 52, 70, 70
+            sa = _math.radians(start_pct * 3.6 - 90)
+            ea = _math.radians(end_pct * 3.6 - 90)
+            x1,y1 = cx+r*_math.cos(sa), cy+r*_math.sin(sa)
+            x2,y2 = cx+r*_math.cos(ea), cy+r*_math.sin(ea)
+            xi,yi = cx+28*_math.cos(ea), cy+28*_math.sin(ea)
+            xj,yj = cx+28*_math.cos(sa), cy+28*_math.sin(sa)
+            lg = 1 if (end_pct-start_pct) > 50 else 0
+            return f'<path d="M{x1:.2f},{y1:.2f} A{r},{r} 0 {lg},1 {x2:.2f},{y2:.2f} L{xi:.2f},{yi:.2f} A28,28 0 {lg},0 {xj:.2f},{yj:.2f} Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
 
         card_html = clean_html(f"""
             <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: clamp(15px, 5vw, 35px); margin: 10px auto; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 100%; position: relative; overflow: hidden;">
