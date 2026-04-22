@@ -846,46 +846,24 @@ st.markdown("""
         transform: scale(1.02);
     }
 
-/* Mini yenile butonu */
+/* Mini yenile butonu — zarif ve küçük */
     .mini-refresh [data-testid="stButton"] { width: auto !important; }
     .mini-refresh button {
-        height: 24px !important;
-        font-size: 0.7rem !important;
-        padding: 0 10px !important;
+        height: 18px !important;
+        font-size: 0.62rem !important;
+        padding: 0 8px !important;
         width: auto !important;
         min-width: 0 !important;
-        border-radius: 20px !important;
+        border-radius: 10px !important;
         background: transparent !important;
         border: 1px solid #818CF8 !important;
         color: #6366F1 !important;
         box-shadow: none !important;
+        line-height: 1 !important;
     }
     .mini-refresh button:hover {
         background: #EEF2FF !important;
         transform: none !important;
-    }
-
-/* Yenile butonu — küçük, inline link görünümlü */
-    button[key="refresh_btn"],
-    [data-testid="stButton"]:has(button[key="refresh_btn"]) {
-        width: auto !important;
-    }
-    [data-testid="stButton"]:has(button[key="refresh_btn"]) button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: #818CF8 !important;
-        font-size: 0.78rem !important;
-        font-weight: 600 !important;
-        height: auto !important;
-        padding: 2px 0 !important;
-        width: auto !important;
-        display: inline !important;
-    }
-    [data-testid="stButton"]:has(button[key="refresh_btn"]) button:hover {
-        color: #6366F1 !important;
-        transform: none !important;
-        text-decoration: underline !important;
     }
 
 
@@ -1262,6 +1240,46 @@ with tab1:
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
+        # Geçmiş chip'leri — Giriş kutusunun hemen üzerinde daha görünür
+        if st.session_state.url_history:
+            chips_data = [
+                {"url": h["url"] if isinstance(h, dict) else h,
+                 "name": (h["name"] if isinstance(h, dict) else h)[:22]}
+                for h in st.session_state.url_history[:5]
+            ]
+            chips_js_array = json.dumps(chips_data)
+            components.html(f"""
+                <style>
+                    body {{ margin:0; padding:0; background:transparent; overflow:hidden; }}
+                    .chip-wrap {{ display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 4px 0; }}
+                    .chip-label {{ font-size: 0.65rem; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-family: 'Poppins', sans-serif; }}
+                    .chip {{ display: inline-block; cursor: pointer; background: #EEF2FF; border: 1px solid #818CF8; color: #4338CA; border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600; font-family: 'Poppins', sans-serif; white-space: nowrap; transition: all 0.15s ease; user-select: none; }}
+                    .chip:hover {{ background: #E0E7FF; border-color: #6366F1; transform: translateY(-1px); }}
+                </style>
+                <div class="chip-label">Son Aramalar</div>
+                <div class="chip-wrap" id="chip-wrap"></div>
+                <script>
+                (function() {{
+                    var chips = {chips_js_array};
+                    var wrap = document.getElementById('chip-wrap');
+                    chips.forEach(function(c) {{
+                        var span = document.createElement('span');
+                        span.className = 'chip';
+                        span.textContent = c.name;
+                        span.addEventListener('click', function() {{
+                            var inp = window.parent.document.querySelector('[data-testid="stTextInput"] input');
+                            if (!inp) return;
+                            var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                            setter.call(inp, c.url);
+                            inp.dispatchEvent(new Event('input', {{bubbles: true}}));
+                            inp.dispatchEvent(new Event('change', {{bubbles: true}}));
+                        }});
+                        wrap.appendChild(span);
+                    }});
+                }})();
+                </script>
+            """, height=65, scrolling=False)
+
         store_url = st.text_input(
             "Uygulama linki veya ID girin:",
             placeholder="Örn: com.instagram.android veya 1500198745",
@@ -1277,84 +1295,6 @@ with tab1:
                 st.session_state.pop(_k, None)
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # Geçmiş chip'leri — components.html ile render (onclick çalışır)
-        if st.session_state.url_history:
-            chips_data = [
-                {"url": h["url"] if isinstance(h, dict) else h,
-                 "name": (h["name"] if isinstance(h, dict) else h)[:22]}
-                for h in st.session_state.url_history[:5]
-            ]
-            chips_js_array = json.dumps(chips_data)
-
-            components.html(f"""
-                <style>
-                    body {{ margin:0; padding:0; background:transparent; overflow:hidden; }}
-                    .chip-wrap {{
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 6px;
-                        padding: 4px 0 6px 0;
-                    }}
-                    .chip-label {{
-                        font-size: 0.68rem;
-                        color: #94A3B8;
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        letter-spacing: 0.8px;
-                        margin-bottom: 4px;
-                        font-family: 'Poppins', sans-serif;
-                    }}
-                    .chip {{
-                        display: inline-block;
-                        cursor: pointer;
-                        background: #EEF2FF;
-                        border: 1px solid #818CF8;
-                        color: #4338CA;
-                        border-radius: 20px;
-                        padding: 4px 12px;
-                        font-size: 0.78rem;
-                        font-weight: 600;
-                        font-family: 'Poppins', sans-serif;
-                        white-space: nowrap;
-                        transition: all 0.15s ease;
-                        user-select: none;
-                    }}
-                    .chip:hover {{
-                        background: #E0E7FF;
-                        border-color: #6366F1;
-                        transform: translateY(-1px);
-                    }}
-                    .chip:active {{
-                        transform: scale(0.97);
-                    }}
-                </style>
-                <div class="chip-label">Son Aramalar</div>
-                <div class="chip-wrap" id="chip-wrap"></div>
-                <script>
-                (function() {{
-                    var chips = {chips_js_array};
-                    var wrap = document.getElementById('chip-wrap');
-                    chips.forEach(function(c) {{
-                        var span = document.createElement('span');
-                        span.className = 'chip';
-                        span.textContent = c.name;
-                        span.title = c.url;
-                        span.addEventListener('click', function() {{
-                            // Streamlit input'una React-compatible şekilde yaz
-                            var inp = window.parent.document.querySelector('[data-testid="stTextInput"] input');
-                            if (!inp) return;
-                            var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                            setter.call(inp, c.url);
-                            inp.dispatchEvent(new Event('input', {{bubbles: true}}));
-                            inp.dispatchEvent(new Event('change', {{bubbles: true}}));
-                            inp.focus();
-                        }});
-                        wrap.appendChild(span);
-                    }});
-                }})();
-                </script>
-            """, height=70, scrolling=False)
 
 
 
