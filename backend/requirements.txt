@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+tensorflow
+transformers
+pydantic
+python-multipart
+python-dotenv
+google-generativeai
