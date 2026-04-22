@@ -606,6 +606,37 @@ st.markdown("""
         font-weight: 500;
         cursor: default;
     }
+
+    /* Compact Radio Chips specifically for Time Scale */
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 10px !important;
+    }
+    div[data-testid="stRadio"] label {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        padding: 4px 12px !important;
+        border-radius: 50px !important;
+        cursor: pointer !important;
+        font-size: 0.85rem !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stRadio"] label:hover {
+        background-color: #F8FAFC !important;
+    }
+    div[data-testid="stRadio"] label[data-selected="true"] {
+        background-color: #6366F1 !important;
+        color: white !important;
+        border-color: #6366F1 !important;
+    }
+    /* Hide the radio circles */
+    div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] {
+        margin-left: 0px !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] > div > div:first-child {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1422,11 +1453,9 @@ if "bulk_results" in st.session_state:
         st.markdown("---")
         
         # UI for Frequency Selection
-        g_col1, g_col2 = st.columns([2, 1])
-        with g_col1:
-            st.write("#### Puan Dağılımı Trendi")
-        with g_col2:
-            freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel")
+        st.write("#### Puan Dağılımı Trendi")
+        freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
