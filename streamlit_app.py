@@ -1215,19 +1215,7 @@ def render_google_business_ui() -> None:
             # Hata var mı?
             scrape_error = st.session_state.get("_gb_last_scrape_error")
             if scrape_error:
-                # Markdown olarak göster (\n\n destekli)
-                st.warning(scrape_error)
-                debug_log = st.session_state.get("_gb_debug_log", [])
-                if debug_log:
-                    with st.expander("🔍 Teknik detaylar", expanded=False):
-                        for line in debug_log:
-                            st.text(line)
-
-                # Alternatif yöntem önerisi
-                st.info(
-                    "**💡 Hızlı çözüm:** Google Maps sayfasını açın, yorumları kopyalayın "
-                    "ve **Metin Girişi** sekmesine yapıştırın. Analiz aynı şekilde çalışır."
-                )
+                st.warning("kısa bir süre ara!")
                 return
 
             threshold = datetime.now() - timedelta(days=gb_days)
