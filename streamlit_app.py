@@ -321,10 +321,25 @@ st.markdown("""
         fill: #000000 !important;
     }
 
-    /* Fix Selectbox & Inputs to Light Blue with DARK TEXT */
-    .stSelectbox div[data-baseweb="select"], .stTextInput input, .stTextArea textarea {
-        background-color: #F0F9FF !important;
+    /* Premium Input Styling - Unified and Clean */
+    .stTextInput input, .stSelectbox [data-baseweb="select"], .stTextArea textarea {
+        background-color: #FFFFFF !important;
         color: #1E293B !important;
+        border: 2px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        transition: all 0.2s ease !important;
+        font-size: 1rem !important;
+    }
+    
+    .stTextInput input:hover, .stSelectbox [data-baseweb="select"]:hover {
+        border-color: #6366F1 !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    }
+    
+    .stTextInput input:focus, .stSelectbox [data-baseweb="select"]:focus-within {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
     }
     
     /* Selectbox Popover (Dropdown) fixes */
@@ -337,9 +352,9 @@ st.markdown("""
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
-        background-color: #F0F9FF !important;
+        background-color: #FFFFFF !important;
         color: #1E293B !important;
-        border-color: #FFE4D6 !important;
+        border: none !important;
     }
     
     /* Ensure no dark boxes in Expanders - Aggressive Fix */
@@ -705,21 +720,29 @@ tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin 
 
 with tab1:
     with st.container(border=True):
-        col_u, col_r = st.columns([2, 1])
+        st.markdown("""
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 5px;">
+                <span style="font-size: 1.2rem;">🔗</span>
+                <span style="font-weight: 700; color: #1E293B;">Uygulama Bilgileri</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        col_u, col_r = st.columns([1.5, 1])
         with col_u:
-            store_url = st.text_input("Uygulama linki veya ID girin:", placeholder="Örn: com.whatsapp veya 1500198745")
-            st.session_state.app_url = store_url # Sync for share report
+            store_url = st.text_input("Link veya ID:", placeholder="Örn: com.whatsapp veya 1500198745", label_visibility="collapsed")
+            st.session_state.app_url = store_url
         with col_r:
             time_range = st.selectbox(
-                "Tarih Aralığı Seçin:",
+                "Aralık:",
                 options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"],
-                index=0
+                index=0,
+                label_visibility="collapsed"
             )
+        st.caption("✨ Apple: Mağaza linki or ID, Play Store: Link or paket adı geçerlidir.")
         
         # Map range to days
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
-        st.caption("Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.")
 
 
     if store_url.strip():
