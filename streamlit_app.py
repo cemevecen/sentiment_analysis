@@ -193,7 +193,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- Analysis Configuration Section ---
-is_bulk = st.checkbox("🔄 Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın / Dosya yükleyin)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
+is_bulk = st.checkbox("Toplu Analiz Modu (Birden fazla yorumu alt alta yapıştırın / Dosya yükleyin)", help="Her satırı ayrı bir yorum olarak değerlendirir.")
 
 # Input Section
 comments_to_analyze = []
