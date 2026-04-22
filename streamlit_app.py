@@ -3317,15 +3317,27 @@ if "bulk_results" in st.session_state:
                     st.session_state.last_results_len = len(analysis_df)
             
             st.markdown(f"""
-            <div style="background: #FFFFFF; padding: 25px; border-radius: 12px; border: 2px solid #a78bfa; color: #1e293b; line-height: 1.6; box-shadow: 0 4px 15px rgba(167, 139, 250, 0.1);">
-                <div style="font-weight: 800; font-size: 1.3rem; margin-bottom: 15px; color: #7c3aed; display: flex; align-items: center; gap: 10px;">
-                    <span>Yapay Zeka Derin Analiz Raporu</span>
-                </div>
-                <div style="font-size: 0.95rem;">
-                    {st.session_state.ai_summary}
-                </div>
+        <div style="background:#F5F3FF;border-radius:12px;padding:20px 24px;position:relative;
+                    border:0.5px solid #DDD6FE;">
+            <div style="font-size:52px;line-height:0.6;color:#7c3aed;font-family:Georgia,serif;
+                        opacity:0.3;margin-bottom:10px;user-select:none;">"</div>
+            <div style="font-size:0.82rem;font-weight:700;color:#7c3aed;
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                Yapay Zeka Derin Analiz Raporu
             </div>
-            """, unsafe_allow_html=True)
+            <p style="font-size:0.9rem;color:#1E293B;line-height:1.75;margin:0;">
+                {st.session_state.ai_summary}
+            </p>
+            <div style="margin-top:14px;display:flex;gap:6px;align-items:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#f43f5e;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>
+                <span style="font-size:0.7rem;color:#94A3B8;margin-left:4px;font-weight:500;">
+                    {m_olumlu} olumlu · {m_olumsuz} olumsuz · {m_istek} görüş
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         else:
             # Hızlı Analiz — heuristic özet (API kullanmaz)
             if total_all == 0:
@@ -3414,16 +3426,26 @@ if "bulk_results" in st.session_state:
                 summary_body = " ".join(p for p in parts if p)
 
                 st.markdown(f"""
-            <div style="background: {grad_bg}; padding: 20px; border-radius: 12px;
-                        border: 2px solid {border_c}; color: #1e293b; line-height: 1.8;">
-                <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 10px;">
-                    {summary_title}
-                </div>
-                <div style="font-size: 0.9rem; opacity: 0.95;">
-                    {summary_body}
-                </div>
+        <div style="background:#F8FAFC;border-radius:12px;padding:20px 24px;position:relative;">
+            <div style="font-size:52px;line-height:0.6;color:#818cf8;font-family:Georgia,serif;
+                        opacity:0.35;margin-bottom:10px;user-select:none;">"</div>
+            <div style="font-size:0.82rem;font-weight:700;color:#6366F1;
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                {summary_title}
             </div>
-            """, unsafe_allow_html=True)
+            <p style="font-size:0.9rem;color:#1E293B;line-height:1.75;margin:0;">
+                {summary_body}
+            </p>
+            <div style="margin-top:14px;display:flex;gap:6px;align-items:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#f43f5e;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>
+                <span style="font-size:0.7rem;color:#94A3B8;margin-left:4px;font-weight:500;">
+                    {m_olumlu} olumlu · {m_olumsuz} olumsuz · {m_istek} görüş
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         
 
