@@ -82,10 +82,10 @@ def is_valid_comment(text):
         if re.search(date_regex, s, re.IGNORECASE):
             return False
 
-    # 5. Formal Developer Canned Replies
+    # 6. Formal Developer Canned Replies (Aggressive)
     formal_patterns = [
-        "merhaba, geri bildiriminiz için",
-        "teşekkür ederiz. yaşadığınız",
+        "aksaklık için üzgünüz", "yaşanan aksaklık için",
+        "teşekkür ederiz. yaşadığınız", "teşekkürler. yaşadığınız",
         "good day, thank you for the feedback",
         "support team", "destek ekibi",
         "iletişime geçtiğiniz için teşekkür",
@@ -93,12 +93,20 @@ def is_valid_comment(text):
         "ilgili birimlerimize iletiyoruz",
         "çözüm için çalışıyoruz",
         "güncelleme ile giderilmiştir",
+        "versiyonda giderilmiştir",
         "sorununuz devam ediyorsa",
+        "yeni versiyon yayınlandı",
+        "yükleyebilmiş miydiniz",
+        "yardıma ihtiyacınız olursa",
         "iyi günler dileriz"
     ]
     if any(fp in sl for fp in formal_patterns):
         return False
         
+    # 7. Email Addresses (Common in support replies)
+    if re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", sl):
+        return False
+
     return True
 
 # --- PREMIUM STYLING (GLASSMORPHISM) ---
@@ -447,17 +455,28 @@ with tab1:
         # Date regex for "Jan 23, 2026 - User"
         store_meta_regex = r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{1,2},?\s+\d{4}\s*-\s*.*$"
         
+        skip_dev_block = False
+        
         for line in raw_lines:
             l = line.strip()
             if not l: continue
             
-            # Detect Store Metadata (Date - User)
+            # Detect Store Metadata (Date - User) -> This starts a NEW user review block
             if re.search(store_meta_regex, l, re.IGNORECASE):
+                skip_dev_block = False # Reset on new review
                 # If we have a previous line in progress, it's likely a TITLE or NICKNAME. Remove it.
                 if processed_comments and len(processed_comments[-1]["text"]) < 85:
                     processed_comments.pop()
-                continue # Skip the date line too
+                continue
                 
+            # Detect Developer Response Header -> Starts a block to IGNORE
+            if any(k in l.lower() for k in ["developer response", "geliştirici cevabı"]):
+                skip_dev_block = True
+                continue
+            
+            if skip_dev_block:
+                continue
+
             if is_valid_comment(l):
                 processed_comments.append({"text": l})
                 
