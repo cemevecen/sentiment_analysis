@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-10-05"  # Google Travel URL + Playwright runtime bootstrap
+CURRENT_VERSION = "2026-03-19-11-00"  # Travel URL pre-resolve + crash-safe Playwright goto
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -620,6 +620,49 @@ def build_maps_url_from_place_id(place_id: str) -> str:
     return f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
 
+def _extract_maps_url_from_travel(travel_url: str) -> Optional[str]:
+    """
+    Google Travel/Search URL'sinden Maps URL'si çıkarır — Playwright kullanmadan.
+    requests ile sayfayı çekip başlık veya og:title'dan işletme adını alır.
+    """
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        }
+        resp = requests.get(travel_url, headers=headers, timeout=15, allow_redirects=True)
+        # Redirect ile direkt Maps URL'sine geldiyse kullan
+        if "google.com/maps" in resp.url:
+            return resp.url
+        # <title> etiketinden işletme adı
+        title_m = re.search(r"<title[^>]*>([^<]+)</title>", resp.text, re.IGNORECASE)
+        if title_m:
+            title = title_m.group(1).strip()
+            for sep in [" - Google", " | Google", " – Google", " — Google", " • Google"]:
+                if sep in title:
+                    name = title.split(sep)[0].strip()
+                    if name and name.lower() not in ("google", "google travel", "google maps", "google haritalar"):
+                        return "https://www.google.com/maps/search/" + urllib.parse.quote(name)
+        # og:title meta etiketinden
+        og_m = re.search(
+            r'property=["\']og:title["\'][^>]*content=["\']([^"\']+)["\']',
+            resp.text,
+            re.IGNORECASE,
+        )
+        if og_m:
+            name = og_m.group(1).strip()
+            if name and name.lower() not in ("google", "google travel", "google maps", "google haritalar"):
+                return "https://www.google.com/maps/search/" + urllib.parse.quote(name)
+    except Exception:
+        pass
+    return None
+
+
 def format_playwright_runtime_error(error: Union[str, Exception]) -> str:
     """Playwright runtime hatalarını kullanıcıya okunabilir hale getirir."""
     raw_message = str(error)
@@ -751,10 +794,33 @@ def scrape_google_reviews_playwright(
     try:
         from playwright.sync_api import sync_playwright
 
+        # ── Google Travel / Search URL → Maps URL ön-çözümlemesi ───────
+        # Playwright'a geçmeden önce requests ile dene; Travel URL'leri
+        # headless Chromium'da "Page crashed" hatasına yol açabilir.
+        _is_travel_url_initial = (
+            "google.com/travel" in maps_url
+            or (
+                "google.com/search" in maps_url
+                and "google.com/maps" not in maps_url
+            )
+        )
+        if _is_travel_url_initial:
+            _pre_resolved = _extract_maps_url_from_travel(maps_url)
+            if _pre_resolved:
+                maps_url = _pre_resolved
+                _is_travel_url_initial = False
+
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox"],
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
+                    "--disable-crash-reporter",
+                    "--no-zygote",
+                ],
             )
             ctx = browser.new_context(
                 locale="tr-TR",
@@ -767,7 +833,23 @@ def scrape_google_reviews_playwright(
             )
             page = ctx.new_page()
 
-            page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+            # Travel URL'leri "commit" ile yükle (JS crash'ini önler);
+            # normal Maps URL'leri için domcontentloaded kullan.
+            _goto_wait = "commit" if _is_travel_url_initial else "domcontentloaded"
+            try:
+                page.goto(maps_url, timeout=30000, wait_until=_goto_wait)
+            except Exception as _goto_err:
+                if "crashed" in str(_goto_err).lower():
+                    # Sayfa çöktü — işletme adını URL'den çıkarmayı dene
+                    _fallback = _extract_maps_url_from_travel(maps_url)
+                    if _fallback:
+                        maps_url = _fallback
+                        _is_travel_url_initial = False
+                        page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+                    else:
+                        raise
+                else:
+                    raise
             time.sleep(2)
 
             # Çerez onay popup'ı
@@ -780,13 +862,8 @@ def scrape_google_reviews_playwright(
                     continue
 
             # ── Google Travel / Search URL → Maps URL dönüşümü ──────────
-            _is_travel_url = (
-                "google.com/travel" in maps_url
-                or (
-                    "google.com/search" in maps_url
-                    and "google.com/maps" not in maps_url
-                )
-            )
+            # (ön-çözümleme başarısız olursa Playwright üzerinden tekrar dene)
+            _is_travel_url = _is_travel_url_initial
             if _is_travel_url:
                 resolved_maps_url = None
                 # 1. Sayfadaki Maps linkini ara
