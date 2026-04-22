@@ -809,6 +809,29 @@ st.markdown("""
         transform: scale(1.02);
     }
 
+/* Yenile butonu — küçük, inline link görünümlü */
+    button[key="refresh_btn"],
+    [data-testid="stButton"]:has(button[key="refresh_btn"]) {
+        width: auto !important;
+    }
+    [data-testid="stButton"]:has(button[key="refresh_btn"]) button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #818CF8 !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        height: auto !important;
+        padding: 2px 0 !important;
+        width: auto !important;
+        display: inline !important;
+    }
+    [data-testid="stButton"]:has(button[key="refresh_btn"]) button:hover {
+        color: #6366F1 !important;
+        transform: none !important;
+        text-decoration: underline !important;
+    }
+
 
     /* File Uploader Button - Restored & Refined */
     [data-testid="stFileUploader"] button[kind="secondary"] {
@@ -1183,18 +1206,16 @@ with tab1:
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        # Üst sağda yenile butonu
-        col_inp, col_ref = st.columns([5, 1])
-        with col_inp:
-            store_url = st.text_input(
-                "Uygulama linki veya ID girin:",
-                placeholder="Örn: com.instagram.android veya 1500198745",
-                key="_store_url_input"
-            )
-            st.session_state.app_url = store_url
-        with col_ref:
-            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            if st.button("🔄", key="refresh_btn", use_container_width=True, help="Yorumları yeniden çek"):
+        store_url = st.text_input(
+            "Uygulama linki veya ID girin:",
+            placeholder="Örn: com.instagram.android veya 1500198745",
+            key="_store_url_input"
+        )
+        st.session_state.app_url = store_url
+
+        # Yenile linki — buton yerine küçük tıklanabilir metin
+        if st.session_state.get("last_fetch_key"):
+            if st.button("↺  Yorumları yeniden çek", key="refresh_btn"):
                 for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
                            "comments_to_analyze", "ai_summary", "last_results_len"]:
                     st.session_state.pop(_k, None)
@@ -1327,8 +1348,8 @@ with tab1:
 
         
         # Bugünün tarihi + saati (saatlik cache) fetch_key'e ekleniyor
-        _now_hour = datetime.now().strftime("%Y%m%d_%H")
-        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_hour}"
+        _now_ts = int(time.time() // 1800)  # 30 dakikada bir yenilenir
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_ts}"
         
         if not platform or not app_id:
             if store_url.strip():
