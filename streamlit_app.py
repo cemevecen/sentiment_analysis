@@ -1402,13 +1402,11 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if st.button("Analizini Yap", type="primary", use_container_width=True):
-        if not comments_to_analyze:
-            st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
-        else:
-            run_bulk_analysis(comments_to_analyze)
+if st.button("Analizini Yap", type="primary", use_container_width=True):
+    if not comments_to_analyze:
+        st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
+    else:
+        run_bulk_analysis(comments_to_analyze)
 
 # --- Persistent Results Display ---
 if "bulk_results" in st.session_state:
