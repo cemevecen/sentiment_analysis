@@ -821,11 +821,16 @@ if comments_to_analyze:
 def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
     if not HAS_GEMINI:
         return None
-    try:
-        # temperature=0 → deterministik, tutarlı sonuçlar
-        generation_config = genai.types.GenerationConfig(temperature=0)
-        model = genai.GenerativeModel(model_name, generation_config=generation_config)
-        prompt = f"""Sen bir Türkçe uygulama yorumu duygu analizi uzmanısın.
+    
+    # Fallback zinciri: seçilen model çalışmazsa gemini-2.0-flash'e geç
+    FALLBACK_MODEL = 'gemini-2.0-flash'
+    models_to_try = [model_name] if model_name == FALLBACK_MODEL else [model_name, FALLBACK_MODEL]
+    
+    for current_model in models_to_try:
+        try:
+            generation_config = genai.types.GenerationConfig(temperature=0)
+            model = genai.GenerativeModel(current_model, generation_config=generation_config)
+            prompt = f"""Sen bir Türkçe uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
 KATEGORİLER:
@@ -864,24 +869,28 @@ SOMUT ÖRNEKLER (few-shot):
 
 Yorum: "{text}"
 """
-        response = model.generate_content(prompt)
-        content = response.text
-        match = re.search(r'\{.*?\}', content, re.DOTALL)
-        if match:
-            data = json.loads(match.group())
-            p = float(data.get("olumlu", 0))
-            n = float(data.get("olumsuz", 0))
-            neu = float(data.get("istek_gorus", 0))
-            total = p + n + neu
-            if total > 0:
-                return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
-    except Exception as e:
-        err_str = str(e)
-        if "429" in err_str or "quota" in err_str.lower():
-            st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
-        else:
-            st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
-        return None
+            response = model.generate_content(prompt)
+            content = response.text
+            match = re.search(r'\{.*?\}', content, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                p = float(data.get("olumlu", 0))
+                n = float(data.get("olumsuz", 0))
+                neu = float(data.get("istek_gorus", 0))
+                total = p + n + neu
+                if total > 0:
+                    return {"olumlu": p/total, "olumsuz": n/total, "istek_gorus": neu/total}
+        except Exception as e:
+            err_str = str(e)
+            if "404" in err_str and current_model != FALLBACK_MODEL:
+                # Model bulunamadı → fallback'e geç, sessizce devam et
+                continue
+            elif "429" in err_str or "quota" in err_str.lower():
+                st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
+                return None
+            else:
+                st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
+                return None
     return None
 
 
@@ -934,13 +943,13 @@ if st.button("Analizini Yap", use_container_width=True):
         # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
         mode_idx = st.session_state.get("analysis_mode", 0)
         if mode_idx == 0:  # Hızlı
-            ANALYSIS_MODEL = 'gemini-2.0-flash'
-            DELAY_SECS = 2
+            ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
+            DELAY_SECS = 1
             RPM_LIMIT = 30
         else:  # Yavaş
-            ANALYSIS_MODEL = 'gemini-2.0-flash'
+            ANALYSIS_MODEL = 'gemini-2.5-pro-exp-03-25'
             DELAY_SECS = 5
-            RPM_LIMIT = 12
+            RPM_LIMIT = 10
 
 
 
