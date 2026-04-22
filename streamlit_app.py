@@ -1255,14 +1255,6 @@ with tab1:
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        # 3. Input alanı
-        store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
-            key="_store_url_input"
-        )
-        st.session_state.app_url = store_url
-
         # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
         if st.session_state.url_history:
             chips_data = [
