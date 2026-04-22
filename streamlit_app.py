@@ -28,6 +28,8 @@ import os
 import json
 import re
 import time
+import subprocess
+import sys
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -62,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-18-21-15"  # Model selector + Real-time search added
+CURRENT_VERSION = "2026-03-19-10-05"  # Google Travel URL + Playwright runtime bootstrap
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -618,6 +620,102 @@ def build_maps_url_from_place_id(place_id: str) -> str:
     return f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
 
+def format_playwright_runtime_error(error: Union[str, Exception]) -> str:
+    """Playwright runtime hatalarını kullanıcıya okunabilir hale getirir."""
+    raw_message = str(error)
+    if (
+        "Executable doesn't exist" in raw_message
+        or "Please run the following command to download new browsers" in raw_message
+    ):
+        return (
+            "Playwright yüklü ancak Chromium tarayıcı dosyaları bu ortamda henüz hazır değil. "
+            "Uygulama otomatik kurulum denedi fakat tarayıcı başlatılamadı. "
+            "Deploy ortamında `python -m playwright install chromium` adımının da çalıştığından emin olun."
+        )
+    return f"Playwright scraping hatası: {raw_message}"
+
+
+def ensure_playwright_runtime() -> Dict[str, Any]:
+    """Playwright Python paketi ve Chromium binary'sinin çalışır durumda olmasını sağlar."""
+    if st.session_state.get("_pw_runtime_ready"):
+        return {"ok": True, "message": ""}
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return {
+            "ok": False,
+            "message": (
+                "Playwright Python paketi kurulu değil. "
+                "`pip install playwright` ve ardından `python -m playwright install chromium` gerekir."
+            ),
+        }
+
+    def _launch_check() -> None:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
+            browser.close()
+
+    try:
+        _launch_check()
+        st.session_state["_pw_runtime_ready"] = True
+        return {"ok": True, "message": ""}
+    except Exception as exc:
+        missing_browser = (
+            "Executable doesn't exist" in str(exc)
+            or "Please run the following command to download new browsers" in str(exc)
+        )
+        if not missing_browser:
+            return {"ok": False, "message": format_playwright_runtime_error(exc)}
+
+    if st.session_state.get("_pw_runtime_install_attempted"):
+        return {
+            "ok": False,
+            "message": (
+                "Playwright Chromium kurulumu bu oturumda daha once denendi ancak tamamlanamadı. "
+                "Deploy loglarında `python -m playwright install chromium` adımını kontrol edin."
+            ),
+        }
+
+    st.session_state["_pw_runtime_install_attempted"] = True
+    try:
+        install_result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=False,
+        )
+    except Exception as install_exc:
+        return {
+            "ok": False,
+            "message": (
+                "Playwright Chromium kurulumu otomatik olarak başlatılamadı: "
+                f"{install_exc}"
+            ),
+        }
+
+    if install_result.returncode != 0:
+        install_output = (install_result.stderr or install_result.stdout or "").strip()
+        return {
+            "ok": False,
+            "message": (
+                "Playwright Chromium otomatik kurulumu başarısız oldu. "
+                f"Ayrıntı: {install_output[:400]}"
+            ),
+        }
+
+    try:
+        _launch_check()
+        st.session_state["_pw_runtime_ready"] = True
+        return {"ok": True, "message": ""}
+    except Exception as retry_exc:
+        return {"ok": False, "message": format_playwright_runtime_error(retry_exc)}
+
+
 def scrape_google_reviews_playwright(
     maps_url: str,
     max_reviews: int = 300,
@@ -626,9 +724,14 @@ def scrape_google_reviews_playwright(
     """
     Playwright (Chromium headless) ile Google Maps sayfasından yorumları çeker.
     """
+    st.session_state["_gb_last_scrape_error"] = None
+
     try:
         from playwright.sync_api import sync_playwright  # noqa: F401
     except ImportError:
+        st.session_state["_gb_last_scrape_error"] = (
+            "Playwright Python paketi kurulu değil. `pip install playwright` gerekir."
+        )
         return []
 
     reviews: List[Dict[str, Any]] = []
@@ -841,7 +944,8 @@ def scrape_google_reviews_playwright(
             browser.close()
 
     except Exception as e:
-        st.error(f"Playwright scraping hatası: {e}")
+        st.session_state["_gb_last_scrape_error"] = format_playwright_runtime_error(e)
+        return []
 
     if _progress_callback:
         _progress_callback(1.0)
@@ -865,6 +969,7 @@ def render_google_business_ui() -> None:
         ("gb_fetch_metadata",  {}),
         ("_gb_last_cache_key", ""),
         ("_gb_prev_input",     ""),
+        ("_gb_last_scrape_error", None),
     ]:
         if key not in st.session_state:
             st.session_state[key] = default
@@ -1038,6 +1143,11 @@ def render_google_business_ui() -> None:
 
     # ── Scraping ──────────────────────────────────────────────────
     if active_url and HAS_PLAYWRIGHT:
+        runtime_status = ensure_playwright_runtime()
+        if not runtime_status.get("ok"):
+            st.error(runtime_status["message"])
+            return
+
         cache_key = f"gb_{active_url}_{gb_time_range}"
 
         if st.session_state.get("_gb_last_cache_key") != cache_key:
@@ -1070,6 +1180,11 @@ def render_google_business_ui() -> None:
                 )
 
             loading_ph.empty()
+
+            scrape_error = st.session_state.get("_gb_last_scrape_error")
+            if scrape_error:
+                st.error(scrape_error)
+                return
 
             threshold = datetime.now() - timedelta(days=gb_days)
             filtered  = [
