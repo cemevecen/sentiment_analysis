@@ -557,7 +557,7 @@ if 'comments_to_analyze' not in st.session_state:
 
 comments_to_analyze = [] # Reset local ref for tab logic
 
-tab1, tab2, tab3 = st.tabs(["🔗 Mağaza Linki", "📁 Dosya Yükle (CSV/Excel)", "✍️ Metin Girişi"])
+tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi"])
 
 with tab1:
     with st.container(border=True):
@@ -574,7 +574,7 @@ with tab1:
         # Map range to days
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}
         days_limit = range_map[time_range]
-        st.caption("ℹ️ Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.")
+        st.caption("Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.")
 
 
     if store_url.strip():
@@ -611,12 +611,12 @@ with tab1:
 
         if not platform or not app_id:
             if store_url.strip():
-                st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
+                st.warning("Geçerli bir Play Store veya App Store linki bulunamadı.")
         else:
             with st.container():
                 loading_placeholder = st.empty()
                 with loading_placeholder.container():
-                    st.markdown(f"#### 🚀 {time_range} yorumları mağazadan çekiliyor...")
+                    st.markdown(f"#### {time_range} yorumları mağazadan çekiliyor...")
                     if lottie_loading:
                         st_lottie(lottie_loading, height=150, key="fetch_loader")
                     else:
@@ -654,14 +654,14 @@ with tab1:
                             min_dt = min([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
                             max_dt = max([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
                             
-                            st.warning(f"⚠️ Toplamda **{total_found}** yorum bulundu. Bu yorumların arasından en güncel olan **{MAX_REVIEWS}** tanesi analize dahil ediliyor. (Seçilen yorumların tarih aralığı: {min_dt} ile {max_dt} arasındadır)")
+                            st.warning(f"Toplamda **{total_found}** yorum bulundu. Bu yorumların arasından en güncel olan **{MAX_REVIEWS}** tanesi analize dahil ediliyor. (Seçilen yorumların tarih aralığı: {min_dt} ile {max_dt} arasındadır)")
                         
                         st.session_state.comments_to_analyze = fetched_comments
-                        st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
+                        st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
-                        st.info(f"ℹ️ {time_range} kriterine uygun yorum bulunamadı.")
+                        st.info(f"{time_range} kriterine uygun yorum bulunamadı.")
                 except Exception as e:
-                    st.error(f"⚠️ Yorumlar çekilirken bir hata oluştu: {e}")
+                    st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
     uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
@@ -739,14 +739,13 @@ with tab2:
                         st.markdown(f"""
                         <div style="display: flex; justify-content: space-between; align-items: center; background-color: #F0F9FF; padding: 10px 15px; border-radius: 10px; border: 1px solid #E0F2FE; margin-bottom: 5px;">
                             <div style="color: #0369a1; font-weight: 600; font-size: 0.9rem;">
-                                ℹ️ Dosya okundu: {len(df_upload)} satır
+                                Dosya okundu: {len(df_upload)} satır
                             </div>
                             <div style="font-size: 0.9rem; font-weight: 600; color: #475569;">
-                                ✨ Otomatik Seçilen Sütun: <span class="column-badge">{col_name}</span>
+                                Otomatik Seçilen Sütun: <span class="column-badge">{col_name}</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-
                         
                         if col_name:
                             # NEW FEATURE: Dosya Istatistikleri
@@ -801,15 +800,15 @@ with tab2:
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
                             
             except Exception as e:
-                st.error(f"⚠️ {uploaded_file.name} okuma hatası: {e}")
+                st.error(f"{uploaded_file.name} okuma hatası: {e}")
         
         if all_comments:
             MAX_REVIEWS = 500
             if len(all_comments) > MAX_REVIEWS:
-                st.warning(f"⚠️ Dosyadaki ilk {MAX_REVIEWS} yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
+                st.warning(f"Dosyadaki ilk {MAX_REVIEWS} yorum analize alınmıştır (Toplam: {len(all_comments)} satır).")
                 all_comments = all_comments[:MAX_REVIEWS]
             st.session_state.comments_to_analyze = all_comments
-            st.success(f"📋 Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
+            st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
     text_input = st.text_area(
@@ -853,10 +852,10 @@ with tab3:
         if processed_comments:
             MAX_REVIEWS = 500
             if len(processed_comments) > MAX_REVIEWS:
-                st.warning(f"⚠️ En fazla {MAX_REVIEWS} adet yorum girilebilir. Fazlası kırpıldı.")
+                st.warning(f"En fazla {MAX_REVIEWS} adet yorum girilebilir. Fazlası kırpıldı.")
                 processed_comments = processed_comments[:MAX_REVIEWS]
             st.session_state.comments_to_analyze = processed_comments
-            st.success(f"✏️ Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
+            st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
 
 # Update the main reference (Important for analysis button)
 comments_to_analyze = st.session_state.comments_to_analyze
@@ -1009,7 +1008,7 @@ Yorum: "{text}"
             elif "429" in err_str or "quota" in err_str.lower():
                 return {"_error": "quota"}
             else:
-                return {"_error": f"⚠️ Gemini API hatası: {err_str[:120]}"}
+                return {"_error": f"Gemini API hatası: {err_str[:120]}"}
     return None
 
 
@@ -1059,7 +1058,7 @@ if st.button("Analizini Yap", use_container_width=True):
         progress_bar = st.progress(0)
         status_text = st.empty()
         quota_info = st.empty()
-        st.warning("🔴 Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
+        st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
         st.session_state['_quota_hits'] = 0
             
         # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
@@ -1088,7 +1087,7 @@ if st.button("Analizini Yap", use_container_width=True):
                 var m = Math.floor(totalSecs / 60);
                 var s = totalSecs % 60;
                 var timeStr = (m > 0 ? m + ' dakika ' : '') + s + ' saniye';
-                var msg = '⚠️ Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
+                var msg = 'Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
                 e.preventDefault();
                 e.returnValue = msg;
                 return msg;
@@ -1109,7 +1108,7 @@ if st.button("Analizini Yap", use_container_width=True):
             else:
                 rem_str = "—"
             time_display.markdown(
-                f"⏱ **Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; ⏳ **Tahmini kalan:** {rem_str}"
+                f"**Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; **Tahmini kalan:** {rem_str}"
             )
 
 
@@ -1149,9 +1148,9 @@ if st.button("Analizini Yap", use_container_width=True):
                     q = st.session_state.get('_quota_hits', 0) + 1
                     st.session_state['_quota_hits'] = q
                     if q == 1:
-                        quota_info.info(f"ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
+                        quota_info.info(f"Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
                     elif q > 1:
-                        quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+                        quota_info.info(f"Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
                 elif err:
                     st.warning(err)
                 
@@ -1159,14 +1158,14 @@ if st.button("Analizini Yap", use_container_width=True):
                 date = entry.get("date")
                 ticker_date = ""
                 if date:
-                    try: ticker_date = f"📅 {date.strftime('%d-%m-%Y')}"
+                    try: ticker_date = f"{date.strftime('%d-%m-%Y')}"
                     except: pass
 
                 ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
                 ticker_placeholder.markdown(f"""
                 <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
                     <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
-                        <span>⚡ ŞU AN EKLENEN (#{i+1})</span>
+                        <span>ŞU AN EKLENEN (#{i+1})</span>
                         <span>{ticker_date}</span>
                     </div>
                     <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
@@ -1190,7 +1189,7 @@ if st.button("Analizini Yap", use_container_width=True):
 
         ticker_placeholder.markdown(f"""
         <div style="border: 2px solid #10B981; padding: 20px; border-radius: 12px; background: #ECFDF5; margin: 10px 0; text-align: center;">
-            <div style="font-size: 2em; margin-bottom: 10px;">✅</div>
+            <div style="font-size: 2em; margin-bottom: 10px;"></div>
             <div style="font-weight: 700; color: #065F46; font-size: 1.2em;">ANALİZ TAMAMLANDI</div>
             <div style="font-size: 0.9em; color: #047857; margin-top: 5px;">Toplam {total_items} satır başarıyla işlendi.</div>
         </div>
