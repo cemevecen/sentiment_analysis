@@ -44,9 +44,12 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
     /* Global Overrides */
+    html, body, [class*="st-"], .stApp, *, .stButton>button, .stTextInput input, .stTextArea textarea {
+        font-family: 'Poppins', sans-serif !important;
+    }
+    
     .stApp {
         background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 100%);
-        font-family: 'Poppins', sans-serif;
     }
     
     /* Header Card */
