@@ -1938,41 +1938,41 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
                     st.link_button(name, link, use_container_width=True)
         st.markdown("<br>", unsafe_allow_html=True)
         import streamlit.components.v1 as components
-        components.html("""
-        <style>body { margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }</style>
+        components.html(f"""
+        <style>body {{ margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }}</style>
         <button onclick="downloadPNG()" style='width: 100%; height: 50px; background: #6366F1; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;'>
             📷 Kartı PNG Görseli Olarak İndir
         </button>
         <script>
             var pDoc = window.parent.document;
-            if (!pDoc.getElementById('html2canvas-js')) {
+            if (!pDoc.getElementById('html2canvas-js')) {{
                 var s = pDoc.createElement('script');
                 s.id = 'html2canvas-js';
                 s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
                 pDoc.head.appendChild(s);
-            }
+            }}
 
-            function downloadPNG() {
+            function downloadPNG() {{
                 var target = pDoc.getElementById('nlp-report-card');
-                if (target && window.parent.html2canvas) {
+                if (target && window.parent.html2canvas) {{
                     var btn = document.querySelector('button');
                     var oldText = btn.innerText;
                     btn.innerText = "⏳ Hazırlanıyor...";
                     
-                    window.parent.html2canvas(target, {scale: 2, backgroundColor: '#FFFFFF', useCORS: true}).then(canvas => {
+                    window.parent.html2canvas(target, {{scale: 2, backgroundColor: '#FFFFFF', useCORS: true}}).then(canvas => {{
                         var link = pDoc.createElement('a');
-                        link.download = '{app_name.replace(" ", "_").lower()}_{store_type.replace(" ", "_").lower()}_yorum_analizi.png';
+                        link.download = '{f"{app_name} ai sentiment report.png".replace(" ", "_")}';
                         link.href = canvas.toDataURL("image/png");
                         link.click();
                         btn.innerText = oldText;
-                    }).catch(err => {
+                    }}).catch(err => {{
                         alert("Görsel oluşturulurken hata oluştu.");
                         btn.innerText = oldText;
-                    });
-                } else {
+                    }});
+                }} else {{
                     alert('Sistem hazırlanıyor... Lütfen 1-2 saniye bekleyip tekrar deneyin.');
-                }
-            }
+                }}
+            }}
         </script>
         """, height=53)
         
