@@ -830,39 +830,112 @@ def get_gemini_sentiment(text, model_name='gemini-2.0-flash'):
         try:
             generation_config = genai.types.GenerationConfig(temperature=0)
             model = genai.GenerativeModel(current_model, generation_config=generation_config)
-            prompt = f"""Sen bir Türkçe uygulama yorumu duygu analizi uzmanısın.
-Aşağıdaki yorumu analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
+            prompt = f"""Sen çok dilli (Türkçe, İngilizce, Arapça vb.) bir uygulama mağaza yorumu duygu analizi uzmanısın.
+Aşağıdaki yorumu hangi dilde olursa olsun analiz et ve 3 kategoriye puan ver. Toplam 1.0 olmalı.
 
 KATEGORİLER:
-- olumlu: Kullanıcı memnun, övüyor, teşekkür ediyor, tavsiye ediyor.
-- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, kızgın, hayal kırıklığı var.
-- istek_gorus: Tarafsız öneri, soru, beklenti. Olumlu da olumsuz da değil.
+- olumlu: Kullanıcı memnun, övüyor, teşekkür ediyor, tavsiye ediyor. (happy, great, love, ممتاز, احبه vb.)
+- olumsuz: Kullanıcı şikayetçi, sorun yaşıyor, kızgın, hayal kırıklığı var. (bad, terrible, سيء, أسوأ vb.)
+- istek_gorus: Tarafsız öneri, soru, beklenti. Olumlu da olumsuz da değil. (when will X?, please add Y vb.)
 
 KARAR KURALLARI (önem sırasına göre):
 1. Son cümle/edit baskındır. Başta şikayet, sonda çözüm varsa → olumlu.
 2. Başta iltifat, sonda şikayet varsa → olumsuz.
-3. Ironi/alaycılık: "Helal olsun uygulama çöküyor yine" → olumsuz.
+3. Ironi/alaycılık → olumsuz.
 4. Karışık ama net şikayet sonuçlanıyorsa → olumsuz.
 5. Karışık ama net memnuniyet sonuçlanıyorsa → olumlu.
 
-SOMUT ÖRNEKLER (few-shot):
+SOMUT ÖRNEKLER - TÜRKÇE - OLUMSUZ:
 "harika uygulama teşekkürler" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"çok güzel bir uygulama" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
-"süper, 5 yıldız hak ediyor" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
+"çok güzel, mükemmel" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"beş yıldız hak ediyor" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
+"güncelleme sonrası düzeldi sağolun" → {{"olumlu":0.88,"olumsuz":0.07,"istek_gorus":0.05}}
+"işe yarıyor, memnunum" → {{"olumlu":0.85,"olumsuz":0.08,"istek_gorus":0.07}}
+"fena değil" → {{"olumlu":0.65,"olumsuz":0.15,"istek_gorus":0.20}}
+
+SOMUT ÖRNEKLER - TÜRKÇE - OLUMSUZ:
 "uygulama açılmıyor, düzeltin" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
 "donuyor ve kapanıyor, berbat" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"giremiyor musun sen de? ben de yaşıyorum bu sorunu" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
 "yaramaz bu uygulama" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
-"güncelleme sonrası düzeldi sağolun" → {{"olumlu":0.88,"olumsuz":0.07,"istek_gorus":0.05}}
-"sorun vardı ama hallettiniz teşekkürler" → {{"olumlu":0.85,"olumsuz":0.10,"istek_gorus":0.05}}
 "iyiydi ama son güncellemeden sonra bozuldu" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
 "teşekkürler ama hâlâ açılmıyor" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
-"şu özelliği ekleseniz çok iyi olur" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
-"reklam çok fazla, azaltabilir misiniz?" → {{"olumlu":0.05,"olumsuz":0.15,"istek_gorus":0.80}}
-"neden bu özellik yok ki?" → {{"olumlu":0.05,"olumsuz":0.10,"istek_gorus":0.85}}
 "helal olsun, yine çöktü" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
-"işe yarıyor" → {{"olumlu":0.80,"olumsuz":0.10,"istek_gorus":0.10}}
-"fena değil" → {{"olumlu":0.65,"olumsuz":0.15,"istek_gorus":0.20}}
+"para iade etmiyorlar, dolandırıcılık" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"çok yavaş, kasıyor" → {{"olumlu":0.03,"olumsuz":0.94,"istek_gorus":0.03}}
+"her güncelleme sonrası daha kötü oluyor" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
+"reklam çok fazla, rahatsız edici" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
+
+SOMUT ÖRNEKLER - TÜRKÇE - İSTEK/GÖRÜŞ:
+"şu özelliği ekleseniz çok iyi olur" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
+"ne zaman karanlık mod gelecek?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
+"Türkçe dil desteği ekleyebilir misiniz?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
+
+SOMUT ÖRNEKLER - İNGİLİZCE - OLUMLU:
+"Great app, love it!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"Good" → {{"olumlu":0.85,"olumsuz":0.05,"istek_gorus":0.10}}
+"Amazing experience, highly recommend!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"Best app ever, 5 stars!" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"Easy to use and very helpful" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
+"Works perfectly, no issues" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
+"Fast, reliable and user-friendly" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
+"Excellent customer service, got my refund quickly" → {{"olumlu":0.90,"olumsuz":0.05,"istek_gorus":0.05}}
+
+SOMUT ÖRNEKLER - İNGİLİZCE - OLUMSUZ:
+"Terrible app, keeps crashing" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Not recommended" → {{"olumlu":0.03,"olumsuz":0.92,"istek_gorus":0.05}}
+"Doesn't work at all" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"App crashes every time I open it" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Won't load on my phone" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Can't login, stuck on loading screen" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Useless, waste of time" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Full of bugs, terrible UX" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Too slow and laggy" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
+"Too many annoying ads" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
+"I never received my refund after contacting support many times!" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Prices shown are different from what you actually pay" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Received wrong item and no one is helping" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"App used to be good but latest update ruined it" → {{"olumlu":0.05,"olumsuz":0.90,"istek_gorus":0.05}}
+"Lost all my data after the update" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Scam! Don't trust them" → {{"olumlu":0.02,"olumsuz":0.96,"istek_gorus":0.02}}
+"Misleading descriptions, what I received was totally different" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"Customer service is non-existent" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"App freezes after 2 minutes" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+
+SOMUT ÖRNEKLER - İNGİLİZCE - İSTEK/GÖRÜŞ:
+"When will the US be able to use this app?" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
+"Please add dark mode" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
+"Would be better if you could filter by price" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
+"Needs improvement but has potential" → {{"olumlu":0.20,"olumsuz":0.20,"istek_gorus":0.60}}
+
+SOMUT ÖRNEKLER - ARAPÇA - OLUMLU:
+"ممتاز" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
+"احبه 💕🥰" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"رائع جداً وسهل الاستخدام" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
+"أفضل تطبيق، أنصح به الجميع" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"تجربة رائعة، الخدمة ممتازة" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
+"يعمل بدون مشاكل، شكراً" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
+"سريع وفعال، مفيد جداً" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
+
+SOMUT ÖRNEKLER - ARAPÇA - OLUMSUZ:
+"سيء جدا جدا" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"أسوأ تعامل" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"لا يعمل التطبيق" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"يتعطل باستمرار" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"بطيء جداً ومزعج" → {{"olumlu":0.03,"olumsuz":0.93,"istek_gorus":0.04}}
+"لا أستطيع الدخول إلى حسابي" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"لم أستلم أموال الاسترجاع رغم تواصلي مرات عديدة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"تضييع للوقت والمال، لا أنصح به" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"إعلانات كثيرة ومزعجة" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
+"جودة رديئة جداً" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"الموقع ممتاز لكن مشكلتهم عند الاسترجاع لا تصلك الاموال" → {{"olumlu":0.05,"olumsuz":0.88,"istek_gorus":0.07}}
+"يتم شحن ألوان مختلفة وأغراض غير أصلية بجودة رديئة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"سعر المنتج يختلف بعد الإضافة للسلة" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"خدمة العملاء سيئة جداً ولا يوجد رد" → {{"olumlu":0.02,"olumsuz":0.95,"istek_gorus":0.03}}
+"التطبيق يحتاج إلى تحديث عاجل، به مشاكل كثيرة" → {{"olumlu":0.05,"olumsuz":0.85,"istek_gorus":0.10}}
+
+SOMUT ÖRNEKLER - ARAPÇA - İSTEK/GÖRÜŞ:
+"أتمنى أن يضيفوا خاصية البحث بالصور" → {{"olumlu":0.10,"olumsuz":0.05,"istek_gorus":0.85}}
+"متى سيكون التطبيق متاحاً في دولتي؟" → {{"olumlu":0.05,"olumsuz":0.05,"istek_gorus":0.90}}
 
 ÇIKTI KURALI: SADECE JSON döndür, başka hiçbir şey yazma.
 {{"olumlu": X, "olumsuz": Y, "istek_gorus": Z}}
