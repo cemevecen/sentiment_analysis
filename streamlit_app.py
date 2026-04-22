@@ -1184,7 +1184,6 @@ comments_to_analyze = []
 tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
 
 with tab1:
-    st.session_state["_cmp_mode"] = False  # Karşılaştırma modunu kapat
     with st.container(border=True):
         # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
@@ -1464,7 +1463,6 @@ with tab1:
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
-    st.session_state["_cmp_mode"] = False
     uploaded_files = st.file_uploader("Dosya Yükle", type=["csv", "xlsx"], accept_multiple_files=True, label_visibility="collapsed")
     if uploaded_files:
         # Use a list of file info as a key to detect if files changed
@@ -1625,7 +1623,6 @@ with tab2:
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
-    st.session_state["_cmp_mode"] = False
     text_input = st.text_area(
         "Yorumları alt alta girin:",
         height=200,
@@ -4313,6 +4310,1234 @@ if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
 
 
 
+if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
+    df = pd.DataFrame(st.session_state.bulk_results)
+    counts = df["Baskın Duygu"].value_counts()
+    
+    st.markdown("""
+<style>
+/* Results Card Styling */
+.neon-pos { border: 2px solid #34D399 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neg { border: 2px solid #F87171 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.neon-neu { border: 2px solid #60A5FA !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.normal-card { border: 1px solid #E2E8F0 !important; padding: 15px; border-radius: 12px; margin: 10px 0; background: #FFFFFF !important; }
+
+.neon-pos *, .neon-neg *, .neon-neu *, .normal-card * {
+    color: #000000 !important;
+}
+
+.metric-container {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.metric-card {
+    background: #FFFFFF !important;
+    border: 2px solid #FFE4D6 !important;
+    border-radius: 100px !important;
+    padding: 1.5rem 1rem !important;
+    text-align: center;
+    flex: 1;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+}
+.metric-value { font-size: 2.5em; font-weight: bold; line-height: 1.2; }
+.metric-label { font-size: 0.9em; color: #64748b !important; margin-top: 0.3rem; }
+
+.glass-card {
+    background: #FFFFFF !important;
+    border: 2px solid #F1F5F9 !important;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    color: #000000 !important;
+}
+
+.glass-card * {
+    color: #000000 !important;
+}
+
+.sentiment-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85em;
+    margin-right: 8px;
+}
+.sentiment-indicator.positive { border: 1px solid #10b981; color: #10b981; }
+.sentiment-indicator.negative { border: 1px solid #f43f5e; color: #f43f5e; }
+.sentiment-indicator.neutral { border: 1px solid #3b82f6; color: #3b82f6; }
+</style>
+""", unsafe_allow_html=True)
+
+    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    st.markdown("## Analiz Sonuçları ve İstatistikler")
+    
+    analysis_df = df[df["Baskın Duygu"] != "—"].copy()
+    counts = analysis_df["Baskın Duygu"].value_counts()
+    
+    
+    m_olumlu = counts.get("Olumlu", 0)
+    m_olumsuz = counts.get("Olumsuz", 0)
+    m_istek = counts.get("İstek/Görüş", 0)
+    
+    st.markdown(f"""
+    <div class="metric-container">
+        <div class="metric-card">
+            <div class="metric-value" style="color: #10b981;">{m_olumlu}</div>
+            <div class="metric-label">Olumlu</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #f43f5e;">{m_olumsuz}</div>
+            <div class="metric-label">Olumsuz</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #3b82f6;">{m_istek}</div>
+            <div class="metric-label">İstek / Görüş</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #a78bfa;">{len(df)}</div>
+            <div class="metric-label">Toplam Veri</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_pie, col_summary = st.columns([1, 1])
+    
+    with col_pie:
+        total_for_chart = m_olumlu + m_olumsuz + m_istek or 1
+        pos_pct = int((m_olumlu / total_for_chart) * 100)
+        neg_pct = int((m_olumsuz / total_for_chart) * 100)
+        neu_pct = 100 - pos_pct - neg_pct
+
+        # Çember çevresi (2πr)
+        r_outer, r_mid, r_inner = 54, 38, 22
+        c_outer = 2 * 3.14159 * r_outer  # ~339.3
+        c_mid   = 2 * 3.14159 * r_mid    # ~238.8
+        c_inner = 2 * 3.14159 * r_inner  # ~138.2
+
+        def arc(pct, circ):
+            filled = round(circ * pct / 100, 1)
+            gap    = round(circ - filled, 1)
+            return filled, gap
+
+        pf, pg = arc(pos_pct, c_outer)
+        nf, ng = arc(neg_pct, c_mid)
+        uf, ug = arc(neu_pct, c_inner)
+
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:20px;padding:8px 0 4px 0;">
+            <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0;">
+                <!-- Arka plan halkaları -->
+                <circle cx="70" cy="70" r="{r_outer}" fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <circle cx="70" cy="70" r="{r_mid}"   fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <circle cx="70" cy="70" r="{r_inner}" fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <!-- Olumlu -->
+                <circle cx="70" cy="70" r="{r_outer}" fill="none" stroke="#10b981" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{pf} {pg}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- Olumsuz -->
+                <circle cx="70" cy="70" r="{r_mid}" fill="none" stroke="#f43f5e" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{nf} {ng}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- İstek -->
+                <circle cx="70" cy="70" r="{r_inner}" fill="none" stroke="#818cf8" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{uf} {ug}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- Merkez -->
+                <text x="70" y="75" text-anchor="middle"
+                    style="font-size:14px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
+                    {pos_pct}%
+                </text>
+            </svg>
+            <!-- Legend -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#10b981;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#10b981;line-height:1.2;">{pos_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">Olumlu</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#f43f5e;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#f43f5e;line-height:1.2;">{neg_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">Olumsuz</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#818cf8;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#818cf8;line-height:1.2;">{neu_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">İstek/Görüş</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        
+        total_valid = m_olumlu + m_olumsuz + m_istek
+        if total_valid > 0:
+            # 2. Genel Deneyim Skoru
+            score = int(((m_olumlu * 100) + (m_istek * 50)) / total_valid)
+            score_color = "#10b981" if score >= 70 else "#f59e0b" if score >= 40 else "#f43f5e"
+            st.markdown(f"""
+            <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; margin-top: -10px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.85rem; color: #64748B; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Genel Deneyim Skoru</div>
+                <div style="font-size: 2.5rem; font-weight: 800; color: {score_color}; line-height: 1;">{score}<span style="font-size: 1.2rem; color: #94A3B8;">/100</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+
+            # ── TREND GÖSTERGESİ ─────────────────────────────
+            try:
+                dated = [r for r in st.session_state.get("bulk_results", [])
+                         if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated and len(dated) >= 20:
+                    dated_sorted = sorted(dated, key=lambda x: x["Tarih"])
+                    half = len(dated_sorted) // 2
+                    first_half = dated_sorted[:half]
+                    second_half = dated_sorted[half:]
+                    def _neg_rate(lst):
+                        if not lst: return 0
+                        return sum(1 for r in lst if r["Baskın Duygu"] == "Olumsuz") / len(lst)
+                    r1 = _neg_rate(first_half)
+                    r2 = _neg_rate(second_half)
+                    diff_trend = r2 - r1
+                    if diff_trend > 0.05:
+                        trend_icon, trend_color, trend_text = "↑", "#f43f5e", f"Olumsuz oran artıyor (+%{int(diff_trend*100)})"
+                    elif diff_trend < -0.05:
+                        trend_icon, trend_color, trend_text = "↓", "#10b981", f"Memnuniyet artıyor (+%{int(abs(diff_trend)*100)})"
+                    else:
+                        trend_icon, trend_color, trend_text = "→", "#f59e0b", "Oran stabil seyrediyor"
+                    st.markdown(f"""
+                    <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;
+                                padding:12px 15px;margin-top:8px;display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:1.6rem;color:{trend_color};font-weight:800;line-height:1;">{trend_icon}</span>
+                        <div>
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Trend</div>
+                            <div style="font-size:0.85rem;font-weight:600;color:{trend_color};">{trend_text}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── DUYGU ISI HARİTASI ────────────────────────────
+            try:
+                dated2 = [r for r in st.session_state.get("bulk_results", [])
+                          if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated2 and len(dated2) >= 14:
+                    import collections as _col
+                    day_neg2 = _col.defaultdict(int)
+                    day_total2 = _col.defaultdict(int)
+                    for r in dated2:
+                        try:
+                            d = pd.to_datetime(r["Tarih"]).strftime("%a")
+                            day_total2[d] += 1
+                            if r["Baskın Duygu"] == "Olumsuz":
+                                day_neg2[d] += 1
+                        except Exception:
+                            pass
+                    days_order2 = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+                    days_tr2 = {"Mon":"Pzt","Tue":"Sal","Wed":"Çrş","Thu":"Per","Fri":"Cum","Sat":"Cmt","Sun":"Paz"}
+                    cells2 = ""
+                    for d in days_order2:
+                        if day_total2[d] == 0: continue
+                        rate2 = day_neg2[d] / day_total2[d]
+                        bg2 = "#FEE2E2" if rate2 >= 0.6 else ("#FEF9C3" if rate2 >= 0.35 else "#DCFCE7")
+                        fc2 = "#DC2626" if rate2 >= 0.6 else ("#D97706" if rate2 >= 0.35 else "#16A34A")
+                        cells2 += (
+                            f'<div style="flex:1;text-align:center;background:{bg2};border-radius:8px;padding:6px 2px;">'
+                            f'<div style="font-size:0.65rem;color:{fc2};font-weight:700;">{days_tr2[d]}</div>'
+                            f'<div style="font-size:0.7rem;color:{fc2};font-weight:600;">%{int(rate2*100)}</div>'
+                            f'</div>'
+                        )
+                    if cells2:
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Günlük Olumsuz Oran</div>
+                            <div style="display:flex;gap:4px;">{cells2}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── HIZLI İSTATİSTİKLER ───────────────────────────
+            try:
+                dated3 = [r for r in st.session_state.get("bulk_results", [])
+                          if r.get("Tarih") and r.get("Baskın Duygu") != "—"]
+                if dated3:
+                    import collections as _col2
+                    dates_only3 = []
+                    for r in dated3:
+                        try:
+                            dates_only3.append(pd.to_datetime(r["Tarih"]).date())
+                        except Exception:
+                            pass
+                    if dates_only3:
+                        date_counts3 = _col2.Counter(dates_only3)
+                        busiest_date3 = max(date_counts3, key=date_counts3.get)
+                        busiest_count3 = date_counts3[busiest_date3]
+                        unique_days3 = len(date_counts3)
+                        daily_avg3 = round(len(dated3) / unique_days3, 1) if unique_days3 else 0
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Hızlı İstatistikler</div>
+                            <div style="display:flex;justify-content:space-between;gap:8px;">
+                                <div style="text-align:center;flex:1;">
+                                    <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{daily_avg3}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Günlük Ort.</div>
+                                </div>
+                                <div style="text-align:center;flex:2;">
+                                    <div style="font-size:0.85rem;font-weight:800;color:#6366F1;">{busiest_date3.strftime('%d %b')}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">En Yoğun ({busiest_count3} yorum)</div>
+                                </div>
+                                <div style="text-align:center;flex:1;">
+                                    <div style="font-size:1.2rem;font-weight:800;color:#6366F1;">{unique_days3}</div>
+                                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;">Aktif Gün</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            # ── AKSİYON LİSTESİ ──────────────────────────────
+            try:
+                neg_yorumlar5 = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                                 if r.get("Baskın Duygu") == "Olumsuz"]
+                if neg_yorumlar5:
+                    action_keywords5 = {
+                        "Giriş / şifre sorunu giderilmeli": ["giriş yapamıyorum", "şifre", "login", "giremiyorum", "can't login", "password"],
+                        "Uygulama çökmesi / donması düzeltilmeli": ["donuyor", "çöküyor", "crash", "freezing", "lag", "kapanıyor", "crashing"],
+                        "Reklam yoğunluğu azaltılmalı": ["reklam", "ads", "ad every", "too many ads", "publicidad"],
+                        "Hesap askı / ban süreci iyileştirilmeli": ["askıya", "banned", "suspended", "ban", "hesabım kapatıldı", "disabled"],
+                        "Müzik / medya sorunu çözülmeli": ["müzik", "ses yok", "music", "audio", "no sound"],
+                        "Güncelleme sonrası bozulan özellikler düzeltilmeli": ["güncelleme", "update", "son güncelleme", "after update"],
+                        "Mesaj / bildirim sorunları giderilmeli": ["mesaj", "bildirim", "messages", "notification", "dm not working"],
+                    }
+                    neg_text_all5 = " ".join(neg_yorumlar5).lower()
+                    found_actions5 = []
+                    for action5, kws5 in action_keywords5.items():
+                        if any(kw5 in neg_text_all5 for kw5 in kws5):
+                            found_actions5.append(action5)
+                        if len(found_actions5) >= 4:
+                            break
+                    if found_actions5:
+                        items_html5 = "".join(
+                            f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+                            f'<span style="color:#f43f5e;font-size:0.8rem;margin-top:1px;">●</span>'
+                            f'<span style="font-size:0.8rem;color:#334155;font-weight:500;">{a5}</span></div>'
+                            for a5 in found_actions5
+                        )
+                        st.markdown(f"""
+                        <div style="background:#FEF2F2;border:1px solid #FEE2E2;border-radius:12px;padding:12px 15px;margin-top:8px;">
+                            <div style="font-size:0.7rem;color:#DC2626;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⚡ Aksiyon Listesi</div>
+                            {items_html5}
+                        </div>
+                        """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
+    with col_summary:
+        st.write("### Duygu Dağılımı")
+        
+        total_all = m_olumlu + m_olumsuz + m_istek
+        diff_val = abs(m_olumlu - m_olumsuz)
+        
+        if st.session_state.get("analysis_type") == "Zengin Analiz":
+            if "ai_summary" not in st.session_state or st.session_state.get("last_results_len") != len(analysis_df):
+                with st.spinner("Yapay zeka derinlemesine raporu hazırlıyor..."):
+                    summary_text = generate_dynamic_summary(analysis_results=st.session_state.bulk_results)
+                    st.session_state.ai_summary = summary_text
+                    st.session_state.last_results_len = len(analysis_df)
+            
+            st.markdown(f"""
+        <div style="background:#F5F3FF;border-radius:12px;padding:20px 24px;position:relative;
+                    border:0.5px solid #DDD6FE;">
+            <div style="font-size:52px;line-height:0.6;color:#7c3aed;font-family:Georgia,serif;
+                        opacity:0.3;margin-bottom:10px;user-select:none;">"</div>
+            <div style="font-size:0.82rem;font-weight:700;color:#7c3aed;
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                Yapay Zeka Derin Analiz Raporu
+            </div>
+            <p style="font-size:0.9rem;color:#1E293B;line-height:1.75;margin:0;">
+                {st.session_state.ai_summary}
+            </p>
+            <div style="margin-top:14px;display:flex;gap:6px;align-items:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#f43f5e;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>
+                <span style="font-size:0.7rem;color:#94A3B8;margin-left:4px;font-weight:500;">
+                    {m_olumlu} olumlu · {m_olumsuz} olumsuz · {m_istek} görüş
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        else:
+            # Hızlı Analiz — heuristic özet (API kullanmaz)
+            if total_all == 0:
+                summary_title = "Henüz yeterli veri yok."
+                summary_body  = "Analiz edilecek yorumlar geldikçe burası güncellenecektir."
+                grad_bg, border_c = "#F8FAFC", "#E2E8F0"
+            else:
+                import random
+
+                pos_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "Olumlu"]
+                neg_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "Olumsuz"]
+                neu_list = [r["Yorum"] for r in st.session_state.get("bulk_results", [])
+                            if r.get("Baskın Duygu") == "İstek/Görüş"]
+
+                pos_p = int(len(pos_list) / total_all * 100) if total_all else 0
+                neg_p = int(len(neg_list) / total_all * 100) if total_all else 0
+                neu_p = int(len(neu_list) / total_all * 100) if total_all else 0
+
+                def _pick(lst, n=3):
+                    chosen = lst[:n] if len(lst) <= n else random.sample(lst, n)
+                    return [t[:120] for t in chosen]
+
+                pos_samples = _pick(pos_list)
+                neg_samples = _pick(neg_list)
+                neu_samples = _pick(neu_list)
+
+                # Ton belirle
+                if total_all > 10 and (diff_val / total_all) < 0.15:
+                    summary_title = "Dengeli/Karmaşık bir kullanıcı deneyimi"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorum incelendiğinde kullanıcı deneyiminin oldukça karmaşık bir tablo çizdiği görülüyor. "
+                        f"Olumlu yorumlar %{pos_p} oranıyla olumsuzlarla (%{neg_p}) neredeyse eşit düzeyde seyrediyor. "
+                        "Bu durum, uygulamanın bazı kullanıcı kesimlerini memnun ederken diğerlerinde ciddi sorunlara yol açtığına işaret ediyor."
+                    )
+                    grad_bg, border_c = "#fef9c3", "#eab308"
+                elif pos_p >= 55:
+                    summary_title = "Topluluk genel olarak Olumlu"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorumun %{pos_p}'i olumlu, %{neg_p}'i olumsuz, %{neu_p}'i ise istek ve görüş içeriyor. "
+                        "Genel tablo kullanıcıların uygulamadan büyük ölçüde memnun olduğunu ortaya koyuyor. "
+                        "Özellikle uygulama deneyimine dair yapılan yorumlar, kullanıcı kitlesinin sadakatinin yüksek olduğuna işaret ediyor."
+                    )
+                    grad_bg, border_c = "#dcfce7", "#10b981"
+                else:
+                    summary_title = "Dikkat çeken Olumsuz bir eğilim"
+                    tone_intro = (
+                        f"Analiz edilen {total_all} yorumun %{neg_p}'i olumsuz, %{pos_p}'i olumlu, %{neu_p}'i ise istek ve görüş içeriyor. "
+                        "Kullanıcıların önemli bir kısmı teknik sorunlar, performans düşüklüğü veya hizmet aksaklıkları yaşadığını dile getiriyor. "
+                        "Bu eğilim, geliştirici ekibin kısa vadede müdahale etmesi gereken kritik alanların bulunduğuna işaret ediyor."
+                    )
+                    grad_bg, border_c = "#fee2e2", "#f43f5e"
+
+                # Olumlu bölüm
+                if pos_samples:
+                    pos_text = (
+                        "Olumlu geri bildirimlerde öne çıkan temalar arasında şunlar yer alıyor: "
+                        + "; ".join(f'"{s}"' for s in pos_samples[:2])
+                        + ". Bu yorumlar, uygulamanın güçlü yönlerinin kullanıcılar tarafından açıkça fark edildiğini gösteriyor."
+                    )
+                else:
+                    pos_text = ""
+
+                # Olumsuz bölüm
+                if neg_samples:
+                    neg_text = (
+                        "Olumsuz yorumlarda ise şu konular sıklıkla gündeme geliyor: "
+                        + "; ".join(f'"{s}"' for s in neg_samples[:2])
+                        + ". Bu şikayetlerin geliştirici ekip tarafından öncelikli olarak ele alınması, kullanıcı memnuniyetini doğrudan artıracaktır."
+                    )
+                else:
+                    neg_text = ""
+
+                # İstek bölüm
+                if neu_samples:
+                    neu_text = (
+                        "Kullanıcıların dile getirdiği başlıca istekler arasında şunlar öne çıkıyor: "
+                        + "; ".join(f'"{s}"' for s in neu_samples[:2])
+                        + ". Bu taleplerin bir yol haritasına dahil edilmesi, uygulamanın uzun vadeli başarısına katkı sağlayacaktır."
+                    )
+                else:
+                    neu_text = ""
+
+                parts = [tone_intro, pos_text, neg_text, neu_text]
+                summary_body = " ".join(p for p in parts if p)
+
+                st.markdown(f"""
+        <div style="background:#F8FAFC;border-radius:12px;padding:20px 24px;position:relative;">
+            <div style="font-size:52px;line-height:0.6;color:#818cf8;font-family:Georgia,serif;
+                        opacity:0.35;margin-bottom:10px;user-select:none;">"</div>
+            <div style="font-size:0.82rem;font-weight:700;color:#6366F1;
+                        text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                {summary_title}
+            </div>
+            <p style="font-size:0.9rem;color:#1E293B;line-height:1.75;margin:0;">
+                {summary_body}
+            </p>
+            <div style="margin-top:14px;display:flex;gap:6px;align-items:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#f43f5e;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#818cf8;"></div>
+                <span style="font-size:0.7rem;color:#94A3B8;margin-left:4px;font-weight:500;">
+                    {m_olumlu} olumlu · {m_olumsuz} olumsuz · {m_istek} görüş
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        
+
+    
+    if "Puan" in df.columns and df["Puan"].notnull().any():
+        st.markdown("---")
+        
+        
+        st.write("### Puan Dağılımı")
+        st.markdown('<div class="no-print">', unsafe_allow_html=True)
+        freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel", label_visibility="collapsed")
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
+        try:
+            
+            df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce').fillna(0).astype(int)
+            df_puan = df_puan[(df_puan["Puan_val"] >= 1) & (df_puan["Puan_val"] <= 5)]
+            
+            if not df_puan.empty:
+                df_puan["Tarih_dt"] = pd.to_datetime(df_puan["Tarih"])
+                
+                
+                min_d = df_puan["Tarih_dt"].min().strftime('%d-%m-%Y')
+                max_d = df_puan["Tarih_dt"].max().strftime('%d-%m-%Y')
+                st.caption(f"**Tespit Edilen Tarih Aralığı:** {min_d} ile {max_d}")
+
+                
+                tr_months = {1:"Ocak", 2:"Şubat", 3:"Mart", 4:"Nisan", 5:"Mayıs", 6:"Haziran", 
+                             7:"Temmuz", 8:"Ağustos", 9:"Eylül", 10:"Ekim", 11:"Kasım", 12:"Aralık"}
+
+                
+                if freq == "Haftalık":
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('W').apply(lambda r: r.start_time)
+                    df_puan["Grup_Label"] = df_puan["Grup"].apply(lambda x: f"{x.day} {tr_months[x.month]} {x.year}")
+                    title_txt = "Haftalık Puan Dağılımı"
+                elif freq == "Aylık":
+                    df_puan["Grup_Label"] = df_puan["Tarih_dt"].apply(lambda x: f"{tr_months[x.month]} {x.year}")
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('M').apply(lambda r: r.start_time)
+                    title_txt = "Aylık Puan Dağılımı"
+                else:
+                    df_puan["Grup_Label"] = df_puan["Tarih_dt"].dt.strftime('%d-%m-%Y')
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.date
+                    title_txt = "Günlük Puan Dağılımı"
+
+                
+                dist_trend = df_puan.groupby(["Grup", "Grup_Label", "Puan_val"]).size().reset_index(name='Oy Sayısı')
+                dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
+                dist_trend = dist_trend.sort_values(["Grup", "Puan_val"], ascending=[True, True])
+
+                fig_dist = px.bar(dist_trend, x="Grup_Label", y="Oy Sayısı", color="Puan_Label",
+                                 title=title_txt,
+                                 color_discrete_map={
+                                     "1 Yıldız": "#E53E3E",
+                                     "2 Yıldız": "#F6AD55",
+                                     "3 Yıldız": "#F6E05E",
+                                     "4 Yıldız": "#68D391",
+                                     "5 Yıldız": "#2F855A"
+                                 },
+                                 category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]},
+                                 labels={"Puan_Label": "", "Grup_Label": "Zaman", "Oy Sayısı": "Sayı"})
+                
+                fig_dist.update_layout(
+                    height=450, 
+                    margin={"t": 60, "b": 100, "l": 10, "r": 10},
+                    xaxis_title="",
+                    yaxis_title="Yorum / Puan Sayısı",
+                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
+                    barmode='stack',
+                    bargap=0.3,
+                    template="plotly_white",
+                    paper_bgcolor="#F0F9FF",
+                    plot_bgcolor="#F0F9FF",
+                    font={"color": "#000000", "family": "Poppins, sans-serif"},
+                    title_font={"color": "#000000", "size": 18}
+                )
+                
+                
+                fig_dist.update_xaxes(type='category', tickangle=-45, tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+                fig_dist.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+                st.plotly_chart(fig_dist, use_container_width=True)
+        except Exception as e:
+            st.error(f"Grafik oluşturma hatası: {e}")
+
+    
+    
+    all_pool = st.session_state.get("all_fetched_pool", [])
+    if all_pool:
+        
+        analyzed_count = len(df)
+        remaining_pool = all_pool[analyzed_count:]
+        
+        if remaining_pool:
+            st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown(f"""
+                <div style="background-color: #F0F9FF; margin: -1rem; padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem;">
+                    <div style="color: #0369a1; font-weight: 600; text-align: center;">
+                        Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                analysis_type_now = st.session_state.get("analysis_type", "Hızlı Analiz")
+                take_next = min(len(remaining_pool), 500) if analysis_type_now == "Zengin Analiz" else len(remaining_pool)
+
+                label = (f"Sonraki {take_next} yorumu da analiz et" 
+                         if analysis_type_now == "Zengin Analiz" 
+                         else f"Kalan tüm {take_next} yorumu analiz et")
+
+                if st.button(label, use_container_width=True):
+                    next_batch = remaining_pool[:take_next]
+                    run_bulk_analysis(next_batch, is_append=True)
+
+    
+    def render_trend_chart(filtered_df, key, title_suffix="", freq="Haftalık"):
+        df_dates = filtered_df.dropna(subset=["Tarih"]).copy()
+        if not df_dates.empty:
+            df_dates["Tarih"] = pd.to_datetime(df_dates["Tarih"])
+            
+            if freq == "Haftalık":
+                df_dates['Grup'] = df_dates['Tarih'].dt.to_period('W').apply(lambda r: r.start_time)
+                xaxis_title = "Tarih (Haftalık)"
+                chart_title_prefix = "Haftalık"
+            elif freq == "Aylık":
+                df_dates['Grup'] = df_dates['Tarih'].dt.to_period('M').apply(lambda r: r.start_time)
+                xaxis_title = "Tarih (Aylık)"
+                chart_title_prefix = "Aylık"
+            else: 
+                df_dates['Grup'] = df_dates['Tarih'].dt.date
+                xaxis_title = "Tarih (Günlük)"
+                chart_title_prefix = "Günlük"
+
+            trend_data = df_dates.groupby(['Grup', "Baskın Duygu"]).size().reset_index(name='Adet')
+            
+            
+            trend_data['Grup_str'] = trend_data['Grup'].astype(str)
+            fig_trend = px.bar(trend_data, x="Grup", y="Adet", color="Baskın Duygu",
+                               title=f"{chart_title_prefix} Duygu Dağılımı {title_suffix}",
+                               color_discrete_map={'Olumlu':'#10B981', 'Olumsuz':'#F43F5E', 'İstek/Görüş':'#818CF8'},
+                               barmode='group',
+                               labels={"Baskın Duygu": ""},
+                               custom_data=["Grup_str", "Baskın Duygu"])
+            
+            fig_trend.update_layout(height=400, margin={"t": 80, "b": 40, "l": 10, "r": 10},
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
+                                   xaxis_title=xaxis_title, yaxis_title="Yorum Sayısı",
+                                   template="plotly_white",
+                                   paper_bgcolor="#F0F9FF",
+                                   plot_bgcolor="#F0F9FF",
+                                   font={"color": "#000000", "family": "Poppins, sans-serif"},
+                                   title_font={"color": "#000000", "size": 18},
+                                   clickmode='event+select')
+            
+            fig_trend.update_xaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+            fig_trend.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+            
+            
+            selection = st.plotly_chart(fig_trend, use_container_width=True, on_select="rerun", key=f"chart_{key}")
+            
+            if selection and "selection" in selection and selection["selection"]["points"]:
+                point = selection["selection"]["points"][0]
+                
+                sel_grup_str = point["customdata"][0]
+                sel_grup = pd.to_datetime(sel_grup_str).tz_localize(None)
+                sel_sentiment = str(point["customdata"][1]).strip()
+                
+                
+                df_dates['Grup_compare'] = pd.to_datetime(df_dates['Grup']).dt.tz_localize(None)
+                
+                final_filtered = df_dates[
+                    (df_dates['Grup_compare'] == sel_grup) & 
+                    (df_dates['Baskın Duygu'] == sel_sentiment)
+                ]
+                
+                st.info(f"Filtrelendi: **{sel_grup.strftime('%d.%m.%Y')}** periyodu - **{sel_sentiment}** yorumlar")
+                if st.button("Filtreyi Temizle", key=f"clear_{key}"):
+                    st.rerun()
+                return final_filtered
+            
+        return filtered_df
+
+    def display_comments(filtered_df, tab_id, highlight=True):
+        if filtered_df.empty:
+            st.info("Bu kategoride henüz yorum bulunmuyor.")
+            return
+            
+        show_all_key = f"show_all_{tab_id}"
+        page_key = f"page_{tab_id}"
+        
+        if show_all_key not in st.session_state:
+            st.session_state[show_all_key] = False
+        if page_key not in st.session_state:
+            st.session_state[page_key] = 1
+            
+        show_all = st.session_state[show_all_key]
+        total_items = len(filtered_df)
+        
+        if not show_all:
+            render_df = filtered_df.head(3)
+        else:
+            if total_items > 250:
+                current_page = st.session_state[page_key]
+                total_pages = (total_items - 1) // 250 + 1
+                if current_page > total_pages: current_page = total_pages
+                if current_page < 1: current_page = 1
+                
+                start_idx = (current_page - 1) * 250
+                render_df = filtered_df.iloc[start_idx : start_idx + 250]
+            else:
+                render_df = filtered_df
+
+        for _, row in render_df.iterrows():
+            sentiment = row["Baskın Duygu"]
+            cls = "normal-card"
+            if highlight:
+                cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
+            
+            
+            extra_info = ""
+            if "Puan" in row and pd.notnull(row["Puan"]):
+                extra_info += f" | Puan: {row['Puan']}"
+            
+            date_tag = ""
+            if "Tarih" in row and pd.notnull(row["Tarih"]):
+                try: 
+                    d = pd.to_datetime(row["Tarih"])
+                    date_tag = f"Tarih: {d.strftime('%d-%m-%Y')}"
+                except: pass
+
+            
+            dot_colors = {"Olumlu": "#10b981", "Olumsuz": "#f43f5e", "İstek/Görüş": "#3b82f6"}
+            s_color = dot_colors.get(sentiment, "#94a3b8")
+            sentiment_indicator = f'<span style="display: inline-block; width: 10px; height: 10px; background-color: {s_color}; border-radius: 50%; margin: 0 4px; vertical-align: middle;"></span>'
+
+            st.markdown(f"""
+            <div class="{cls}">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: 0.8em; color: #94a3b8; font-weight: 500;">#{row['No']} | {sentiment_indicator}{extra_info}</span>
+                    <span style="font-size: 0.8em; color: #94a3b8;">{date_tag}</span>
+                </div>
+                <div style="color: #000000; line-height: 1.5;">{row['Yorum']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if total_items > 3:
+            if not show_all:
+                if st.button("Tüm Yorumları Göster", key=f"btn_show_{tab_id}", use_container_width=True):
+                    st.session_state[show_all_key] = True
+                    st.rerun()
+            else:
+                if total_items > 250:
+                    total_pages = (total_items - 1) // 250 + 1
+                    current_page = st.session_state[page_key]
+                    
+                    nav_cols = st.columns([1, 2, 1])
+                    with nav_cols[0]:
+                        if st.button("Önceki Sayfa", key=f"prev_{tab_id}", use_container_width=True, disabled=(current_page == 1)):
+                            st.session_state[page_key] -= 1
+                            st.rerun()
+                    with nav_cols[1]:
+                        st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: bold; color: #64748B;'>Sayfa {current_page} / {total_pages}</div>", unsafe_allow_html=True)
+                    with nav_cols[2]:
+                        if st.button("Sonraki Sayfa", key=f"next_{tab_id}", use_container_width=True, disabled=(current_page == total_pages)):
+                            st.session_state[page_key] += 1
+                            st.rerun()
+                            
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                if st.button("Daha Az Göster", key=f"btn_hide_{tab_id}", use_container_width=True):
+                    st.session_state[show_all_key] = False
+                    st.session_state[page_key] = 1
+                    st.rerun()
+
+    
+    st.write("### Yorum Listesi")
+    
+    
+    st.markdown('<div class="no-print">', unsafe_allow_html=True)
+    yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    t_pos = counts.get('Olumlu', 0)
+    t_neg = counts.get('Olumsuz', 0)
+    t_neu = counts.get('İstek/Görüş', 0)
+    t_all = len(analysis_df)
+
+    tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
+        f"Analizler ({t_all})", 
+        f"Olumlu ({t_pos})", 
+        f"Olumsuz ({t_neg})", 
+        f"İstek/Görüş ({t_neu})"
+    ])
+
+    with tab_all:
+        f_df = render_trend_chart(analysis_df, "all", "(Genel)", freq=yorum_freq)
+        display_comments(f_df, "all", highlight=False)
+    
+    with tab_pos:
+        pos_df = df[df["Baskın Duygu"] == "Olumlu"]
+        f_df = render_trend_chart(pos_df, "pos", "(Olumlu)", freq=yorum_freq)
+        display_comments(f_df, "pos")
+        
+    with tab_neg:
+        neg_df = df[df["Baskın Duygu"] == "Olumsuz"]
+        f_df = render_trend_chart(neg_df, "neg", "(Olumsuz)", freq=yorum_freq)
+        display_comments(f_df, "neg")
+        
+    with tab_neu:
+        neu_df = df[df["Baskın Duygu"] == "İstek/Görüş"]
+        f_df = render_trend_chart(neu_df, "neu", "(İstek/Görüş)", freq=yorum_freq)
+        display_comments(f_df, "neu")
+
+    
+    try:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
+        
+        
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="no-print"><h3 style="font-size:1.5rem;font-weight:700;color:#1E293B;margin-bottom:10px;">Analiz Raporunu Paylaş</h3></div>', unsafe_allow_html=True)
+        
+        
+        total_q = len(df)
+        pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
+        neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
+        neu_p = int((t_neu / total_q) * 100) if total_q > 0 else 0
+        
+        import math
+        def get_svg_path(start_pct, end_pct):
+            if end_pct - start_pct >= 99.9: 
+                return "M 0 -1 A 1 1 0 1 1 -0.001 -1 Z"
+            start_rad = math.radians(start_pct * 3.6 - 90)
+            end_rad = math.radians(end_pct * 3.6 - 90)
+            x1, y1 = math.cos(start_rad), math.sin(start_rad)
+            x2, y2 = math.cos(end_rad), math.sin(end_rad)
+            large_arc = 1 if (end_pct - start_pct) > 50 else 0
+            return f"M 0 0 L {x1:.3f} {y1:.3f} A 1 1 0 {large_arc} 1 {x2:.3f} {y2:.3f} Z"
+
+        p_path = get_svg_path(0, pos_p)
+        n_path = get_svg_path(pos_p, pos_p + neg_p)
+        u_path = get_svg_path(pos_p + neg_p, 100)
+
+        
+        app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
+        store_type = st.session_state.get('detected_store_type', "STORE")
+        report_title = f"{app_name.upper()} {store_type.upper()} ANALİZ RAPORU"
+        excel_filename = f"{app_name}_yorum_analizi.xlsx".replace(" ", "_").lower()
+
+        
+        summary_text = (
+            f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Toplam Veri: {total_q} Yorum\n"
+            f"Olumlu Deneyim: %{pos_p}\n"
+            f"Olumsuz Deneyim: %{neg_p}\n"
+        )
+        if st.session_state.get('ai_summary'):
+             summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
+        summary_text += "━━━━━━━━━━━━━━━━━━━━━\n"
+        summary_text += f"Analizini yap: https://sentimentanalysis-aimode.streamlit.app/\n"
+        summary_text += "#ivicin"
+        
+        encoded_text = urllib.parse.quote(summary_text)
+
+        
+        def clean_html(h):
+            return "\n".join([line.strip() for line in h.split('\n') if line.strip()])
+        
+        
+        # Dinamik özet varsa kullan, yoksa genel skor özeti çıkar
+        display_summary = st.session_state.get('ai_summary')
+        if not display_summary:
+            if pos_p > 70: display_summary = "Kullanıcı topluluğu uygulamadan oldukça memnun. Pozitif geri bildirimler baskın."
+            elif neg_p > 50: display_summary = "Kritik teknik sorunlar ve kullanıcı memnuniyetsizliği tespit edildi. Acil müdahale gerekebilir."
+            else: display_summary = "Kullanıcı deneyimi karmaşık bir yapıda. Hem pozitif hem negatif geri bildirimler dengeli seyrediyor."
+        
+        display_summary = display_summary.replace("`", "").replace("*", "").replace("#", "")
+        
+        
+        import re
+        
+        display_summary = re.sub(r'\s+([.,;:!?])', r'\1', display_summary)
+        
+        display_summary = re.sub(r' {2,}', ' ', display_summary)
+        
+        display_summary = display_summary.replace('\n', '<br>')
+
+        def _pie_path(start_pct, end_pct, color):
+            import math as _math
+            if end_pct - start_pct <= 0: return ""
+            if end_pct - start_pct >= 99.9:
+                return f'<path d="M70,18 A52,52 0 1,1 69.99,18 Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
+            r, cx, cy = 52, 70, 70
+            sa = _math.radians(start_pct * 3.6 - 90)
+            ea = _math.radians(end_pct * 3.6 - 90)
+            x1,y1 = cx+r*_math.cos(sa), cy+r*_math.sin(sa)
+            x2,y2 = cx+r*_math.cos(ea), cy+r*_math.sin(ea)
+            xi,yi = cx+28*_math.cos(ea), cy+28*_math.sin(ea)
+            xj,yj = cx+28*_math.cos(sa), cy+28*_math.sin(sa)
+            lg = 1 if (end_pct-start_pct) > 50 else 0
+            return f'<path d="M{x1:.2f},{y1:.2f} A{r},{r} 0 {lg},1 {x2:.2f},{y2:.2f} L{xi:.2f},{yi:.2f} A28,28 0 {lg},0 {xj:.2f},{yj:.2f} Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
+
+        card_html = clean_html(f"""
+            <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: clamp(15px, 5vw, 35px); margin: 10px auto; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 100%; position: relative; overflow: hidden;">
+                <style>
+                    @media (max-width: 480px) {{
+                        #nlp-report-card {{ padding: 20px !important; margin: 10px auto !important; }}
+                        .metric-row {{ flex-wrap: wrap !important; gap: 8px !important; }}
+                        .metric-box {{ flex: 1 1 40% !important; padding: 8px !important; }}
+                        .chart-container {{ padding: 15px !important; flex-direction: column !important; gap: 20px !important; }}
+                        .chart-svg-box {{ width: 100px !important; height: 100px !important; }}
+                    }}
+                </style>
+                <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
+                    <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
+                </div>
+                
+                <div class="metric-row" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 35px; gap: 8px;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+                        <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+                        <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+                        <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+                        <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
+                    </div>
+                </div>
+
+                <div class="chart-container" style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
+                    <div class="chart-svg-box" style="width: 140px; height: 140px; position: relative;">
+                        <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
+                        <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
+                            <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
+                            <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
+                            <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
+                        </svg>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
+                    </div>
+                </div>
+
+                <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        Stratejik Özet
+                    </div>
+                    <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
+                        {display_summary}
+                    </div>
+                </div>
+            </div>
+        """)
+        st.markdown(card_html, unsafe_allow_html=True)
+        st.info("Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
+
+        image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
+        
+        components.html(f"""
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+            <script>
+            (function() {{
+
+                // ── Bildirim kutusu ──────────────────────────────
+                if (!window.parent.document.getElementById('uNotif')) {{
+                    const div = window.parent.document.createElement('div');
+                    div.id = 'uNotif';
+                    div.innerHTML = '<span id="uMsg">Hazırlanıyor...</span>';
+                    Object.assign(div.style, {{
+                        position:'fixed', top:'20px', left:'50%',
+                        transform:'translateX(-50%) translateY(-20px) scale(0.9)',
+                        background:'#10B981', color:'white',
+                        padding:'14px 28px', borderRadius:'12px', fontWeight:'700',
+                        opacity:'0', transition:'all 0.4s cubic-bezier(0.19,1,0.22,1)',
+                        zIndex:'9999999', boxShadow:'0 15px 30px rgba(16,185,129,0.4)',
+                        display:'flex', alignItems:'center', gap:'10px',
+                        pointerEvents:'none', fontFamily:'"Poppins",sans-serif',
+                        whiteSpace:'nowrap'
+                    }});
+                    window.parent.document.body.appendChild(div);
+                }}
+
+                window.notifyBridge = function(msg, duration=3000) {{
+                    const n = window.parent.document.getElementById('uNotif');
+                    const m = window.parent.document.getElementById('uMsg');
+                    if (n && m) {{
+                        m.innerText = msg;
+                        n.style.opacity = '1';
+                        n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                        setTimeout(() => {{
+                            n.style.opacity = '0';
+                            n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                        }}, duration);
+                    }}
+                }};
+
+                // ── html2canvas'ı parent'a yükle ─────────────────
+                function injectHtml2Canvas(cb) {{
+                    if (window.parent.html2canvas) {{ cb(); return; }}
+                    const s = window.parent.document.createElement('script');
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    s.onload = cb;
+                    window.parent.document.head.appendChild(s);
+                }}
+
+                // ── Kart → canvas → blob ──────────────────────────
+                async function captureCard() {{
+                    const target = window.parent.document.getElementById('nlp-report-card');
+                    if (!target) throw new Error('Kart bulunamadı');
+                    return await window.parent.html2canvas(target, {{
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#FFFFFF',
+                        logging: false,
+                        allowTaint: true
+                    }});
+                }}
+
+                // ── PNG indir butonu (#btn-png-download) ──────────
+                function bindPngBtn() {{
+                    const btn = window.parent.document.getElementById('btn-png-download');
+                    if (!btn || btn.hasAttribute('data-bound')) return;
+                    btn.setAttribute('data-bound', 'true');
+                    btn.addEventListener('click', async function() {{
+                        window.notifyBridge('Görsel Hazırlanıyor... ⏳', 5000);
+                        try {{
+                            const canvas = await captureCard();
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                            const dataUrl = canvas.toDataURL('image/png');
+                            if (isIOS) {{
+                                const t = window.open();
+                                if (t) {{
+                                    t.document.write('<img src="' + dataUrl + '" style="width:100%;height:auto;">');
+                                    t.document.title = 'Analiz Raporu';
+                                    window.notifyBridge('Görseli basılı tutarak kaydedin');
+                                }}
+                            }} else {{
+                                const a = document.createElement('a');
+                                a.href = dataUrl;
+                                a.download = '{image_name}';
+                                a.click();
+                                window.notifyBridge('İndirme Başlatıldı!');
+                            }}
+                        }} catch(e) {{
+                            window.notifyBridge('Hata oluştu!');
+                        }}
+                    }});
+                }}
+
+                // ── Paylaş butonu (#btn-share-image) ─────────────
+                function bindShareBtn() {{
+                    const btn = window.parent.document.getElementById('btn-share-image');
+                    if (!btn || btn.hasAttribute('data-sbound')) return;
+                    btn.setAttribute('data-sbound', 'true');
+
+                    btn.addEventListener('click', async function() {{
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '⏳ Hazırlanıyor...';
+                        btn.disabled = true;
+
+                        try {{
+                            const canvas = await captureCard();
+                            canvas.toBlob(async function(blob) {{
+                                const file = new File([blob], '{image_name}', {{type:'image/png'}});
+
+                                if (navigator.share && navigator.canShare &&
+                                    navigator.canShare({{files:[file]}})) {{
+                                    try {{
+                                        await navigator.share({{
+                                            files: [file],
+                                            title: 'AI Yorum Analiz Raporu'
+                                        }});
+                                        btn.innerHTML = 'Paylaşıldı!';
+                                        setTimeout(() => {{
+                                            btn.innerHTML = orig;
+                                            btn.disabled = false;
+                                        }}, 2000);
+                                    }} catch(e) {{
+                                        btn.innerHTML = orig;
+                                        btn.disabled = false;
+                                        if (e.name !== 'AbortError') fallback(blob);
+                                    }}
+                                }} else {{
+                                    fallback(blob);
+                                    btn.innerHTML = orig;
+                                    btn.disabled = false;
+                                }}
+                            }}, 'image/png');
+
+                        }} catch(e) {{
+                            btn.innerHTML = 'Hata';
+                            setTimeout(() => {{ btn.innerHTML = orig; btn.disabled = false; }}, 2000);
+                        }}
+                    }});
+                }}
+
+                function fallback(blob) {{
+                    const url = URL.createObjectURL(blob);
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    if (isIOS) {{
+                        const t = window.open();
+                        if (t) {{
+                            t.document.write(
+                                '<img src="' + url + '" style="width:100%;height:auto;">' +
+                                '<p style="text-align:center;font-family:sans-serif;color:#64748B;">Kaydetmek için görsele basılı tutun.</p>'
+                            );
+                        }}
+                    }} else {{
+                        const a = window.parent.document.createElement('a');
+                        a.href = url;
+                        a.download = '{image_name}';
+                        a.click();
+                    }}
+                    const row = window.parent.document.getElementById('fallback-share-row');
+                    if (row) row.style.display = 'flex';
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                }}
+
+                // ── Butonları bul ve bind et ───────────────────────
+                injectHtml2Canvas(function() {{
+                    bindPngBtn();
+                    bindShareBtn();
+                    // Henüz DOM'da değilse bekle
+                    const timer = setInterval(function() {{
+                        bindPngBtn();
+                        bindShareBtn();
+                    }}, 800);
+                    setTimeout(() => clearInterval(timer), 15000);
+                }});
+
+            }})();
+            </script>
+        """, height=0)
+
+        
+        share_ui = textwrap.dedent(f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+            <style>
+                .share-btn-row {{
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                    margin-bottom: 10px;
+                    flex-wrap: wrap;
+                }}
+                .share-btn {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    border: 1px solid #E2E8F0;
+                    background: #FFFFFF;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    font-family: 'Poppins', sans-serif;
+                    color: #1E293B;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    transition: all 0.2s ease;
+                    text-decoration: none;
+                }}
+                .share-btn:hover {{
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+                    border-color: #CBD5E1;
+                }}
+                .share-btn-primary {{
+                    background: #6366F1;
+                    color: white !important;
+                    border-color: #6366F1;
+                    font-size: 1rem;
+                    padding: 14px 28px;
+                    width: 100%;
+                    max-width: 300px;
+                    margin: 0 auto;
+                }}
+                .share-btn-primary:hover {{
+                    background: #4F46E5 !important;
+                    border-color: #4F46E5 !important;
+                }}
+            </style>
+
+            <div class="share-btn-row">
+                <button class="share-btn share-btn-primary" id="btn-share-image">
+                    📤 Görseli Paylaş
+                </button>
+            </div>
+
+            <div class="share-btn-row" id="fallback-share-row" style="display:none;">
+                <span style="font-size:0.8rem;color:#94A3B8;text-align:center;width:100%;">
+                    Tarayıcınız doğrudan paylaşımı desteklemiyor. Görseli indirip manuel paylaşabilirsiniz.
+                </span>
+                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn" style="color:#25D366;font-size:1.3rem;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn" style="color:#000;font-size:1.3rem;">
+                    <i class="fa-brands fa-x-twitter"></i>
+                </a>
+                <a href="https://t.me/share/url?url=https://sentimentanalysis-aimode.streamlit.app/&text={encoded_text}" target="_blank" class="share-btn" style="color:#24A1DE;font-size:1.3rem;">
+                    <i class="fa-brands fa-telegram"></i>
+                </a>
+            </div>
+        """).strip()
+        st.markdown(share_ui, unsafe_allow_html=True)
+
+        btn_cols = st.columns(3)
+        with btn_cols[0]:
+            st.markdown("""
+                <button id="btn-png-download" style="width: 100%; height: 50px; background: #5a67d8; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                    📷 PNG
+                </button>
+            """, unsafe_allow_html=True)
+        with btn_cols[1]:
+            st.download_button("EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+        with btn_cols[2]:
+            components.html(f"""
+                <style>
+                    body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}
+                    button:hover {{ filter: brightness(0.9); transform: translateY(-1px); }}
+                </style>
+                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;'>
+                    PDF
+                </button>
+            """, height=48)
+                    
+    except Exception as e:
+        st.error(f"Paylaşım sistemi hatası: {e}")
+
+
+
+
 # ── Karşılaştırma analizi — fonksiyonlar tanımlıyken çalışır ──────
 if st.session_state.get("_cmp_pending"):
     active_inputs = st.session_state.pop("_cmp_pending")
@@ -4421,22 +5646,19 @@ if st.session_state.get("_cmp_pending"):
 
     st.rerun()
 
-# --- KESİN ÇÖZÜM: ANALİZ BUTONU BLOĞU ---
+# --- ANALİZ AYARLARI VE BAŞLATMA ---
 
-# Analiz edilecek veri var mı kontrol et
-_has_data = len(st.session_state.get("comments_to_analyze", [])) > 0
-
-# Veri varsa butonu göster
-if _has_data:
+# Karşılaştırma modu açık değilse (sonuç ekranı hariç) ayarları ve butonu göster
+if not st.session_state.get("_cmp_mode", False):
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### ⚙️ Analiz Ayarları")
     
     # Seçenekler için iki kolon
     c1, c2 = st.columns(2)
     
     with c1:
-        # Key çakışmasını önlemek için benzersiz key: "final_method_sel"
         a_type = st.radio(
-            "Yöntem Seçin:",
+            "Analiz Yöntemi:",
             ["Hızlı Analiz", "Zengin Analiz"],
             key="final_method_sel",
             index=0 if st.session_state.get("analysis_type") == "Hızlı Analiz" else 1
@@ -4446,9 +5668,9 @@ if _has_data:
     with c2:
         if st.session_state.analysis_type == "Zengin Analiz":
             a_mode = st.radio(
-                "Derinlik:",
+                "Analiz Derinliği:",
                 [0, 1],
-                format_func=lambda x: ["Genel", "Derin"][x],
+                format_func=lambda x: ["Standart (Genel)", "Gelişmiş (Derin)"][x],
                 key="final_mode_sel"
             )
             st.session_state.analysis_mode = a_mode
@@ -4457,19 +5679,24 @@ if _has_data:
 
     # Bilgi Kutusu
     if st.session_state.analysis_type == "Zengin Analiz":
-        st.info("🤖 Zengin Analiz: Yapay zeka tüm yorumları anlamlandırarak işler.")
+        st.info("🤖 **Zengin Analiz**: Yapay zeka tüm yorumları semantik olarak analiz eder. Günlük kotanızı tüketebilir.")
     else:
-        st.info("⚡ Hızlı Analiz: Kelime bazlı algoritmalarla anlık sonuç üretir.")
+        st.info("⚡ **Hızlı Analiz**: İstatistiksel algoritmalarla saniyeler içinde sonuç üretir.")
 
-    # İŞTE ANA BUTON
+    # ANA BUTON
     if st.button("🚀 ANALİZİ BAŞLAT", type="primary", use_container_width=True):
-        # Hızlı analizde eğer tüm havuz varsa onu kullan (daha kapsamlı sonuç için)
-        data_to_run = st.session_state.comments_to_analyze
-        if st.session_state.analysis_type == "Hızlı Analiz" and st.session_state.get("all_fetched_pool"):
-            data_to_run = st.session_state.all_fetched_pool
-            
-        # Analiz fonksiyonunu çağır
-        run_bulk_analysis(data_to_run)
+        # State'den verileri tazele
+        data_to_run = st.session_state.get("comments_to_analyze", [])
+        
+        if not data_to_run:
+            st.error("⚠️ Analiz edilecek veri bulunamadı! Lütfen bir uygulama linki girin veya dosya yükleyin.")
+        else:
+            # Hızlı analizde eğer tüm havuz varsa onu kullan
+            if st.session_state.analysis_type == "Hızlı Analiz" and st.session_state.get("all_fetched_pool"):
+                data_to_run = st.session_state.all_fetched_pool
+                
+            # Analiz fonksiyonunu çağır
+            run_bulk_analysis(data_to_run)
 
 
 st.divider()
