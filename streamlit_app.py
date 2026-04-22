@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import io
+import requests
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
 # Removed app-store-scraper due to dependency conflicts with streamlit
@@ -20,7 +21,7 @@ load_dotenv(override=True)
 # Set Page Config
 st.set_page_config(
     page_title="AI Duygu Analizi",
-    page_icon="🧠",
+    page_icon="❤️",
     layout="centered"
 )
 
