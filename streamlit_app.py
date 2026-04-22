@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import google.generativeai as genai
 import os
 import json
@@ -342,6 +343,26 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
 
             start_time = time.time()
             time_display = st.empty()  # For side-by-side time display
+            total_items = len(comments_to_analyze)
+            est_total_secs = total_items * DELAY_SECS
+
+            # JavaScript: sayfadan ayrılmaya karşı uyarı
+            components.html(f"""
+            <script>
+            (function() {{
+                var totalSecs = {est_total_secs};
+                window.parent.onbeforeunload = function(e) {{
+                    var m = Math.floor(totalSecs / 60);
+                    var s = totalSecs % 60;
+                    var timeStr = (m > 0 ? m + ' dakika ' : '') + s + ' saniye';
+                    var msg = '⚠️ Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
+                    e.preventDefault();
+                    e.returnValue = msg;
+                    return msg;
+                }};
+            }})();
+            </script>
+            """, height=0)
 
             def update_time(done, total, start):
                 elapsed = int(time.time() - start)
@@ -389,7 +410,11 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
 
             
             st.session_state.bulk_results = bulk_results
-            status_text.success("Analiz Başarıyla Tamamlandı!")
+            status_text.success("✅ Analiz Başarıyla Tamamlandı!")
+            time_display.empty()
+            # Sayfadan ayrılma uyarısını kaldır
+            components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
+
         else:
             # Single analysis logic
             with st.spinner("Analiz ediliyor..."):
