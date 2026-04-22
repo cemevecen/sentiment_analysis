@@ -816,32 +816,38 @@ st.markdown("""
     [data-testid="stButton"] {
         width: 100% !important;
     }
-    /* Yeniden çek — sağ alt köşe, küçük link stili */
-    [data-testid="stElementContainer"]:has(> [data-testid="stButton"] button[key="refresh_btn"]) {
-        display: flex !important;
-        justify-content: flex-end !important;
-        margin-top: -8px !important;
+    /* Yeniden çek — input'un içine yerleşik, sağ taraf */
+    .refresh-wrap {
+        position: relative;
+        margin-bottom: 0;
+    }
+    .refresh-wrap [data-testid="stTextInput"] {
         margin-bottom: 0 !important;
     }
-    [data-testid="stButton"] button[key="refresh_btn"] {
+    .refresh-wrap [data-testid="stButton"] {
+        position: absolute !important;
+        right: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: auto !important;
+        z-index: 10 !important;
+    }
+    .refresh-wrap button[key="refresh_btn"] {
         width: auto !important;
         min-width: 0 !important;
-        height: 20px !important;
-        min-height: 20px !important;
-        font-size: 0.65rem !important;
-        padding: 0 6px !important;
+        height: 22px !important;
+        font-size: 0.62rem !important;
+        padding: 0 8px !important;
         border-radius: 6px !important;
         box-shadow: none !important;
-        background: transparent !important;
-        border: none !important;
-        color: #94A3B8 !important;
-        font-weight: 500 !important;
-    }
-    [data-testid="stButton"] button[key="refresh_btn"]:hover {
+        background: #EEF2FF !important;
+        border: 1px solid #818CF8 !important;
         color: #6366F1 !important;
-        background: transparent !important;
+        font-weight: 600 !important;
+    }
+    .refresh-wrap button[key="refresh_btn"]:hover {
+        background: #E0E7FF !important;
         transform: none !important;
-        text-decoration: underline !important;
     }
 
     .stButton > button[kind="primary"] {
@@ -1300,15 +1306,20 @@ with tab1:
                 </script>
             """, height=60, scrolling=False)
 
-        # 5. Yenile butonu — sağa hizalı, küçük (5/1 oranı)
-        _, col_ref = st.columns([1, 1])
-        with col_ref:
-            if st.button("↺ yeniden çek", key="refresh_btn", use_container_width=True):
-                st.session_state["_refresh_token"] = int(time.time())
-                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                           "comments_to_analyze", "ai_summary", "last_results_len"]:
-                    st.session_state.pop(_k, None)
-                st.rerun()
+        st.markdown('<div class="refresh-wrap">', unsafe_allow_html=True)
+        store_url = st.text_input(
+            "Uygulama linki veya ID girin:",
+            placeholder="Örn: com.instagram.android veya 1500198745",
+            key="_store_url_input"
+        )
+        st.session_state.app_url = store_url
+        if st.button("↺ yeniden çek", key="refresh_btn"):
+            st.session_state["_refresh_token"] = int(time.time())
+            for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                       "comments_to_analyze", "ai_summary", "last_results_len"]:
+                st.session_state.pop(_k, None)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # 6. Tarih aralığı
         time_range = st.selectbox(
