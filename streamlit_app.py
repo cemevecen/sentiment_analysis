@@ -49,7 +49,7 @@ st.set_page_config(
 
 # --- AUTO-RELOAD MECHANISM ---
 # Define the current version (to be updated on each deployment)
-CURRENT_VERSION = "2026-03-17-22-02"
+CURRENT_VERSION = "2026-03-17-22-05"
 
 # JavaScript to poll for version changes and reload
 components.html(f"""
@@ -4082,7 +4082,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
     
     
     st.markdown('<div class="no-print">', unsafe_allow_html=True)
-    yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
+    yorum_freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=0, horizontal=True, key="yorum_freq_sel", label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
