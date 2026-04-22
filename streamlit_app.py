@@ -22,7 +22,6 @@ if os.path.exists(".env"):
 # Set Page Config
 st.set_page_config(
     page_title="AI Duygu Analizi",
-    page_icon="💮",
     layout="centered"
 )
 
@@ -127,7 +126,6 @@ def is_valid_comment(text):
 
     return True
 
-@st.cache_data(show_spinner=False, ttl=600)
 def get_app_store_reviews(app_id, country='tr', _progress_callback=None, _days_limit=30):
     """Fetch reviews using App Store RSS Feed (Pagination)"""
     reviews = []
@@ -180,7 +178,6 @@ def get_app_store_reviews(app_id, country='tr', _progress_callback=None, _days_l
     except Exception as e:
         return reviews
 
-@st.cache_data(show_spinner=False, ttl=600)
 def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
     """Cached Google Play fetcher with timeframe-based progress sync"""
     from google_play_scraper import Sort, reviews as play_reviews
@@ -623,9 +620,15 @@ with tab1:
                 platform = "google"
                 app_id = u
 
+        # Logic Improvement: Manual cache to avoid re-fetching on every UI interaction
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}"
+        
         if not platform or not app_id:
             if store_url.strip():
                 st.warning("Geçerli bir Play Store veya App Store linki bulunamadı.")
+        elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
+            # Already fetched, skip to results summary
+            pass
         else:
             with st.container():
                 loading_placeholder = st.empty()
@@ -665,6 +668,7 @@ with tab1:
                         # Store all fetched comments for potential extended analysis
                         fetched_comments.sort(key=lambda x: x['date'], reverse=True)
                         st.session_state.all_fetched_pool = fetched_comments
+                        st.session_state.last_fetch_key = fetch_key # Update manual cache key
                         
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
@@ -707,7 +711,7 @@ with tab2:
                 
                 if df_upload is not None:
                     # Replace Expander with Container
-                    st.markdown(f"#### 📄 {uploaded_file.name}")
+                    st.markdown(f"#### Dosya: {uploaded_file.name}")
                     with st.container(border=True):
                         
                         # Date & Rating Detection
@@ -897,7 +901,7 @@ if comments_to_analyze:
     mode_idx = st.radio(
         "Analiz hızı ve doğruluk dengesini seçin:",
         options=[0, 1],
-        format_func=lambda x: ["🚀 Hızlı", "🎯 Yavaş (Daha Tutarlı)"][x],
+        format_func=lambda x: ["Hızlı", "Yavaş (Daha Tutarlı)"][x],
         captions=[
             f"Genel değerlendirmeler — tahmini {fmt_time(n * 1)}",
             f"Çok daha doğru sonuçlar — tahmini {fmt_time(n * 2)}"
@@ -982,7 +986,7 @@ SOMUT ÖRNEKLER - İNGİLİZCE - İSTEK/GÖRÜŞ:
 
 SOMUT ÖRNEKLER - ARAPÇA - OLUMLU:
 "ممتاز" → {{"olumlu":0.92,"olumsuz":0.03,"istek_gorus":0.05}}
-"احبه 💕🥰" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
+"احبه" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 "رائع جداً وسهل الاستخدام" → {{"olumlu":0.93,"olumsuz":0.03,"istek_gorus":0.04}}
 "أفضل تطبيق، أنصح به الجميع" → {{"olumlu":0.95,"olumsuz":0.02,"istek_gorus":0.03}}
 
@@ -1357,7 +1361,7 @@ if "bulk_results" in st.session_state:
                 # Show Date Range Info
                 min_d = df_puan["Tarih_dt"].min().strftime('%d-%m-%Y')
                 max_d = df_puan["Tarih_dt"].max().strftime('%d-%m-%Y')
-                st.caption(f"📅 **Tespit Edilen Tarih Aralığı:** {min_d} ile {max_d}")
+                st.caption(f"**Tespit Edilen Tarih Aralığı:** {min_d} ile {max_d}")
 
                 # Month names map
                 tr_months = {1:"Ocak", 2:"Şubat", 3:"Mart", 4:"Nisan", 5:"Mayıs", 6:"Haziran", 
@@ -1428,7 +1432,7 @@ if "bulk_results" in st.session_state:
         if remaining_pool:
             st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
             with st.container(border=True):
-                st.write(f"🔍 **Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.**")
+                st.write(f"**Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.**")
                 take_next = min(len(remaining_pool), 500)
                 if st.button(f"Sonraki {take_next} yorumu da analiz et ve sonuçlara ekle", use_container_width=True):
                     next_batch = remaining_pool[:take_next]
@@ -1482,7 +1486,7 @@ if "bulk_results" in st.session_state:
                     (df_dates['Baskın Duygu'] == sel_sentiment)
                 ]
                 
-                st.info(f"🔎 Filtrelendi: **{sel_week.strftime('%d.%m.%Y')}** haftası - **{sel_sentiment}** yorumlar")
+                st.info(f"Filtrelendi: **{sel_week.strftime('%d.%m.%Y')}** haftası - **{sel_sentiment}** yorumlar")
                 if st.button("Filtreyi Temizle", key=f"clear_{key}"):
                     st.rerun()
                 return final_filtered
@@ -1502,7 +1506,7 @@ if "bulk_results" in st.session_state:
             # Format extra info (Rating)
             extra_info = ""
             if "Puan" in row and pd.notnull(row["Puan"]):
-                extra_info += f" | ⭐ {row['Puan']}"
+                extra_info += f" | Puan: {row['Puan']}"
             
             date_tag = ""
             if "Tarih" in row and pd.notnull(row["Tarih"]):
@@ -1535,10 +1539,10 @@ if "bulk_results" in st.session_state:
     t_all = len(analysis_df)
 
     tab_all, tab_pos, tab_neg, tab_neu = st.tabs([
-        f"🌐 Analizler ({t_all})", 
-        f"🟢 Olumlu ({t_pos})", 
-        f"🔴 Olumsuz ({t_neg})", 
-        f"🔵 İstek/Görüş ({t_neu})"
+        f"Analizler ({t_all})", 
+        f"Olumlu ({t_pos})", 
+        f"Olumsuz ({t_neg})", 
+        f"İstek/Görüş ({t_neu})"
     ])
 
     with tab_all:
