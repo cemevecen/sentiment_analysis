@@ -44,5 +44,23 @@ streamlit run streamlit_app.py
 - **Paralel Çalışma:** Eşzamanlı (Concurrent) analiz yeteneği ile hızlı sonuç üretimi.
 - **Veri Güvenliği:** API anahtarları çevre değişkenleri üzerinden güvenli bir şekilde yönetilir.
 
+## 🌍 Canlıya Alma (Render)
+
+Bu repoda `render.yaml` bulunduğu için Render'a tek tıkla deploy edebilirsiniz.
+
+1. Render hesabınızla giriş yapın.
+2. **New +** → **Blueprint** seçin.
+3. Bu GitHub reposunu seçin.
+4. Render, `render.yaml` dosyasını otomatik algılar ve servisi oluşturur.
+5. Ortam değişkenlerini girin:
+	- `GEMINI_API_KEY` veya `GOOGLE_API_KEY`
+	- `GOOGLE_PLACES_API_KEY` (Google işletme yorumları için önerilir)
+	- Opsiyonel: `GOOGLE_MAPS_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`
+
+Başlatma komutu otomatik olarak:
+`streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0`
+
+Not: Google Maps kaynaklı çekimlerde API sınırları veya anti-bot politikaları nedeniyle sonuçlar değişken olabilir. API anahtarı tanımlandığında Places API yolu daha stabil çalışır.
+
 ---
 Geliştiren: **ivicin**
