@@ -212,6 +212,10 @@ st.markdown("""
         color: #B91C1C !important;
         font-weight: 600 !important;
     }
+    [data-testid="stFileUploaderDeleteBtn"] svg {
+        color: #B91C1C !important;
+        fill: #B91C1C !important;
+    }
     
     /* Ensure File Names are readable (not white) */
     [data-testid="stFileUploaderFileName"] {
