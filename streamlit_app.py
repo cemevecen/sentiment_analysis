@@ -920,9 +920,9 @@ if st.button("Analizini Yap", use_container_width=True):
             DELAY_SECS = 2
             RPM_LIMIT = 30
         else:  # Yavaş
-            ANALYSIS_MODEL = 'gemini-2.0-pro-exp-02-05'
-            DELAY_SECS = 4
-            RPM_LIMIT = 15
+            ANALYSIS_MODEL = 'gemini-1.5-pro'
+            DELAY_SECS = 3
+            RPM_LIMIT = 20
 
 
 
