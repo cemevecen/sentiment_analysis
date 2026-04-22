@@ -208,11 +208,12 @@ else:
         comments_to_analyze = [{"text": text_input}]
 
 # ── Analiz Modu Seçici (sadece toplu analizde göster) ──────────────────────
+SPEED_OPTIONS = ["Hızlı", "Yavaş"]
 if is_bulk and comments_to_analyze:
     st.markdown("---")
     mode = st.radio(
         "Analiz hızı:",
-        options=["Hızlı", "Yavaş"],
+        options=SPEED_OPTIONS,
         captions=[
             "Genel değerlendirmeler, daha kısa sürer",
             "Çok daha doğru sonuçlar, uzun sürer"
@@ -221,9 +222,8 @@ if is_bulk and comments_to_analyze:
         key="analysis_mode"
     )
     n = len(comments_to_analyze)
-    # Index-based karşılaştırma: Yavaş ikinci seçenek (index 1)
-    is_slow = (mode == "Yavaş")
-    secs_per = 4 if is_slow else 2
+    mode_idx = SPEED_OPTIONS.index(mode) if mode in SPEED_OPTIONS else 0
+    secs_per = 4 if mode_idx == 1 else 2
     total_secs = n * secs_per
     total_min = total_secs // 60
     total_sec = total_secs % 60
@@ -327,15 +327,17 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
             st.session_state['_quota_hits'] = 0
             
             # Seçilen moda göre model ve bekleme süresi
-            mode = st.session_state.get("analysis_mode", "Hızlı")
-            if mode == "Hızlı":
+            saved_mode = st.session_state.get("analysis_mode", SPEED_OPTIONS[0])
+            mode_idx = SPEED_OPTIONS.index(saved_mode) if saved_mode in SPEED_OPTIONS else 0
+            if mode_idx == 0:  # Hızlı
                 ANALYSIS_MODEL = 'gemini-2.0-flash-lite'
                 DELAY_SECS = 2
                 RPM_LIMIT = 30
-            else:
+            else:  # Yavaş
                 ANALYSIS_MODEL = 'gemini-3.1-flash-lite-preview'
                 DELAY_SECS = 4
                 RPM_LIMIT = 15
+
 
             start_time = time.time()
 
