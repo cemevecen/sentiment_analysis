@@ -341,14 +341,28 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
 
 
             start_time = time.time()
+            time_display = st.empty()  # For side-by-side time display
+
+            def update_time(done, total, start):
+                elapsed = int(time.time() - start)
+                el_m, el_s = divmod(elapsed, 60)
+                el_str = f"{el_m} dk {el_s} sn" if el_m > 0 else f"{el_s} sn"
+                if done > 0:
+                    avg = (time.time() - start) / done
+                    rem_secs = int(avg * (total - done))
+                    rem_m, rem_s = divmod(rem_secs, 60)
+                    rem_str = f"{rem_m} dk {rem_s} sn" if rem_m > 0 else f"{rem_s} sn"
+                else:
+                    rem_str = "—"
+                time_display.markdown(
+                    f"⏱ **Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; ⏳ **Tahmini kalan:** {rem_str}"
+                )
 
             for i, entry in enumerate(comments_to_analyze):
                 comment = entry["text"]
                 date = entry.get("date")
-                elapsed = int(time.time() - start_time)
-                el_min, el_sec = divmod(elapsed, 60)
-                el_str = f"{el_min}dk {el_sec}sn" if el_min > 0 else f"{el_sec}sn"
-                status_text.text(f"Analiz ediliyor ({i+1}/{len(comments_to_analyze)}) — ⏱ {el_str} geçti")
+                status_text.text(f"Analiz ediliyor: {i+1} / {len(comments_to_analyze)}")
+                update_time(i, len(comments_to_analyze), start_time)
 
                 res = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL) or heuristic_analysis(comment)
                 scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
@@ -371,15 +385,7 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 remaining = len(comments_to_analyze) - (i + 1)
                 if remaining > 0:
                     time.sleep(DELAY_SECS)
-                    # Kalan süreyi gerçek geçen süreye göre hesapla
-                    avg_secs = (time.time() - start_time) / (i + 1)
-                    est_rem = int(avg_secs * remaining)
-                    rem_min, rem_sec = divmod(est_rem, 60)
-                    rem_str = f"{rem_min}dk {rem_sec}sn" if rem_min > 0 else f"{rem_sec}sn"
-                    elapsed2 = int(time.time() - start_time)
-                    el2_min, el2_sec = divmod(elapsed2, 60)
-                    el2_str = f"{el2_min}dk {el2_sec}sn" if el2_min > 0 else f"{el2_sec}sn"
-                    status_text.text(f"Analiz ediliyor ({i+2}/{len(comments_to_analyze)}) — ⏱ {el2_str} geçti · ≈ {rem_str} kaldı")
+                    update_time(i + 1, len(comments_to_analyze), start_time)
 
             
             st.session_state.bulk_results = bulk_results
