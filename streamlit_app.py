@@ -815,7 +815,8 @@ with tab1:
                         # Try to get name from URL if it's a link
                         if "apple.com" in u and "/app/" in u:
                             try:
-                                name_for_state = u.split("/app/")[-1].split("/")[0].replace("-", " ").title()
+                                raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
+                                name_for_state = urllib.parse.unquote(raw_name).title()
                             except: pass
                     
                     st.session_state.detected_app_name = name_for_state
@@ -1895,7 +1896,7 @@ if "bulk_results" in st.session_state:
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
         
         # Priority: Use detected names from previous fetch if available
-        app_name = st.session_state.get('detected_app_name', "Uygulama")
+        app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
         store_type = st.session_state.get('detected_store_type', "STORE")
 
         # Fallback/Refinement for Link Input (if session state is missing)
