@@ -482,7 +482,11 @@ with tab2:
                                     if date_col and pd.notnull(row[date_col]):
                                         dt_val = row[date_col]
                                         if not isinstance(dt_val, (int, float)):
-                                            parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                                            parsed_date = pd.to_datetime(dt_val, errors='coerce')
+                                            # If logic fails for unusual formats, then Try dayfirst
+                                            if pd.isnull(parsed_date):
+                                                parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+
                                             if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
                                                 parsed_date = parsed_date.tz_localize(None)
                                             entry["date"] = parsed_date
@@ -889,23 +893,35 @@ if "bulk_results" in st.session_state:
             if not df_puan.empty:
                 df_puan["Tarih_dt"] = pd.to_datetime(df_puan["Tarih"])
                 
-                # Resample based on chosen frequency
+                # Show Date Range Info
+                min_d = df_puan["Tarih_dt"].min().strftime('%d-%m-%Y')
+                max_d = df_puan["Tarih_dt"].max().strftime('%d-%m-%Y')
+                st.caption(f"📅 **Tespit Edilen Tarih Aralığı:** {min_d} ile {max_d}")
+
+                # Month names map
+                tr_months = {1:"Ocak", 2:"Şubat", 3:"Mart", 4:"Nisan", 5:"Mayıs", 6:"Haziran", 
+                             7:"Temmuz", 8:"Ağustos", 9:"Eylül", 10:"Ekim", 11:"Kasım", 12:"Aralık"}
+
+                # Resample based on choice
                 if freq == "Haftalık":
                     df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('W').apply(lambda r: r.start_time)
+                    df_puan["Grup_Label"] = df_puan["Grup"].apply(lambda x: f"{x.day} {tr_months[x.month]} {x.year}")
                     title_txt = "Haftalık Puan Dağılımı"
                 elif freq == "Aylık":
+                    df_puan["Grup_Label"] = df_puan["Tarih_dt"].apply(lambda x: f"{tr_months[x.month]} {x.year}")
                     df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('M').apply(lambda r: r.start_time)
                     title_txt = "Aylık Puan Dağılımı"
                 else:
+                    df_puan["Grup_Label"] = df_puan["Tarih_dt"].dt.strftime('%d-%m-%Y')
                     df_puan["Grup"] = df_puan["Tarih_dt"].dt.date
                     title_txt = "Günlük Puan Dağılımı"
 
-                # Group by chosen period and rating value
-                dist_trend = df_puan.groupby(["Grup", "Puan_val"]).size().reset_index(name='Oy Sayısı')
+                # Group and Sort
+                dist_trend = df_puan.groupby(["Grup", "Grup_Label", "Puan_val"]).size().reset_index(name='Oy Sayısı')
                 dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
-                dist_trend = dist_trend.sort_values("Puan_val", ascending=True)
+                dist_trend = dist_trend.sort_values(["Grup", "Puan_val"], ascending=[True, True])
 
-                fig_dist = px.bar(dist_trend, x="Grup", y="Oy Sayısı", color="Puan_Label",
+                fig_dist = px.bar(dist_trend, x="Grup_Label", y="Oy Sayısı", color="Puan_Label",
                                  title=title_txt,
                                  color_discrete_map={
                                      "1 Yıldız": "#08306b",
@@ -915,24 +931,24 @@ if "bulk_results" in st.session_state:
                                      "5 Yıldız": "#deebf7"
                                  },
                                  category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]},
-                                 labels={"Puan_Label": "", "Grup": "Zaman", "Oy Sayısı": "Sayı"})
+                                 labels={"Puan_Label": "", "Grup_Label": "Zaman", "Oy Sayısı": "Sayı"})
                 
                 fig_dist.update_layout(
                     height=450, 
                     margin={"t": 60, "b": 40, "l": 10, "r": 10},
-                    xaxis_title="Zaman Dönemi",
+                    xaxis_title="",
                     yaxis_title="Yorum / Puan Sayısı",
                     legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
                     barmode='stack',
-                    bargap=0.1,
-                    template="plotly_white"
+                    bargap=0.3,
+                    template="plotly_white",
+                    paper_bgcolor="#F0F9FF",
+                    plot_bgcolor="#F0F9FF",
+                    font={"color": "#1E293B"}
                 )
                 
-                # Dynamic X-axis formatting
-                fig_dist.update_xaxes(
-                    tickformat="%b %Y" if freq == "Aylık" else "%d %b %y",
-                    tickangle=-45
-                )
+                # Force categorical X axis to avoid interpolation
+                fig_dist.update_xaxes(type='category', tickangle=-45)
                 st.plotly_chart(fig_dist, use_container_width=True)
         except Exception as e:
             st.error(f"Grafik oluşturma hatası: {e}")
