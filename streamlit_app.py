@@ -484,7 +484,8 @@ st.markdown("""
         border: none !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         height: 50px !important;
-        font-weight: 600 !important;
+        font-weight: 400 !important;
+        font-size: 0.95rem !important;
     }
     .stDownloadButton > button * {
         color: #FFFFFF !important;
@@ -1867,7 +1868,7 @@ Bu rapor yapay zeka tarafından otomatik oluşturulmuştur.
             components.html("""
                 <style>body { margin: 0; padding: 0; overflow: hidden; }</style>
                 <div style='text-align: center; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 50px;'>
-                    <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 1rem;'>
+                    <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: #FFFFFF; border: none; padding: 0; border-radius: 12px; cursor: pointer; font-family: inherit; font-weight: 400; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.95rem;'>
                         Raporu PDF Olarak İndir / Yazdır
                     </button>
                 </div>
