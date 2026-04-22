@@ -1529,10 +1529,10 @@ if active_tab == "Mağaza Linki":
         if "_platform_filter" not in st.session_state:
             st.session_state._platform_filter = "Android"
 
-        # Unified styling for platform and app buttons
+        # Styling ONLY for platform selector buttons
         st.markdown("""
         <style>
-        /* Platform selector buttons - consistent styling */
+        /* Platform selector buttons - wide button styling ONLY */
         [data-testid="stButton"] > button[key*="platform_"] {
             width: 100% !important;
             height: 56px !important;
@@ -1551,39 +1551,17 @@ if active_tab == "Mağaza Linki":
             transition: all 0.3s ease !important;
         }
         
-        /* Default unselected state */
+        /* Platform button - default unselected state */
         [data-testid="stButton"] > button[key="platform_android"],
         [data-testid="stButton"] > button[key="platform_ios"] {
             background-color: white !important;
             color: #1F2937 !important;
             border: 2px solid #E5E7EB !important;
         }
-        
-        /* Select app buttons (search results) */
-        [data-testid="stButton"] > button[key*="select_app"] {
-            padding: 3px 12px !important;
-            border-radius: 16px !important;
-            background-color: #818CF8 !important;
-            color: white !important;
-            border: none !important;
-            font-size: 10px !important;
-            font-weight: 600 !important;
-            font-family: 'Poppins', sans-serif !important;
-            height: 24px !important;
-            min-height: 24px !important;
-            line-height: 24px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            transition: background-color 0.2s ease !important;
-        }
-        
-        [data-testid="stButton"] > button[key*="select_app"]:hover {
-            background-color: #6366F1 !important;
-        }
         </style>
         """, unsafe_allow_html=True)
         
-        # Dynamic styling for selected platform button
+        # Dynamic styling for selected platform button ONLY
         selected_platform = st.session_state._platform_filter
         st.markdown(f"""
         <style>
@@ -1726,17 +1704,9 @@ if active_tab == "Mağaza Linki":
                         
                         # Display select button as chip
                         with col_btn:
-                            # Chip styling for select button - ONLY affect select_app buttons, NOT platform buttons
+                            # Styling ONLY for select_app buttons - NO platform button styles here
                             st.markdown("""
                             <style>
-                            /* Ensure platform buttons stay wide (56px height, full width) */
-                            [data-testid="stButton"] > button[key*="platform_"] {
-                                height: 56px !important;
-                                min-height: 56px !important;
-                                width: 100% !important;
-                                min-width: 100% !important;
-                            }
-                            
                             /* Only style select_app buttons as chips */
                             [data-testid="stButton"] > button[key*="select_app"] {
                                 float: right;
