@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_lottie import st_lottie
 from google import genai
 from google.genai import types as genai_types
 import os
@@ -41,6 +42,19 @@ def setup_api():
 
 GEMINI_CLIENT = setup_api()
 HAS_GEMINI = GEMINI_CLIENT is not None
+
+# --- Lottie Loader ---
+@st.cache_data(ttl=3600)
+def load_lottieurl(url: str):
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
+        return None
+
+lottie_loading = load_lottieurl("https://lottie.host/81729486-455b-426d-8833-255e2a222857/YV77X3ZzPZ.json") # Updated to a working modern Lottie asset
 
 # --- UTILS: Content Cleanup Filter ---
 def is_valid_comment(text):
@@ -599,7 +613,15 @@ with tab1:
             if store_url.strip():
                 st.warning("⚠️ Geçerli bir Play Store veya App Store linki bulunamadı.")
         else:
-            with st.spinner(f"🚀 {time_range} yorumları mağazadan çekiliyor..."):
+            with st.container():
+                loading_placeholder = st.empty()
+                with loading_placeholder.container():
+                    st.markdown(f"#### 🚀 {time_range} yorumları mağazadan çekiliyor...")
+                    if lottie_loading:
+                        st_lottie(lottie_loading, height=150, key="fetch_loader")
+                    else:
+                        st.info("İşlem devam ediyor, lütfen bekleyin...")
+                
                 fetched_comments = []
                 threshold_date = datetime.now() - timedelta(days=days_limit)
                 
@@ -620,6 +642,8 @@ with tab1:
                                     fetched_comments.append(r)
 
                     if fetched_comments:
+                        # Clear loading animation
+                        loading_placeholder.empty()
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
                             total_found = len(fetched_comments)
