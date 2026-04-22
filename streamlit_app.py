@@ -753,6 +753,19 @@ st.markdown("""
         background-color: #F8B478 !important;
         transform: scale(1.02);
     }
+    .stButton > button[kind="secondary"] {
+        background-color: #EEF2FF !important;
+        border: 1.5px solid #818CF8 !important;
+        color: #4338CA !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background-color: #E0E7FF !important;
+        border-color: #6366F1 !important;
+        color: #3730A3 !important;
+        transform: scale(1.02);
+    }
+
 
     /* File Uploader Button - Restored & Refined */
     [data-testid="stFileUploader"] button[kind="secondary"] {
