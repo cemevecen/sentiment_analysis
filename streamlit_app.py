@@ -809,6 +809,25 @@ st.markdown("""
         transform: scale(1.02);
     }
 
+/* Mini yenile butonu */
+    .mini-refresh [data-testid="stButton"] { width: auto !important; }
+    .mini-refresh button {
+        height: 24px !important;
+        font-size: 0.7rem !important;
+        padding: 0 10px !important;
+        width: auto !important;
+        min-width: 0 !important;
+        border-radius: 20px !important;
+        background: transparent !important;
+        border: 1px solid #818CF8 !important;
+        color: #6366F1 !important;
+        box-shadow: none !important;
+    }
+    .mini-refresh button:hover {
+        background: #EEF2FF !important;
+        transform: none !important;
+    }
+
 /* Yenile butonu — küçük, inline link görünümlü */
     button[key="refresh_btn"],
     [data-testid="stButton"]:has(button[key="refresh_btn"]) {
@@ -1213,13 +1232,14 @@ with tab1:
         )
         st.session_state.app_url = store_url
 
-        # Yenile linki — buton yerine küçük tıklanabilir metin
-        if st.session_state.get("last_fetch_key"):
-            if st.button("↺  Yorumları yeniden çek", key="refresh_btn"):
-                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                           "comments_to_analyze", "ai_summary", "last_results_len"]:
-                    st.session_state.pop(_k, None)
-                st.rerun()
+        st.markdown('<div class="mini-refresh">', unsafe_allow_html=True)
+        if st.button("↺ yeniden çek", key="refresh_btn"):
+            st.session_state["_refresh_token"] = int(time.time())
+            for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                       "comments_to_analyze", "ai_summary", "last_results_len"]:
+                st.session_state.pop(_k, None)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Geçmiş chip'leri — components.html ile render (onclick çalışır)
         if st.session_state.url_history:
@@ -1348,8 +1368,8 @@ with tab1:
 
         
         # Bugünün tarihi + saati (saatlik cache) fetch_key'e ekleniyor
-        _now_ts = int(time.time() // 1800)  # 30 dakikada bir yenilenir
-        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_now_ts}"
+        _refresh_token = st.session_state.get("_refresh_token", 0)
+        fetch_key = f"{platform}_{app_id}_{time_range}_{country}_{_refresh_token}"
         
         if not platform or not app_id:
             if store_url.strip():
