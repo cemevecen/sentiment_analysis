@@ -3814,129 +3814,66 @@ if "bulk_results" in st.session_state:
         
         display_summary = display_summary.replace('\n', '<br>')
 
-        card_html = f"""
-<div id="nlp-report-card" style="background:#faf8f3;max-width:520px;margin:10px auto;font-family:Georgia,'Times New Roman',serif;color:#1a1408;">
-  <div style="height:5px;background:linear-gradient(90deg,#8a6a10,#d4aa30,#e8c84a,#d4aa30,#8a6a10);"></div>
-  <div style="background:#1a0e00;padding:8px 24px;display:flex;align-items:center;gap:16px;">
-    <div style="height:1px;flex:1;background:linear-gradient(90deg,transparent,#c8a030);"></div>
-    <div style="font-size:9px;color:#c8a030;letter-spacing:5px;font-family:Georgia,serif;">◆ ANALİZ RAPORU ◆</div>
-    <div style="height:1px;flex:1;background:linear-gradient(90deg,#c8a030,transparent);"></div>
-  </div>
-  <div style="padding:28px 32px 20px;text-align:center;border-bottom:1px solid #d4c48a;">
-    <div style="font-size:9px;letter-spacing:6px;color:#b8960c;margin-bottom:10px;text-transform:uppercase;font-family:Georgia,serif;">{store_type} · {datetime.now().year}</div>
-    <h1 style="font-size:22px;color:#1a1408;font-weight:bold;line-height:1.25;letter-spacing:0.5px;font-family:Georgia,serif;margin:0;">{app_name}</h1>
-    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-top:14px;">
-      <div style="height:1px;width:50px;background:#d4c48a;"></div>
-      <div style="font-size:9px;color:#b8960c;letter-spacing:4px;font-family:Georgia,serif;">{total_q} YORUM ANALİZİ</div>
-      <div style="height:1px;width:50px;background:#d4c48a;"></div>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid #d4c48a;">
-    <div style="padding:20px 10px;text-align:center;border-right:1px solid #d4c48a;">
-      <div style="font-size:9px;color:#8a7a4a;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;font-family:Georgia,serif;">Analiz</div>
-      <div style="font-size:34px;font-weight:bold;line-height:1;margin-bottom:6px;color:#1a1408;font-family:Georgia,serif;">{total_q}</div>
-      <div style="font-size:8px;color:#b8960c;letter-spacing:1.5px;font-family:Georgia,serif;">toplam kayıt</div>
-    </div>
-    <div style="padding:20px 10px;text-align:center;border-right:1px solid #d4c48a;">
-      <div style="font-size:9px;color:#8a7a4a;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;font-family:Georgia,serif;">Olumlu</div>
-      <div style="font-size:34px;font-weight:bold;line-height:1;margin-bottom:6px;color:#4a7a2a;font-family:Georgia,serif;">{t_pos}</div>
-      <div style="font-size:8px;color:#b8960c;letter-spacing:1.5px;font-family:Georgia,serif;">pozitif yorum</div>
-    </div>
-    <div style="padding:20px 10px;text-align:center;border-right:1px solid #d4c48a;">
-      <div style="font-size:9px;color:#8a7a4a;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;font-family:Georgia,serif;">Olumsuz</div>
-      <div style="font-size:34px;font-weight:bold;line-height:1;margin-bottom:6px;color:#8b2020;font-family:Georgia,serif;">{t_neg}</div>
-      <div style="font-size:8px;color:#b8960c;letter-spacing:1.5px;font-family:Georgia,serif;">negatif yorum</div>
-    </div>
-    <div style="padding:20px 10px;text-align:center;">
-      <div style="font-size:9px;color:#8a7a4a;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;font-family:Georgia,serif;">Görüş</div>
-      <div style="font-size:34px;font-weight:bold;line-height:1;margin-bottom:6px;color:#1a1408;font-family:Georgia,serif;">{t_neu}</div>
-      <div style="font-size:8px;color:#b8960c;letter-spacing:1.5px;font-family:Georgia,serif;">nötr görüş</div>
-    </div>
-  </div>
-  <div style="display:flex;border-bottom:1px solid #d4c48a;">
-    <div style="padding:20px 20px 20px 28px;display:flex;align-items:center;justify-content:center;">
-      <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r="58" fill="none" stroke="#d4c48a" stroke-width="0.5" stroke-dasharray="3,4"/>
-        {_pie_path(0, pos_p, '#b8960c')}
-        {_pie_path(pos_p, pos_p + neg_p, '#7a2020')}
-        {_pie_path(pos_p + neg_p, 100, '#5a7a3a')}
-        <circle cx="70" cy="70" r="26" fill="#faf8f3"/>
-        <text x="70" y="66" text-anchor="middle" font-size="11" fill="#b8960c" font-family="Georgia,serif" font-weight="bold">{total_q}</text>
-        <text x="70" y="78" text-anchor="middle" font-size="7" fill="#8a7a4a" font-family="Georgia,serif" letter-spacing="1">TOPLAM</text>
-      </svg>
-    </div>
-    <div style="border-left:1px solid #d4c48a;"></div>
-    <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:14px;">
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
-          <div style="display:flex;align-items:center;gap:7px;">
-            <div style="width:6px;height:6px;transform:rotate(45deg);background:#b8960c;flex-shrink:0;"></div>
-            <span style="font-size:11px;color:#3a2e18;letter-spacing:1px;font-family:Georgia,serif;">Olumlu</span>
-          </div>
-          <span style="font-size:14px;color:#1a1408;font-weight:bold;font-family:Georgia,serif;">%{pos_p}</span>
-        </div>
-        <div style="height:3px;background:#ede8d8;overflow:hidden;">
-          <div style="height:100%;width:{pos_p}%;background:linear-gradient(90deg,#b8960c,#d4aa30);"></div>
-        </div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
-          <div style="display:flex;align-items:center;gap:7px;">
-            <div style="width:6px;height:6px;transform:rotate(45deg);background:#7a2020;flex-shrink:0;"></div>
-            <span style="font-size:11px;color:#3a2e18;letter-spacing:1px;font-family:Georgia,serif;">Olumsuz</span>
-          </div>
-          <span style="font-size:14px;color:#1a1408;font-weight:bold;font-family:Georgia,serif;">%{neg_p}</span>
-        </div>
-        <div style="height:3px;background:#ede8d8;overflow:hidden;">
-          <div style="height:100%;width:{neg_p}%;background:linear-gradient(90deg,#7a2020,#a03030);"></div>
-        </div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
-          <div style="display:flex;align-items:center;gap:7px;">
-            <div style="width:6px;height:6px;transform:rotate(45deg);background:#5a7a3a;flex-shrink:0;"></div>
-            <span style="font-size:11px;color:#3a2e18;letter-spacing:1px;font-family:Georgia,serif;">Görüş</span>
-          </div>
-          <span style="font-size:14px;color:#1a1408;font-weight:bold;font-family:Georgia,serif;">%{neu_p}</span>
-        </div>
-        <div style="height:3px;background:#ede8d8;overflow:hidden;">
-          <div style="height:100%;width:{neu_p}%;background:linear-gradient(90deg,#5a7a3a,#7a9a4a);"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div style="padding:20px 32px 24px;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <div style="font-size:9px;letter-spacing:4px;color:#b8960c;text-transform:uppercase;font-family:Georgia,serif;white-space:nowrap;">Stratejik Özet</div>
-      <div style="flex:1;height:1px;background:linear-gradient(90deg,#d4c48a,transparent);"></div>
-    </div>
-    <p style="font-size:13px;color:#3a2e18;line-height:1.85;font-style:italic;border-left:2px solid #d4aa30;padding-left:14px;font-family:Georgia,serif;margin:0;">
-      "{display_summary[:300]}..."
-    </p>
-  </div>
-  <div style="background:#1a0e00;padding:8px 24px;display:flex;align-items:center;gap:16px;">
-    <div style="height:1px;flex:1;background:linear-gradient(90deg,transparent,#c8a030);"></div>
-    <div style="font-size:8px;color:#8a6a30;letter-spacing:4px;font-family:Georgia,serif;">◆ sentimentanalysis-aimode.streamlit.app ◆</div>
-    <div style="height:1px;flex:1;background:linear-gradient(90deg,#c8a030,transparent);"></div>
-  </div>
-  <div style="height:5px;background:linear-gradient(90deg,#8a6a10,#d4aa30,#e8c84a,#d4aa30,#8a6a10);"></div>
-</div>
-"""
+        card_html = clean_html(f"""
+            <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: clamp(15px, 5vw, 35px); margin: 10px auto; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 100%; position: relative; overflow: hidden;">
+                <style>
+                    @media (max-width: 480px) {{
+                        #nlp-report-card {{ padding: 20px !important; margin: 10px auto !important; }}
+                        .metric-row {{ flex-wrap: wrap !important; gap: 8px !important; }}
+                        .metric-box {{ flex: 1 1 40% !important; padding: 8px !important; }}
+                        .chart-container {{ padding: 15px !important; flex-direction: column !important; gap: 20px !important; }}
+                        .chart-svg-box {{ width: 100px !important; height: 100px !important; }}
+                    }}
+                </style>
+                <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
+                    <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
+                </div>
+                
+                <div class="metric-row" style="display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 35px; gap: 8px;">
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+                        <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+                        <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+                        <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
+                    </div>
+                    <div class="metric-box" style="text-align: center; flex: 1 1 40%; min-width: 100px; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+                        <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
+                    </div>
+                </div>
 
-        def _pie_path(start_pct, end_pct, color):
-            import math
-            if end_pct - start_pct <= 0: return ""
-            if end_pct - start_pct >= 99.9:
-                return f'<path d="M70,18 A52,52 0 1,1 69.99,18 Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
-            r, cx, cy = 52, 70, 70
-            sa = math.radians(start_pct * 3.6 - 90)
-            ea = math.radians(end_pct * 3.6 - 90)
-            x1,y1 = cx+r*math.cos(sa), cy+r*math.sin(sa)
-            x2,y2 = cx+r*math.cos(ea), cy+r*math.sin(ea)
-            xi,yi = cx+28*math.cos(ea), cy+28*math.sin(ea)
-            xj,yj = cx+28*math.cos(sa), cy+28*math.sin(sa)
-            lg = 1 if (end_pct-start_pct) > 50 else 0
-            return f'<path d="M{x1:.2f},{y1:.2f} A{r},{r} 0 {lg},1 {x2:.2f},{y2:.2f} L{xi:.2f},{yi:.2f} A28,28 0 {lg},0 {xj:.2f},{yj:.2f} Z" fill="{color}" stroke="#faf8f3" stroke-width="1.5"/>'
+                <div class="chart-container" style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
+                    <div class="chart-svg-box" style="width: 140px; height: 140px; position: relative;">
+                        <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
+                        <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
+                            <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
+                            <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
+                            <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
+                        </svg>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
+                        <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
+                    </div>
+                </div>
+
+                <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        Stratejik Özet
+                    </div>
+                    <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
+                        {display_summary}
+                    </div>
+                </div>
+            </div>
+        """)
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
