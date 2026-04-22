@@ -2880,7 +2880,7 @@ if "bulk_results" in st.session_state:
                     transform="rotate(-90 70 70)"/>
                 <!-- Merkez -->
                 <text x="70" y="75" text-anchor="middle"
-                    style="font-size:24px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
+                    style="font-size:21px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
                     {pos_pct}%
                 </text>
             </svg>
