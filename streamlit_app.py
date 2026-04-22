@@ -1860,53 +1860,103 @@ st.markdown("""
         position: absolute !important;
     }
 
-    /* ── Custom Chip Radio Buttons ────────────────── */
-    div[data-testid="stRadio"] > div[role="radiogroup"] {
+    /* ── Hide radio circle for ALL radios ────────────────── */
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
+        display: none !important;
+    }
+
+    /* ── CATEGORY TABS (üst 3'lü - tab mantığı) ────────────────── */
+    .category-radio > div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0 !important;
+        background: transparent !important;
+        padding: 0 !important;
+        border-bottom: 2px solid #E2E8F0 !important;
+    }
+
+    .category-radio div[role="radiogroup"] > label {
+        flex: 1 !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-bottom: 3px solid transparent !important;
+        border-radius: 0 !important;
+        color: #64748B !important;
+        padding: 10px 4px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        text-align: center !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    .category-radio div[role="radiogroup"] > label:hover {
+        color: #334155 !important;
+        background-color: #F8FAFC !important;
+        transform: none !important;
+    }
+
+    .category-radio div[role="radiogroup"] label:has(input:checked),
+    .category-radio div[role="radiogroup"] label[data-checked="true"],
+    .category-radio div[role="radiogroup"] label[aria-checked="true"] {
+        background-color: transparent !important;
+        color: #818CF8 !important;
+        border-bottom: 3px solid #818CF8 !important;
+        box-shadow: none !important;
+        font-weight: 700 !important;
+    }
+
+    .category-radio div[role="radiogroup"] label:has(input:checked) p,
+    .category-radio div[role="radiogroup"] label[data-checked="true"] p {
+        color: #818CF8 !important;
+    }
+
+    @media (max-width: 768px) {
+        .category-radio div[role="radiogroup"] > label {
+            padding: 8px 2px !important;
+            font-size: 0.78rem !important;
+        }
+    }
+
+    /* ── SUB-TAB CHIPS (alt 4'lü - chip mantığı) ────────────────── */
+    .subtab-radio > div[role="radiogroup"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: wrap !important;
-        gap: 6px !important; /* Reduced gap */
+        gap: 6px !important;
         background: transparent !important;
-        padding: 2px 0 !important; /* Reduced padding */
+        padding: 2px 0 !important;
     }
 
-    div[data-testid="stRadio"] div[role="radiogroup"] > label {
+    .subtab-radio div[role="radiogroup"] > label {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         color: #475569 !important;
-        padding: 2px 8px !important; /* Further reduced to 1/4 feel */
+        padding: 2px 8px !important;
         border-radius: 50px !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         font-weight: 500 !important;
-        font-size: 0.75rem !important; /* Smaller text */
+        font-size: 0.75rem !important;
         margin: 0 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
     }
 
-    div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+    .subtab-radio div[role="radiogroup"] > label:hover {
         background-color: #F8FAFC !important;
         border-color: #CBD5E1 !important;
         transform: translateY(-1px);
     }
 
-    /* Active State for Chips */
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
-        display: none !important; /* Hide the radio circle */
-    }
-
-    /* When the radio input inside the label is checked, style the parent label */
-    /* Streamlit's radio buttons are structured as: label > div > input */
-    /* Since we can't easily target the parent label based on child state in CSS without :has(), 
-       we use a sibling selector or rely on Streamlit's class application if possible. 
-       Actually, Streamlit's active radio label has a specific attribute or child. 
-       Let's use a simpler approach: targeting the 'checked' state. */
-
-    /* Radio button - Seçili state (Daha güçlü selector'ler) */
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
-    div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"],
-    div[data-testid="stRadio"] input[type="radio"]:checked + label {
+    .subtab-radio div[role="radiogroup"] label:has(input:checked),
+    .subtab-radio div[role="radiogroup"] label[data-checked="true"],
+    .subtab-radio div[role="radiogroup"] label[aria-checked="true"],
+    .subtab-radio input[type="radio"]:checked + label {
         background-color: #818CF8 !important;
         color: white !important;
         border-color: #818CF8 !important;
@@ -1914,17 +1964,16 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p {
+    .subtab-radio div[role="radiogroup"] label:has(input:checked) p,
+    .subtab-radio div[role="radiogroup"] label[data-checked="true"] p {
         color: white !important;
     }
 
-    /* Mobile adjustments for chips */
     @media (max-width: 768px) {
-        div[data-testid="stRadio"] > div[role="radiogroup"] {
+        .subtab-radio > div[role="radiogroup"] {
             gap: 6px !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+        .subtab-radio div[role="radiogroup"] > label {
             padding: 1px 6px !important;
             font-size: 0.7rem !important;
         }
@@ -2088,9 +2137,24 @@ st.markdown("""
 
 <script>
 (function() {
-    function styleRadios() {
-        const labels = document.querySelectorAll('[data-testid="stRadio"] label');
-        labels.forEach(label => {
+    function tagRadioGroups() {
+        const radios = document.querySelectorAll('[data-testid="stRadio"]');
+        radios.forEach((radio, idx) => {
+            if (idx === 0) {
+                radio.classList.add('category-radio');
+                radio.classList.remove('subtab-radio');
+            } else {
+                radio.classList.add('subtab-radio');
+                radio.classList.remove('category-radio');
+            }
+        });
+    }
+
+    function styleSubtabRadios() {
+        // Only style subtab (chip) radios via JS — category tabs are CSS-only
+        const subtab = document.querySelector('.subtab-radio');
+        if (!subtab) return;
+        subtab.querySelectorAll('label').forEach(label => {
             const input = label.querySelector('input[type="radio"]');
             if (input && input.checked) {
                 label.style.backgroundColor = '#818CF8';
@@ -2099,7 +2163,7 @@ st.markdown("""
                 label.style.boxShadow = '0 4px 10px rgba(129, 140, 248, 0.3)';
                 const p = label.querySelector('p');
                 if (p) p.style.color = 'white';
-            } else if (label.querySelector('input[type="radio"]')) {
+            } else if (input) {
                 label.style.backgroundColor = '#FFFFFF';
                 label.style.color = '#475569';
                 label.style.borderColor = '#E2E8F0';
@@ -2109,15 +2173,41 @@ st.markdown("""
             }
         });
     }
-    
-    // İlk yükleme ve periyodik kontrol
-    styleRadios();
-    
-    // Streamlit rerun sonrası veya DOM değişikliklerinde stili güncelle
-    const observer = new MutationObserver((mutations) => {
-        styleRadios();
-    });
-    
+
+    function styleCategoryRadios() {
+        const cat = document.querySelector('.category-radio');
+        if (!cat) return;
+        cat.querySelectorAll('label').forEach(label => {
+            const input = label.querySelector('input[type="radio"]');
+            if (input && input.checked) {
+                label.style.backgroundColor = 'transparent';
+                label.style.color = '#818CF8';
+                label.style.borderBottom = '3px solid #818CF8';
+                label.style.boxShadow = 'none';
+                label.style.fontWeight = '700';
+                const p = label.querySelector('p');
+                if (p) p.style.color = '#818CF8';
+            } else if (input) {
+                label.style.backgroundColor = 'transparent';
+                label.style.color = '#64748B';
+                label.style.borderBottom = '3px solid transparent';
+                label.style.boxShadow = 'none';
+                label.style.fontWeight = '500';
+                const p = label.querySelector('p');
+                if (p) p.style.color = '#64748B';
+            }
+        });
+    }
+
+    function applyAll() {
+        tagRadioGroups();
+        styleCategoryRadios();
+        styleSubtabRadios();
+    }
+
+    applyAll();
+
+    const observer = new MutationObserver(() => { applyAll(); });
     observer.observe(document.body, { 
         childList: true, 
         subtree: true,
