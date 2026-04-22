@@ -2211,6 +2211,11 @@ def heuristic_analysis(text, rating=None):
         "quit ya jobs",
         "hope whoever made these updates get",
         "this game should be studied",
+        "kötü gazeteciler gibi davranmaya",
+        "çok ucuz bu",
+        "hem ücretli üyelik yapıyorsunuz hem programla ilgilenmiyorsunuz",
+        "ne yapıyorsunuz bu ara",
+        "erişilebilirliğe dikkat edin",  # bu istek aslında
     ]
     sarkasm_hit = any(p in t for p in SARKASM)
 
@@ -2242,6 +2247,48 @@ def heuristic_analysis(text, rating=None):
         "yüklenmiyor", "açılmıyor", "gözükmüyor", "görünmüyor",
         "boş ekran", "lag", "atıyor", "uygulama atıyor",
         "uygulama çöküyor", "uygulama donuyor",
+
+        # TR — Finans/kur uygulaması özel
+        "sıfırlandı", "hepsi sıfırlandı", "veriler sıfırlandı",
+        "varlık sıfır", "bilgiler kayboldu", "veriler kayboldu",
+        "alarm kuramaz", "alarm kurulmuyor", "alarm çalışmıyor",
+        "alarm gelmiyor", "bildirim gelmiyor", "bildirimler gelmiyor",
+        "bildirime tıklıyorum açılmıyor",
+        "favori listem görünmüyor", "favoriler görünmez",
+        "favoriler kayboldu", "favori görünmez oldu",
+        "arka planda güncelleme yapmıyor",
+        "arka planda çalışmıyor",
+        "fiyatlar güncellenmiyor", "kurlar güncellenmiyor",
+        "kurlar donuyor", "rakamlar donuyor",
+        "yetkiniz yok", "yetki hatası",
+        "cüzdan çalışmıyor", "cüzdana ekleyemiyor",
+        "cüzdanda hata", "cüzdan bölümü çalışmıyor",
+        "düzenle butonu çalışmıyor", "düzenle çalışmıyor",
+        "hopörlerden ses", "hoparlörden ses",
+        "hantallık var", "çok hantal",
+        "açılmıyorki", "giremiyor",
+        "erişilebilirlik yok", "voiceover çalışmıyor",
+        "görme engelli",
+        "premium aldık ama", "para ödedik ama",
+        "ücretli üyelik ama", "paralı uygulama oldu",
+        "hem ücretli hem",
+        "sinir bozucu olmuş", "her seferinde sormak",
+        "virgül sonrası kaldırılmış",
+        "tablette destek yok", "tablet desteği yok",
+
+
+        # TR — Finans uygulaması istekleri
+        "yatırım fonu ekle", "fonlar eklensin", "fonları da ekle",
+        "halka arz ekle", "halka arz sayfası",
+        "akaryakıt fiyatları ekle", "akaryakıt da eklensin",
+        "dünya borsaları ekle", "borsa ekle",
+        "widget güncellensin", "anlık güncelleme butonu",
+        "yorum yapma özelliği", "yorum özelliği getirilmeli",
+        "takvimi elle yaz", "elle tarih giriş",
+        "banka eklenmesi", "daha fazla banka",
+        "tarih aralığı seçimi", "üç aylık seçenek",
+        "erişilebilirlik ekle", "ekran okuyucu entegre",
+        "bildirim içeriği daha açık",
 
         # TR — Chat/mesaj sorunları
         "mesaj gitmiyor", "mesajlar gitmiyor", "mesaj gelmiyor",
