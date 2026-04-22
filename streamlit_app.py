@@ -1529,10 +1529,10 @@ if active_tab == "Mağaza Linki":
         if "_platform_filter" not in st.session_state:
             st.session_state._platform_filter = "Android"
 
-        # Unified styling for all buttons
+        # Unified styling for platform and app buttons
         st.markdown("""
         <style>
-        /* Platform selector buttons */
+        /* Platform selector buttons - consistent styling */
         [data-testid="stButton"] > button[key*="platform_"] {
             width: 100% !important;
             height: 56px !important;
@@ -1551,12 +1551,12 @@ if active_tab == "Mağaza Linki":
             transition: all 0.3s ease !important;
         }
         
-        /* Selected platform button state */
-        [data-testid="stButton"] > button[key="platform_android"].active,
-        [data-testid="stButton"] > button[key="platform_ios"].active {
-            background-color: #818CF8 !important;
-            color: white !important;
-            border: none !important;
+        /* Default unselected state */
+        [data-testid="stButton"] > button[key="platform_android"],
+        [data-testid="stButton"] > button[key="platform_ios"] {
+            background-color: white !important;
+            color: #1F2937 !important;
+            border: 2px solid #E5E7EB !important;
         }
         
         /* Select app buttons (search results) */
@@ -1590,7 +1590,7 @@ if active_tab == "Mağaza Linki":
         [data-testid="stButton"] > button[key="platform_{selected_platform.lower()}"] {{
             background-color: #818CF8 !important;
             color: white !important;
-            border: none !important;
+            border: 2px solid #818CF8 !important;
         }}
         </style>
         """, unsafe_allow_html=True)
