@@ -64,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-14-00"  # Fix: robust date extraction + filter None-dates as include
+CURRENT_VERSION = "2026-03-19-15-00"  # Full scraper rewrite: robust selectors, direct place URL nav
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -805,6 +805,7 @@ def scrape_google_reviews_playwright(
 ) -> List[Dict[str, Any]]:
     """
     Playwright (Chromium headless) ile Google Maps sayfasından yorumları çeker.
+    Travel/Search URL'leri otomatik Maps URL'sine dönüştürülür.
     """
     st.session_state["_gb_last_scrape_error"] = None
 
@@ -816,42 +817,54 @@ def scrape_google_reviews_playwright(
         )
         return []
 
+    # ── Ön-çözümleme: Travel/Search URL → Maps URL ──────────────────
+    if (
+        "google.com/travel" in maps_url
+        or ("google.com/search" in maps_url and "google.com/maps" not in maps_url)
+    ):
+        _resolved = _extract_maps_url_from_travel(maps_url)
+        if _resolved:
+            maps_url = _resolved
+
     reviews: List[Dict[str, Any]] = []
 
+    # ── Selector listeleri (eski → yeni sırasıyla) ──────────────────
+    _CARD_SELS  = ["div[data-review-id]", "div.jftiEf", "div.GHT2ce"]
+    _TEXT_SELS  = ["span.wiI7pd", "span[data-expandable-section]", "div.MyEned span", "div.Jtu6Td span"]
+    _STAR_SELS  = ["span.kvMYJc", 'span[aria-label*="yıldız"]', 'span[aria-label*="star"]',
+                   'span[aria-label*="Star"]']
+    _DATE_SELS  = ["span.rsqaWe", "span.xRkPPb", "span.DU9Pgb", "span.y3Ibjb",
+                   "span[class*='rsqa']", "span[class*='xRkP']"]
+    _USER_SELS  = ["div.d4r55", "button.al6Kxe span", "div.WNxzHc span", "div.RfnDt span"]
+    _FEED_SELS  = ["div[role='feed']", "div.m6QErb", "div.DxyBCb", "div.section-layout"]
+    _MORE_SELS  = "button.w8nwRe, button[aria-label*='fazla'], button[aria-label*='more']"
+    _TAB_SELS   = [
+        'button[data-tab-index="1"]',
+        'button[aria-label*="Yorum"]',  'button[aria-label*="Review"]',
+        '[role="tab"]:has-text("Yorumlar")', '[role="tab"]:has-text("Reviews")',
+        'button:has-text("Yorumlar")',  'button:has-text("Reviews")',
+    ]
+
+    def _first(cards_iter, sel):
+        for s in sel:
+            el = cards_iter.query_selector(s)
+            if el:
+                return el
+        return None
+
     try:
-        from playwright.sync_api import sync_playwright
-
-        # ── Google Travel / Search URL → Maps URL ön-çözümlemesi ───────
-        # Playwright'a geçmeden önce requests ile dene; Travel URL'leri
-        # headless Chromium'da "Page crashed" hatasına yol açabilir.
-        _is_travel_url_initial = (
-            "google.com/travel" in maps_url
-            or (
-                "google.com/search" in maps_url
-                and "google.com/maps" not in maps_url
-            )
-        )
-        if _is_travel_url_initial:
-            _pre_resolved = _extract_maps_url_from_travel(maps_url)
-            if _pre_resolved:
-                maps_url = _pre_resolved
-                _is_travel_url_initial = False
-
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
                 headless=True,
                 args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-gpu",
-                    "--disable-dev-shm-usage",
-                    "--disable-crash-reporter",
-                    "--no-zygote",
+                    "--no-sandbox", "--disable-setuid-sandbox",
+                    "--disable-gpu", "--disable-dev-shm-usage",
+                    "--disable-crash-reporter", "--no-zygote",
                 ],
             )
             ctx = browser.new_context(
                 locale="tr-TR",
-                viewport={"width": 1280, "height": 800},
+                viewport={"width": 1280, "height": 900},
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -860,20 +873,14 @@ def scrape_google_reviews_playwright(
             )
             page = ctx.new_page()
 
-            # Travel URL'leri için "commit" kullanmak sayfanın neredeyse hiç
-            # yüklenmemesine yol açar — pre-resolve başarılıysa artık Maps URL
-            # üzerindeyiz, doğrudan domcontentloaded kullan.
-            # Hâlâ Travel URL'sindeyse commit ile yükle (crash önleme).
-            _goto_wait = "commit" if _is_travel_url_initial else "domcontentloaded"
+            # ── 1. Sayfayı aç ───────────────────────────────────────
             try:
-                page.goto(maps_url, timeout=30000, wait_until=_goto_wait)
-            except Exception as _goto_err:
-                if "crashed" in str(_goto_err).lower():
-                    # Sayfa çöktü — işletme adını URL'den çıkarmayı dene
-                    _fallback = _extract_maps_url_from_travel(maps_url)
-                    if _fallback:
-                        maps_url = _fallback
-                        _is_travel_url_initial = False
+                page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+            except Exception as _ge:
+                if "crashed" in str(_ge).lower():
+                    _fb = _extract_maps_url_from_travel(maps_url)
+                    if _fb:
+                        maps_url = _fb
                         page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
                     else:
                         raise
@@ -881,147 +888,81 @@ def scrape_google_reviews_playwright(
                     raise
             time.sleep(2)
 
-            # Çerez onay popup'ı
-            for txt in ["Tümünü kabul et", "Accept all", "Kabul et"]:
+            # ── 2. Çerez popup'ı ────────────────────────────────────
+            for _ct in ["Tümünü kabul et", "Accept all", "Kabul et"]:
                 try:
-                    page.click(f'button:has-text("{txt}")', timeout=2500)
+                    page.click(f'button:has-text("{_ct}")', timeout=2000)
                     time.sleep(0.5)
                     break
                 except Exception:
                     continue
 
-            # ── Google Travel / Search URL → Maps URL dönüşümü ──────────
-            # (ön-çözümleme başarısız olursa Playwright üzerinden tekrar dene)
-            _is_travel_url = _is_travel_url_initial
-            if _is_travel_url:
-                resolved_maps_url = None
-                # 1. Sayfadaki Maps linkini ara
-                for _sel in [
-                    'a[href*="google.com/maps"]',
-                    'a[href*="maps.google.com"]',
-                    '[data-url*="google.com/maps"]',
-                ]:
-                    try:
-                        _el = page.query_selector(_sel)
-                        if _el:
-                            _href = _el.get_attribute("href") or _el.get_attribute("data-url") or ""
-                            if "google.com/maps" in _href or "maps.google.com" in _href:
-                                resolved_maps_url = _href
-                                break
-                    except Exception:
-                        pass
-                # 2. Sayfa başlığından işletme adı çıkar
-                if not resolved_maps_url:
-                    try:
-                        _title = page.title()
-                        for _sep in [" - Google", " | Google", " – Google", " — Google"]:
-                            if _sep in _title:
-                                _name = _title.split(_sep)[0].strip()
-                                if _name:
-                                    resolved_maps_url = (
-                                        "https://www.google.com/maps/search/"
-                                        + urllib.parse.quote(_name)
-                                    )
-                                break
-                    except Exception:
-                        pass
-                # 3. og:title meta etiketinden dene
-                if not resolved_maps_url:
-                    try:
-                        _meta = page.query_selector('meta[property="og:title"]')
-                        if _meta:
-                            _name = (_meta.get_attribute("content") or "").strip()
-                            if _name:
-                                resolved_maps_url = (
-                                    "https://www.google.com/maps/search/"
-                                    + urllib.parse.quote(_name)
-                                )
-                    except Exception:
-                        pass
-                if resolved_maps_url:
-                    maps_url = resolved_maps_url
-                    page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
-                    time.sleep(2)
-                    # Çerez onayı tekrar
-                    for _txt in ["Tümünü kabul et", "Accept all", "Kabul et"]:
-                        try:
-                            page.click(f'button:has-text("{_txt}")', timeout=2500)
-                            time.sleep(0.5)
-                            break
-                        except Exception:
-                            continue
-
-            # Eğer hâlâ /maps/search/ sayfasındaysak (listeleme), ilk sonuca tıkla
-            _current_url = page.url
-            if "/maps/search/" in _current_url or "/maps/search?" in _current_url:
-                _clicked_result = False
-                for _res_sel in [
-                    'a.hfpxzc',
-                    'div[role="feed"] a[href*="/maps/place/"]',
-                    '[jsaction*="mouseover:pane"] a[href*="/maps/place/"]',
-                ]:
-                    try:
-                        _res_el = page.wait_for_selector(_res_sel, timeout=5000)
-                        if _res_el:
-                            _res_el.click()
-                            time.sleep(2)
-                            _clicked_result = True
-                            break
-                    except Exception:
-                        continue
-                if not _clicked_result:
-                    # Son çare: sayfadaki ilk /maps/place/ linkine git
-                    try:
-                        _place_link = page.query_selector('a[href*="/maps/place/"]')
-                        if _place_link:
-                            _href = _place_link.get_attribute("href") or ""
-                            if _href:
-                                page.goto(_href, timeout=30000, wait_until="domcontentloaded")
-                                time.sleep(2)
-                    except Exception:
-                        pass
-
-            # Yorumlar sekmesine git — birden fazla selector dene
-            for sel in [
-                'button[data-tab-index="1"]',
-                'button[aria-label*="Yorum"]',
-                'button[aria-label*="Review"]',
-                '[role="tab"]:has-text("Yorum")',
-                '[role="tab"]:has-text("Review")',
-                'button:has-text("Yorum")',
-                'button:has-text("Review")',
-            ]:
+            # ── 3. Arama/liste sayfasındaysak → doğrudan place URL'e git ──
+            if "/maps/search/" in page.url:
+                _place_url = None
+                # Sayfadaki ilk /maps/place/ linkini DOM'dan çıkar
                 try:
-                    page.click(sel, timeout=3000)
+                    page.wait_for_selector('a[href*="/maps/place/"]', timeout=7000)
+                    _el = page.query_selector('a[href*="/maps/place/"]')
+                    if _el:
+                        _place_url = _el.get_attribute("href") or ""
+                except Exception:
+                    pass
+
+                if _place_url:
+                    page.goto(_place_url, timeout=30000, wait_until="domcontentloaded")
+                    time.sleep(2)
+                else:
+                    # Fallback: tıkla + URL değişmesini bekle
+                    try:
+                        page.click("a.hfpxzc", timeout=5000)
+                        try:
+                            page.wait_for_url("**/maps/place/**", timeout=10000)
+                        except Exception:
+                            time.sleep(3)
+                    except Exception:
+                        pass
+
+            # ── 4. Yorumlar sekmesi ─────────────────────────────────
+            for _ts in _TAB_SELS:
+                try:
+                    page.click(_ts, timeout=3500)
                     time.sleep(1.5)
                     break
                 except Exception:
                     continue
 
-            # En yeni sıralama
-            for val in ["En yeni", "Newest"]:
+            # ── 5. En yeni sıralama ─────────────────────────────────
+            for _sv in ["En yeni", "Newest"]:
                 try:
-                    page.click(f'[data-value="{val}"]', timeout=2500)
+                    page.click(f'[data-value="{_sv}"]', timeout=3000)
                     time.sleep(1)
                     break
                 except Exception:
                     continue
 
-            # İlk review kartları yüklenene kadar bekle
-            try:
-                page.wait_for_selector("div[data-review-id]", timeout=8000)
-            except Exception:
-                pass
+            # ── 6. İlk kartlar yüklenene kadar bekle ────────────────
+            for _cs in _CARD_SELS:
+                try:
+                    page.wait_for_selector(_cs, timeout=8000)
+                    break
+                except Exception:
+                    continue
 
-            # Scroll ile yorum yükle
+            # ── 7. Scroll döngüsü ───────────────────────────────────
             last_count = 0
             no_new = 0
-            _date_threshold_scroll = datetime.now() - timedelta(days=days_hint * 2)
             for _ in range(80):
                 if last_count >= max_reviews:
                     break
+
+                # Feed panelini bul ve scroll et
                 try:
-                    panel = page.query_selector('div[role="feed"]')
+                    panel = None
+                    for _fs in _FEED_SELS:
+                        panel = page.query_selector(_fs)
+                        if panel:
+                            break
                     if panel:
                         panel.evaluate("el => el.scrollTop = el.scrollHeight")
                     else:
@@ -1033,18 +974,25 @@ def scrape_google_reviews_playwright(
 
                 # "Daha fazla" butonları
                 try:
-                    for btn in page.query_selector_all("button.w8nwRe")[:5]:
+                    for _mb in page.query_selector_all(_MORE_SELS)[:5]:
                         try:
-                            btn.click()
+                            _mb.click()
                             time.sleep(0.15)
                         except Exception:
                             pass
                 except Exception:
                     pass
 
-                current = len(page.query_selector_all("div[data-review-id]"))
+                # Kart sayısını güncelle (birden fazla selector)
+                current = 0
+                for _cs in _CARD_SELS:
+                    current = len(page.query_selector_all(_cs))
+                    if current > 0:
+                        break
+
                 if _progress_callback:
-                    _progress_callback(min(current / max_reviews, 0.9))
+                    _progress_callback(min(current / max(max_reviews, 1), 0.9))
+
                 if current == last_count:
                     no_new += 1
                     if no_new >= 3:
@@ -1053,45 +1001,46 @@ def scrape_google_reviews_playwright(
                     no_new = 0
                 last_count = current
 
-            # Yorumları parse et
-            for card in page.query_selector_all("div[data-review-id]"):
+            # ── 8. Kartları parse et ─────────────────────────────────
+            cards = []
+            for _cs in _CARD_SELS:
+                cards = page.query_selector_all(_cs)
+                if cards:
+                    break
+
+            for card in cards:
                 try:
                     # Metin
-                    text_el = (
-                        card.query_selector("span[data-expandable-section]")
-                        or card.query_selector(".wiI7pd")
-                    )
-                    text = text_el.inner_text().strip() if text_el else ""
+                    text = ""
+                    for _ts in _TEXT_SELS:
+                        _el = card.query_selector(_ts)
+                        if _el:
+                            text = (_el.inner_text() or "").strip()
+                            if text:
+                                break
                     if not text or len(text) < 3:
                         continue
 
                     # Yıldız
                     rating = "0"
-                    for star_sel in [
-                        'span[aria-label*="yıldız"]',
-                        'span[aria-label*="star"]',
-                    ]:
-                        star_el = card.query_selector(star_sel)
-                        if star_el:
-                            aria = star_el.get_attribute("aria-label") or ""
-                            m = re.search(r"(\d+)", aria)
-                            if m:
-                                rating = m.group(1)
+                    for _ss in _STAR_SELS:
+                        _el = card.query_selector(_ss)
+                        if _el:
+                            _aria = _el.get_attribute("aria-label") or ""
+                            _m = re.search(r"(\d+)", _aria)
+                            if _m:
+                                rating = _m.group(1)
                             break
 
-                    # Tarih — birden fazla selector dene, yoksa card metnini tara
+                    # Tarih
                     date_str = ""
-                    for _ds in [".rsqaWe", "span.xRkPPb", ".DU9Pgb", ".y3Ibjb",
-                                "span[class*='date']", "span[class*='Date']"]:
-                        _d = card.query_selector(_ds)
-                        if _d:
-                            _t = (_d.inner_text() or "").strip()
-                            if _t and re.search(
-                                r'\d|\bönce\b|\bago\b|dün|yesterday', _t, re.I
-                            ):
+                    for _ds in _DATE_SELS:
+                        _el = card.query_selector(_ds)
+                        if _el:
+                            _t = (_el.inner_text() or "").strip()
+                            if _t and re.search(r'\d|\bönce\b|\bago\b|dün|yesterday', _t, re.I):
                                 date_str = _t
                                 break
-                    # Fallback: kartın bütün metninde göreli zaman ifadesi ara
                     if not date_str:
                         try:
                             _m = re.search(
@@ -1107,11 +1056,16 @@ def scrape_google_reviews_playwright(
                     parsed_date = _parse_relative_date(date_str)
 
                     # Kullanıcı
-                    user_el = card.query_selector(".d4r55")
-                    username = user_el.inner_text().strip() if user_el else "Anonim"
+                    username = "Anonim"
+                    for _us in _USER_SELS:
+                        _el = card.query_selector(_us)
+                        if _el:
+                            _t = (_el.inner_text() or "").strip()
+                            if _t:
+                                username = _t
+                                break
 
                     review_id = card.get_attribute("data-review-id") or text[:50]
-
                     reviews.append({
                         "id":       review_id,
                         "text":     text,
