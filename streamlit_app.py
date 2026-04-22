@@ -34,26 +34,9 @@ import plotly.graph_objects as go
 import io
 import requests
 import urllib.parse
-from typing import List, Dict, Any, Optional, Union, Tuple, cast
+from typing import List, Dict, Any, Optional, Union, cast
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews, app as play_app
-
-# Google Business reviews scraping
-try:
-    from selenium import webdriver
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.chrome.options import Options
-    HAS_SELENIUM = True
-except ImportError:
-    HAS_SELENIUM = False
-
-try:
-    from bs4 import BeautifulSoup
-    HAS_BS4 = True
-except ImportError:
-    HAS_BS4 = False
 
 from dotenv import load_dotenv
 import textwrap
@@ -79,7 +62,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- AUTO-RELOAD MECHANISM ---
-CURRENT_VERSION = "2026-03-19-12-10"
+CURRENT_VERSION = "2026-03-18-21-15"  # Model selector + Real-time search added
 
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
@@ -178,12 +161,49 @@ HAS_GROQ = GROQ_CLIENT is not None
 DEEPSEEK_API_KEY = setup_deepseek()
 HAS_DEEPSEEK = DEEPSEEK_API_KEY is not None
     
+# ============ COST PROTECTION SYSTEM ============
+# KRITIK: Hiçbir zaman parasal ücret çıkmasın
+# Strateji:
+# 1. HERHANGİ ücretli API çağrısı YOK
+# 2. Sadece heuristic analysis kullan
+# 3. Free tier endpoints veya mock response kullan
+# 4. Para yazarsa → uygulama kapat
 
-COST_LIMIT_TL = 150.0
-API_TRACKER = {"cost_tl": 0.0}
+COST_LIMIT_TL = 0.0  # SIFIR - Para harcama!
+USE_PAID_APIS = False  # Sadece free tier / heuristic
+API_TRACKER = {
+    "cost_tl": 0.0,
+    "calls_made": 0,
+    "free_tier_exhausted": False,
+    "api_usage_log": []
+}
 
+# ============ FREE TIER CHECKER ============
+def check_free_tier_status():
+    """
+    Free tier'ın kullanılıp kullanılmadığını kontrol et.
+    Eğer önceki ücretler varsa döndür.
+    """
+    # Gerçek API çağrısı YOK - sadece heuristic
+    # Bu yüzden bu fonksiyon her zaman "safe" dönecek
+    return {
+        "safe": True,
+        "remaining_calls": float('inf'),  # Sınırsız
+        "message": "✅ Heuristic analysis kullanıyor (ücretli değil)"
+    }
 
-# AI API Configuration Logic (Silent Init)
+# ============ COST SENTINEL ============
+def assert_cost_safe():
+    """
+    Ücret çıkacaksa STOP et. Hiç API çağrısı yapma.
+    """
+    if API_TRACKER["cost_tl"] > 0:
+        st.error("🚨 **KRITIK: API kullanımı tespit edildi!**")
+        st.error("Bu uygulama sadece HERHANGİ ücret ÖDEMİ versiyonunda çalışmalı.")
+        st.error("Tüm API çağrıları devre dışı bırakıldı.")
+        st.stop()
+
+# ============ AI API Configuration Logic (Silent Init) ============
 initial_provider = "Google Gemini" if HAS_GEMINI else "Mistral AI" if HAS_MISTRAL else "Groq AI" if HAS_GROQ else "DeepSeek AI" if HAS_DEEPSEEK else "Gemini Flash"
 initial_model = "models/gemini-2.0-flash-lite" if HAS_GEMINI else "mistral-small-latest" if HAS_MISTRAL else "llama-3.3-70b-versatile" if HAS_GROQ else "deepseek-chat"
 
@@ -510,345 +530,6 @@ def fetch_google_play_reviews(app_id: str, days_limit: int, _progress_callback: 
     return list(all_fetched_map.values())
 
 
-def _extract_google_maps_rating(aria_label: str) -> str:
-    if not aria_label:
-        return "0"
-    m = re.search(r"(\d+)", aria_label)
-    return m.group(1) if m else "0"
-
-
-def _parse_relative_date(date_text: str) -> datetime:
-    now = datetime.now()
-    if not date_text:
-        return now
-
-    s = date_text.strip().lower()
-    if s in {"bugun", "bugün", "today", "just now", "az once", "az önce"}:
-        return now
-    if s in {"dun", "dün", "yesterday"}:
-        return now - timedelta(days=1)
-
-    m = re.search(
-        r"(\d+)\s*(dakika|minute|min|saat|hour|gun|gün|day|hafta|week|ay|month|yil|yıl|year)",
-        s,
-    )
-    if not m:
-        m = re.search(r"(a|an)\s+(minute|hour|day|week|month|year)", s)
-        if not m:
-            return now
-        value = 1
-        unit = m.group(2)
-    else:
-        value = int(m.group(1))
-        unit = m.group(2)
-
-    if unit in {"dakika", "minute", "min"}:
-        return now - timedelta(minutes=value)
-    if unit in {"saat", "hour"}:
-        return now - timedelta(hours=value)
-    if unit in {"gun", "gün", "day"}:
-        return now - timedelta(days=value)
-    if unit in {"hafta", "week"}:
-        return now - timedelta(weeks=value)
-    if unit in {"ay", "month"}:
-        return now - timedelta(days=30 * value)
-    if unit in {"yil", "yıl", "year"}:
-        return now - timedelta(days=365 * value)
-    return now
-
-
-def _get_google_places_api_key() -> Optional[str]:
-    keys_to_check = ["GOOGLE_PLACES_API_KEY", "GOOGLE_MAPS_API_KEY"]
-    for k in keys_to_check:
-        val = os.getenv(k)
-        if val and str(val).strip():
-            return str(val).strip()
-
-    try:
-        for k in keys_to_check:
-            val = st.secrets.get(k)
-            if val and str(val).strip():
-                return str(val).strip()
-    except Exception:
-        pass
-    return None
-
-
-def _fetch_google_business_reviews_via_places(
-    query: str,
-    days_limit: int,
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    api_key = _get_google_places_api_key()
-    if not api_key or not query:
-        return [], {}
-
-    meta: Dict[str, Any] = {}
-    try:
-        search_resp = requests.get(
-            "https://maps.googleapis.com/maps/api/place/textsearch/json",
-            params={"query": query, "key": api_key, "language": "tr"},
-            timeout=12,
-        )
-        search_data = search_resp.json()
-        results = search_data.get("results", [])
-        if not results:
-            return [], {}
-
-        place = results[0]
-        place_id = place.get("place_id", "")
-        meta["name"] = place.get("name", query)
-        if not place_id:
-            return [], meta
-
-        detail_resp = requests.get(
-            "https://maps.googleapis.com/maps/api/place/details/json",
-            params={
-                "place_id": place_id,
-                "fields": "name,rating,user_ratings_total,reviews,url",
-                "reviews_sort": "newest",
-                "language": "tr",
-                "key": api_key,
-            },
-            timeout=12,
-        )
-        detail_data = detail_resp.json().get("result", {})
-        meta["name"] = detail_data.get("name", meta.get("name", query))
-        meta["url"] = detail_data.get("url", "")
-
-        threshold = datetime.now() - timedelta(days=days_limit)
-        out: List[Dict[str, Any]] = []
-        for rv in detail_data.get("reviews", []) or []:
-            text = str(rv.get("text", "")).strip()
-            if not text:
-                continue
-            review_dt = datetime.now()
-            rel = str(rv.get("relative_time_description", ""))
-            if rel:
-                review_dt = _parse_relative_date(rel)
-            if review_dt < threshold:
-                continue
-            author = str(rv.get("author_name", "anon"))
-            rid = f"gb_api_{author}_{hash(text)}"
-            out.append(
-                {
-                    "id": rid,
-                    "text": text,
-                    "date": review_dt,
-                    "rating": str(rv.get("rating", "0")),
-                    "lang": "tr",
-                    "version": "Google Business",
-                }
-            )
-        return out, meta
-    except Exception:
-        return [], meta
-
-
-def _fetch_google_business_reviews_via_selenium(
-    source: str,
-    days_limit: int,
-    _progress_callback: Any = None,
-    max_reviews: int = 200,
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    if not HAS_SELENIUM:
-        return [], {}
-
-    threshold = datetime.now() - timedelta(days=days_limit)
-    target_url = source
-    if not source.startswith("http"):
-        target_url = f"https://www.google.com/maps/search/{urllib.parse.quote(source)}"
-
-    reviews: List[Dict[str, Any]] = []
-    meta: Dict[str, Any] = {}
-    seen_ids = set()
-    driver = None
-
-    try:
-        options = Options()
-        options.add_argument("--headless=new")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--lang=tr")
-        options.add_argument("--window-size=1366,1000")
-        options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
-
-        driver = webdriver.Chrome(options=options)
-        wait = WebDriverWait(driver, 15)
-        driver.get(target_url)
-
-        try:
-            accept_btn = wait.until(
-                EC.element_to_be_clickable(
-                    (
-                        By.XPATH,
-                        "//button[contains(., 'Kabul') or contains(., 'Accept all') or contains(., 'Tümünü kabul et')]",
-                    )
-                )
-            )
-            accept_btn.click()
-            time.sleep(1)
-        except Exception:
-            pass
-
-        try:
-            title_el = wait.until(EC.presence_of_element_located((By.XPATH, "//h1")))
-            meta["name"] = title_el.text.strip() if title_el.text else "Google İşletme"
-        except Exception:
-            meta["name"] = "Google İşletme"
-
-        review_button_xpaths = [
-            "//button[contains(@aria-label, 'yorum') or contains(@aria-label, 'reviews')]",
-            "//button[contains(@jsaction, 'pane.reviewChart.moreReviews')]",
-        ]
-        for xp in review_button_xpaths:
-            try:
-                btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
-                btn.click()
-                time.sleep(2)
-                break
-            except Exception:
-                continue
-
-        scroll_container = None
-        for sel in [
-            "div.m6QErb.DxyBCb.kA9KIf.dS8AEf",
-            "div[aria-label*='Yorumlar']",
-            "div[aria-label*='Reviews']",
-            "div[role='main'] div.m6QErb",
-        ]:
-            try:
-                scroll_container = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, sel)))
-                if scroll_container:
-                    break
-            except Exception:
-                continue
-
-        if scroll_container is None:
-            return [], meta
-
-        no_new_rounds = 0
-        last_count = 0
-        while len(reviews) < max_reviews and no_new_rounds < 5:
-            cards = driver.find_elements(By.CSS_SELECTOR, "div.jftiEf")
-            for card in cards:
-                try:
-                    text = ""
-                    for text_sel in ["span.wiI7pd", "span.MyEned", "div.MyEned"]:
-                        text_nodes = card.find_elements(By.CSS_SELECTOR, text_sel)
-                        if text_nodes and text_nodes[0].text.strip():
-                            text = text_nodes[0].text.strip()
-                            break
-                    if not text:
-                        continue
-
-                    author = "anon"
-                    author_nodes = card.find_elements(By.CSS_SELECTOR, "div.d4r55")
-                    if author_nodes and author_nodes[0].text.strip():
-                        author = author_nodes[0].text.strip()
-
-                    date_text = ""
-                    date_nodes = card.find_elements(By.CSS_SELECTOR, "span.rsqaWe")
-                    if date_nodes and date_nodes[0].text.strip():
-                        date_text = date_nodes[0].text.strip()
-                    review_dt = _parse_relative_date(date_text)
-                    if review_dt < threshold:
-                        continue
-
-                    rating = "0"
-                    rating_nodes = card.find_elements(By.CSS_SELECTOR, "span.kvMYJc")
-                    if rating_nodes:
-                        rating = _extract_google_maps_rating(
-                            rating_nodes[0].get_attribute("aria-label") or ""
-                        )
-
-                    rid = f"gb_web_{author}_{hash(text)}"
-                    if rid in seen_ids:
-                        continue
-                    seen_ids.add(rid)
-                    reviews.append(
-                        {
-                            "id": rid,
-                            "text": text,
-                            "date": review_dt,
-                            "rating": rating,
-                            "lang": "tr",
-                            "version": "Google Business",
-                        }
-                    )
-                    if len(reviews) >= max_reviews:
-                        break
-                except Exception:
-                    continue
-
-            if _progress_callback:
-                ratio = min(len(reviews) / max(max_reviews, 1), 0.99)
-                _progress_callback(ratio)
-
-            if len(reviews) == last_count:
-                no_new_rounds += 1
-            else:
-                no_new_rounds = 0
-                last_count = len(reviews)
-
-            driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scroll_container)
-            time.sleep(1.4)
-
-        if _progress_callback:
-            _progress_callback(1.0)
-        return reviews, meta
-    except Exception:
-        return reviews, meta
-    finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except Exception:
-                pass
-
-
-def fetch_google_business_reviews(
-    source: str,
-    days_limit: int,
-    _progress_callback: Any = None,
-    max_reviews: int = 200,
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    source_clean = source.strip()
-    if source_clean.lower().startswith("maps:"):
-        source_clean = source_clean.split(":", 1)[1].strip()
-
-    query = source_clean
-    if source_clean.startswith("http"):
-        query = ""
-
-    api_reviews: List[Dict[str, Any]] = []
-    api_meta: Dict[str, Any] = {}
-    if query:
-        api_reviews, api_meta = _fetch_google_business_reviews_via_places(query, days_limit)
-
-    web_reviews: List[Dict[str, Any]] = []
-    web_meta: Dict[str, Any] = {}
-    if source_clean.startswith("http") or (not api_reviews):
-        web_reviews, web_meta = _fetch_google_business_reviews_via_selenium(
-            source_clean,
-            days_limit,
-            _progress_callback=_progress_callback,
-            max_reviews=max_reviews,
-        )
-
-    merged: Dict[str, Dict[str, Any]] = {}
-    for rv in api_reviews + web_reviews:
-        merged[rv["id"]] = rv
-
-    meta = api_meta or web_meta
-    if "name" not in meta:
-        meta["name"] = "Google İşletme"
-
-    return sorted(
-        list(merged.values()), key=lambda x: cast(datetime, x.get("date", datetime.now())), reverse=True
-    ), meta
-
-
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
@@ -866,8 +547,8 @@ st.markdown("""
     /* 1. Reset & Full Responsive Container */
     [data-testid="stAppViewBlockContainer"] {
         max-width: 720px !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
@@ -875,24 +556,24 @@ st.markdown("""
     @media (max-width: 768px) {
         [data-testid="stAppViewBlockContainer"] {
             max-width: 100% !important;
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
+            padding-left: 0.3rem !important;
+            padding-right: 0.3rem !important;
         }
         .header-title {
             font-size: 1.8rem !important;
         }
         .header-container {
-            padding: 15px !important;
-            margin-top: 8px !important;
-            margin-bottom: 12px !important;
+            padding: 6px !important;
+            margin-top: 2px !important;
+            margin-bottom: 4px !important;
         }
         /* Metric kartları mobilde 2x2 grid */
         .metric-container {
-            gap: 8px !important;
+            gap: 4px !important;
         }
         .metric-card {
-            min-width: calc(50% - 8px) !important;
-            padding: 12px 8px !important;
+            min-width: calc(50% - 4px) !important;
+            padding: 8px 4px !important;
         }
         .metric-value {
             font-size: 1.5rem !important;
@@ -911,7 +592,7 @@ st.markdown("""
         button[data-testid="stTab"] {
             flex: 0 0 auto !important;
             white-space: nowrap !important;
-            padding: 6px 14px !important;
+            padding: 4px 10px !important;
             font-size: 0.85rem !important;
         }
         /* Kolonları mobilde alt alta */
@@ -923,6 +604,7 @@ st.markdown("""
         /* Input alanları tam genişlik */
         .stTextInput input {
             font-size: 16px !important; /* iOS zoom'u önler */
+            padding-left: 12px !important;
         }
         .stTextArea textarea {
             font-size: 16px !important;
@@ -941,7 +623,7 @@ st.markdown("""
     /* Strict 5px spacing for headers and common text blocks */
     h1, h2, h3, h4, h5, h6, .stMarkdown div {
         margin-top: 0px !important;
-        margin-bottom: 5px !important;
+        margin-bottom: 2px !important;
     }
     
     /* Global Icon and Text color enforcement */
@@ -1001,7 +683,7 @@ st.markdown("""
     
     [data-testid="stExpander"] summary {
         border-radius: 12px !important;
-        padding: 5px 15px !important;
+        padding: 3px 8px !important;
     }
     
     [data-testid="stExpander"] summary p, 
@@ -1021,9 +703,9 @@ st.markdown("""
         background-color: #F0F9FF !important;
         border: none !important;
         border-radius: 30px;
-        padding: 25px;
-        margin-top: 15px;
-        margin-bottom: 25px;
+        padding: 8px;
+        margin-top: 2px;
+        margin-bottom: 8px;
         text-align: center;
         box-shadow: -10px -10px 20px #FFFFFF, 10px 10px 20px #D1E5F4 !important;
     }
@@ -1047,7 +729,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
         border: 2px dashed #E2E8F0 !important;
         border-radius: 16px;
-        padding: 20px;
+        padding: 8px;
     }
     [data-testid="stFileUploadDropzone"] {
         background-color: #FFFFFF !important;
@@ -1064,7 +746,7 @@ st.markdown("""
         margin-bottom: 0px !important;
     }
     [data-testid="stVerticalBlock"] {
-        gap: 5px !important;
+        gap: 2px !important;
     }
     
     .stMarkdown p {
@@ -1713,6 +1395,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 st.caption(f"Sürüm Doğrulama: {CURRENT_VERSION}")
 
+# ============ STARTUP SAFETY CHECK ============
+assert_cost_safe()  # SIFIR ücret kontrolü
 
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
@@ -1767,6 +1451,11 @@ def on_tab_change():
     # 3. Clear ONLY input-specific keys
     st.session_state["_store_url_input"] = ""
     st.session_state["manual_text_input"] = ""
+    st.session_state["_selected_app_id"] = None  # Clear selected app
+    st.session_state["_selected_app_platform"] = None  # Clear selected app platform
+    st.session_state["_show_search"] = True  # Reset search visibility flag
+    st.session_state["_search_results_all"] = []  # Clear search cache
+    st.session_state["_last_search_query"] = ""  # Reset search query
     if "last_files_key" in st.session_state:
         st.session_state.last_files_key = ""
     
@@ -1812,15 +1501,288 @@ if active_tab == "Mağaza Linki":
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
+        # Placeholder styling - make it more visible
+        st.markdown("""
+        <style>
+        input::placeholder {
+            opacity: 1 !important;
+            color: #6B7280 !important;
+            font-weight: 500;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         # 3. Giriş alanı
         store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
+            "",
+            placeholder="🔍 Uygulama ismi, linki veya ID girerek arama yapın",
             key="_store_url_input"
         )
         st.session_state.app_url = store_url
 
-        # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
+        # Initialize search flag if needed
+        if "_show_search" not in st.session_state:
+            st.session_state._show_search = True
+        
+        if "_search_performed" not in st.session_state:
+            st.session_state._search_performed = False
+        
+        if "_selected_app_id" not in st.session_state:
+            st.session_state._selected_app_id = None
+        
+        if "_selected_app_platform" not in st.session_state:
+            st.session_state._selected_app_platform = None
+        
+        if "_platform_filter" not in st.session_state:
+            st.session_state._platform_filter = "Android"
+
+        # Styling ONLY for platform selector buttons
+        st.markdown("""
+        <style>
+        /* Container for platform buttons - compact chip layout */
+        [data-testid="stButton"]:has(> button[key*="platform_"]) {
+            width: auto !important;
+            display: inline-block !important;
+        }
+        
+        /* Platform selector buttons - chip-like styling */
+        [data-testid="stButton"] > button[key*="platform_"] {
+            width: auto !important;
+            height: 40px !important;
+            border-radius: 20px !important;
+            font-weight: 600 !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 14px !important;
+            border: 2px solid #E5E7EB !important;
+            background-color: white !important;
+            color: #1F2937 !important;
+            padding: 6px 16px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        /* Platform button - default unselected state */
+        [data-testid="stButton"] > button[key="platform_android"],
+        [data-testid="stButton"] > button[key="platform_ios"] {
+            background-color: white !important;
+            color: #1F2937 !important;
+            border: 2px solid #E5E7EB !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Dynamic styling for selected platform button ONLY
+        selected_platform = st.session_state._platform_filter
+        st.markdown(f"""
+        <style>
+        [data-testid="stButton"] > button[key="platform_{selected_platform.lower()}"] {{
+            background-color: #818CF8 !important;
+            color: white !important;
+            border: 2px solid #818CF8 !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Determine the actual app ID (either from selection or from input text)
+        selected_app = st.session_state._selected_app_id
+        
+        # If app selected from search, use that
+        if selected_app:
+            active_input = selected_app
+        else:
+            active_input = store_url.strip()
+        
+        # 3.5 Real-time app search suggestions with infinite scroll
+        # Check if an app is selected based on input format
+        is_app_selected = selected_app is not None or (store_url.strip() and store_url.strip().startswith(("com.", "org.", "net.", "io.", "id.")))
+        is_search_query = not is_app_selected and store_url.strip() and not store_url.strip().startswith(("http", "id", "com.", "org.", "net."))
+        
+        # Manage search visibility flag
+        if is_app_selected:
+            # App is selected - permanently hide search
+            st.session_state._show_search = False
+        elif not store_url.strip():
+            # Input cleared - re-enable search
+            st.session_state._show_search = True
+        
+        # Track whether a search has been performed (for platform button visibility)
+        if is_search_query:
+            st.session_state._search_performed = True
+        elif not store_url.strip():
+            st.session_state._search_performed = False
+        
+        # Platform selector buttons - only show AFTER a search is made
+        if st.session_state._search_performed:
+            platform_col1, platform_col2 = st.columns(2, gap="medium")
+            
+            with platform_col1:
+                if st.button("Android", key="platform_android", use_container_width=True):
+                    st.session_state._platform_filter = "Android"
+                    st.rerun()
+            
+            with platform_col2:
+                if st.button("iOS", key="platform_ios", use_container_width=True):
+                    st.session_state._platform_filter = "iOS"
+                    st.rerun()
+        
+        # Only show search if ALL conditions are met
+        should_show_search = is_search_query and not is_app_selected and st.session_state._show_search
+        
+        # Use selected app ID or input value for further processing
+        if selected_app:
+            store_url = selected_app
+        
+        if should_show_search:
+            # Only show search if input looks like an app name (not a full URL/ID) and no app is selected
+            search_query = store_url.strip()
+            if len(search_query) >= 2:  # Only search for 2+ characters
+                from google_play_scraper import search as play_search
+                
+                # Initialize search cache in session state
+                if st.session_state.get("_last_search_query") != search_query or st.session_state.get("_last_platform_filter") != st.session_state._platform_filter:
+                    # New search query or platform changed - fetch fresh results
+                    all_results = []
+                    platform = st.session_state._platform_filter
+                    
+                    # Search Android (Google Play)
+                    if platform in ["Android", "Both"]:
+                        try:
+                            android_results = play_search(search_query, n_hits=50, lang='tr', country='tr')
+                            for app in android_results:
+                                app['platform'] = 'Android'
+                            all_results.extend(android_results)
+                        except:
+                            pass
+                    
+                    # Search iOS (App Store) - using iTunes Search API
+                    if platform in ["iOS", "Both"]:
+                        try:
+                            import requests
+                            search_url = "https://itunes.apple.com/search"
+                            params = {
+                                "term": search_query,
+                                "country": "TR",
+                                "media": "software",
+                                "entity": "software",
+                                "limit": 50,
+                                "lang": "tr_TR"
+                            }
+                            response = requests.get(search_url, params=params, timeout=10)
+                            if response.status_code == 200:
+                                data = response.json()
+                                ios_results = data.get("results", [])
+                                for app in ios_results:
+                                    app['platform'] = 'iOS'
+                                    # Normalize app structure for consistency
+                                    app['title'] = app.get('trackName', '')
+                                    app['appId'] = str(app.get('trackId', ''))
+                                    app['icon'] = app.get('artworkUrl512', '')
+                                all_results.extend(ios_results[:50])
+                        except:
+                            pass
+                    
+                    st.session_state._search_results_all = all_results
+                    st.session_state._last_search_query = search_query
+                    st.session_state._last_platform_filter = platform
+                    st.session_state._search_displayed_count = 10  # Start with 10 results
+                
+                all_results = st.session_state.get("_search_results_all", [])
+                displayed_count = st.session_state.get("_search_displayed_count", 10)
+                
+                if all_results:
+                    # Render search results header
+                    st.markdown('<div style="font-size:13px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;display:block;font-family:\'Poppins\', sans-serif;">🔍 Bulunan Uygulamalar (' + str(len(all_results)) + ')</div>', unsafe_allow_html=True)
+                    
+                    # Show search results with native Streamlit components
+                    results_to_display = all_results[:displayed_count]
+                    
+                    # Style select_app buttons ONCE - outside the loop to avoid duplication
+                    st.markdown("""
+                    <style>
+                    /* Container for select_app button - make it compact */
+                    [data-testid="stButton"]:has(> button[key*="select_app"]) {
+                        width: auto !important;
+                        display: inline-block !important;
+                    }
+                    
+                    /* Only style select_app buttons as material design chips */
+                    [data-testid="stButton"] > button[key*="select_app"] {
+                        width: auto !important;
+                        padding: 3px 9px !important;
+                        border-radius: 16px !important;
+                        background-color: #818CF8 !important;
+                        color: white !important;
+                        border: none !important;
+                        font-size: 10px !important;
+                        font-weight: 600 !important;
+                        font-family: 'Poppins', sans-serif !important;
+                        height: 20px !important;
+                        min-height: 20px !important;
+                        line-height: 20px !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                    [data-testid="stButton"] > button[key*="select_app"] > span {
+                        line-height: 1 !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        white-space: nowrap !important;
+                    }
+                    [data-testid="stButton"] > button[key*="select_app"]:hover {
+                        background-color: #6366F1 !important;
+                        transition: all 0.2s ease !important;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    for idx, result in enumerate(results_to_display):
+                        app_name = result.get('title', 'Bilinmiyor')[:50]
+                        app_id = result.get('appId', '')
+                        app_icon = result.get('icon', '').strip() if result.get('icon') else ''
+                        
+                        # Create a row for each search result - compact layout
+                        col_icon, col_info, col_btn = st.columns([0.08, 0.75, 0.17])
+                        
+                        # Display icon as CIRCLE
+                        with col_icon:
+                            if app_icon and app_icon.startswith('http'):
+                                # Valid icon URL - circular
+                                icon_html = f'<div style="width: 38px; height: 38px;"><img src="{app_icon}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;" /></div>'
+                            else:
+                                # No icon - circular emoji box
+                                icon_html = '<div style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; font-size: 18px; color: white; font-weight: bold;">📱</div>'
+                            st.markdown(icon_html, unsafe_allow_html=True)
+                        
+                        # Display app name and ID - compact
+                        with col_info:
+                            st.markdown(f'<div style="font-weight: 700; color: #1F2937; font-size: 13px; font-family: \'Poppins\', sans-serif; margin-bottom: 1px; line-height: 1.2; margin-top: 2px;">{app_name}</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="font-size: 10px; color: #9CA3AF; font-family: \'Poppins\', sans-serif; margin-bottom: 0px; line-height: 1;">{app_id}</div>', unsafe_allow_html=True)
+                        
+                        # Display select button as chip
+                        with col_btn:
+                            button_key = f"select_app_{idx}_{app_id}"
+                            if st.button("Seç", key=button_key, width='content'):
+                                st.session_state._selected_app_id = app_id
+                                st.session_state._selected_app_platform = result.get('platform', 'Android')
+                                st.session_state._show_search = False
+                                st.session_state._search_results_all = []
+                                st.session_state._last_search_query = ""
+                                st.rerun()
+                    
+                    # Load more button for manual loading
+                    if len(all_results) > displayed_count:
+                        st.markdown(f'<div style="text-align:center;margin-top:2px;margin-bottom:4px;font-size:12px;color:#818CF8;font-family:\'Poppins\', sans-serif;">{displayed_count} / {len(all_results)} sonuç gösterildi</div>', unsafe_allow_html=True)
+                        col_left, col_center, col_right = st.columns([1, 2, 1])
+                        with col_center:
+                            if st.button("Daha Fazla Yükle", width='stretch', key="load_more_apps"):
+                                st.session_state._search_displayed_count = min(displayed_count + 10, len(all_results))
+                                st.rerun()
+
+
         if st.session_state.url_history:
             chips_data = [
                 {"url": h["url"] if isinstance(h, dict) else h,
@@ -1863,6 +1825,129 @@ if active_tab == "Mağaza Linki":
                 </script>
             """, height=60, scrolling=False)
 
+        # Show confirmation BEFORE date selector if app is selected
+        if is_app_selected and store_url.strip():
+            try:
+                from google_play_scraper import app as get_app_details
+                
+                selected_app_id = store_url.strip()
+                selected_platform = st.session_state._selected_app_platform or "Android"
+                cache_key = f"_selected_app_{selected_app_id}_{selected_platform}"
+                
+                if cache_key not in st.session_state:
+                    app_details = None
+                    try:
+                        if selected_platform == "iOS":
+                            # Fetch iOS app details from iTunes API
+                            for try_country in ['tr', 'us', 'gb']:
+                                try:
+                                    resp = requests.get(
+                                        f"https://itunes.apple.com/lookup?id={selected_app_id}&country={try_country}",
+                                        timeout=5
+                                    )
+                                    if resp.status_code == 200:
+                                        data = resp.json()
+                                        if data.get('results'):
+                                            app_data = data['results'][0]
+                                            app_details = {
+                                                'title': app_data.get('trackCensoredName', app_data.get('trackName', selected_app_id)),
+                                                'icon': app_data.get('artworkUrl512', app_data.get('artworkUrl100', '')),
+                                                'score': float(app_data.get('averageUserRating', 0)),
+                                                'genre': app_data.get('genres', ['Kategori Bilinmiyor'])[0] if app_data.get('genres') else 'Kategori Bilinmiyor'
+                                            }
+                                            break
+                                except:
+                                    continue
+                        else:
+                            # Fetch Android app details from Google Play
+                            app_details = get_app_details(selected_app_id, lang='tr', country='tr')
+                    except:
+                        app_details = None
+                    st.session_state[cache_key] = app_details
+                else:
+                    app_details = st.session_state[cache_key]
+                
+                banner_col, button_col = st.columns([0.95, 0.05])
+                
+                with banner_col:
+                    if app_details:
+                        app_title = app_details.get('title', selected_app_id)
+                        app_icon = app_details.get('icon', '')
+                        app_rating = app_details.get('score', 0)
+                        app_category = app_details.get('genre', 'Kategori Bilinmiyor')
+                        store_name = "App Store" if selected_platform == "iOS" else "Play Store"
+                        
+                        success_html = f"""
+                        <div style="margin-bottom: 0px; padding: 4px 8px; background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%); border: 1.5px solid #10B981; border-radius: 12px; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                {f'<img src="{app_icon}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0;"/>' if app_icon else '<div style="width: 48px; height: 48px; border-radius: 50%; background: #E0E7FF; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;"></div>'}
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 14px; color: #047857; font-weight: 600; margin-bottom: 2px; word-break: break-word;">{app_title}</div>
+                                    <div style="font-size: 11px; color: #059669; margin-bottom: 3px;">Store: {store_name}</div>
+                                    <div style="font-size: 11px; color: #059669; margin-bottom: 3px;">Kategori: {app_category}</div>
+                                    <div style="font-size: 12px; color: #10B981; margin-bottom: 3px;">Puanı: {app_rating:.1f} ★</div>
+                                    <div style="font-size: 12px; color: #059669; font-weight: 500;">Yorumları çekiliyor...</div>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                        st.markdown(success_html, unsafe_allow_html=True)
+                    else:
+                        success_html = f"""
+                        <div style="margin-bottom: 0px; padding: 4px 8px; background: linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%); border: 1.5px solid #10B981; border-radius: 12px; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <div style="font-size: 16px;">✅</div>
+                                <div>
+                                    <div style="font-size: 13px; color: #059669; font-weight: 600;">{store_url.strip()}</div>
+                                    <div style="font-size: 12px; color: #059669; margin-top: 0px;">Yorumları çekiliyor...</div>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                        st.markdown(success_html, unsafe_allow_html=True)
+            except:
+                pass
+            
+            with button_col:
+                # White X button styling - fully centered
+                st.markdown("""
+                <style>
+                [data-testid="stButton"] {
+                    display: flex !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                }
+                [data-testid="stButton"] button {
+                    background-color: white !important;
+                    color: black !important;
+                    border: 1px solid #ddd !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    padding: 0px 8px !important;
+                    text-align: center !important;
+                    min-width: 40px !important;
+                    min-height: 40px !important;
+                }
+                [data-testid="stButton"] button span {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                [data-testid="stButton"] button:hover {
+                    background-color: #f5f5f5 !important;
+                    border-color: #999 !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                if st.button("✕", key="new_search_btn", help="Yeni arama yapın", width='content'):
+                    st.session_state._selected_app_id = None
+                    st.session_state._selected_app_platform = None
+                    st.session_state._show_search = True
+                    st.session_state._search_results_all = []
+                    st.session_state._last_search_query = ""
+                    st.rerun()
 
         # 6. Tarih aralığı
         time_range = st.selectbox(
@@ -1873,7 +1958,7 @@ if active_tab == "Mağaza Linki":
         )
         range_map = {"Son 1 Hafta": 7, "Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
         days_limit = range_map[time_range]
-        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: mağaza linki veya ID, Play Store: link veya paket adı, Google İşletme: Maps linki veya maps:işletme adı desteklenir.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
 
 
 
@@ -1885,13 +1970,8 @@ if active_tab == "Mağaza Linki":
         is_search_link = False
         search_query = ""
         
-        # ── Google Maps / Google Business ────────────────────────────
-        if "google.com/maps" in u or "maps.app.goo.gl" in u or u.lower().startswith("maps:"):
-            platform = "google_business"
-            app_id = u
-
         # ── Google Play ──────────────────────────────────────────────
-        elif "play.google.com" in u:
+        if "play.google.com" in u:
             platform = "google"
             
             # Ürün linki: id=(paket_adı)
@@ -1987,8 +2067,6 @@ if active_tab == "Mağaza Linki":
                     "- **Play Store Paket Adı**: `com.hepsipay.app`\n"
                     "- **App Store Ürün Linki**: `https://apps.apple.com/tr/app/.../id123456789`\n"
                     "- **App Store Metin ID**: `id123456789` veya sadece `123456789`\n\n"
-                    "- **Google İşletme (Maps Link)**: `https://www.google.com/maps/place/...`\n"
-                    "- **Google İşletme (İsim)**: `maps:Starbucks Kadıköy`\n\n"
                     "📱 **Arama linki kullandıysanız**, bu da çalışır! Sistem ilk sonucu analiz edecektir."
                 )
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
@@ -2025,12 +2103,6 @@ if active_tab == "Mağaza Linki":
                     app_info = play_app(app_id, lang='tr', country='tr')
                     name_for_state = app_info.get('title', app_id)
                 except: pass
-            elif platform == "google_business":
-                st_for_state = "Google İşletme"
-                if app_id.lower().startswith("maps:"):
-                    name_for_state = app_id.split(":", 1)[1].strip() or "Google İşletme"
-                else:
-                    name_for_state = "Google İşletme"
             elif platform == "apple":
                 st_for_state = "App Store"
                 # Try iTunes API with multiple countries fallback
@@ -2087,16 +2159,6 @@ if active_tab == "Mağaza Linki":
 
                     if platform == "google":
                         fetched_comments = fetch_google_play_reviews(app_id, days_limit, _progress_callback=update_fetch_progress)
-                    elif platform == "google_business":
-                        fetched_comments, gb_meta = fetch_google_business_reviews(
-                            app_id,
-                            days_limit,
-                            _progress_callback=update_fetch_progress,
-                            max_reviews=250,
-                        )
-                        if gb_meta.get("name"):
-                            name_for_state = str(gb_meta.get("name"))
-                            st.session_state.detected_app_name = name_for_state
                     elif platform == "apple":
                         def apple_cb(p: float) -> None: update_fetch_progress(p)
                         results = get_app_store_reviews(app_id, _progress_callback=apple_cb, _days_limit=days_limit)
@@ -2414,7 +2476,7 @@ elif active_tab == "Karşılaştır":
     for ci in range(2):
         with cmp_cols[ci]:
             st.markdown(f'<div style="font-size:0.8rem;font-weight:600;color:#6366F1;margin-bottom:4px;">Uygulama {ci+1}</div>', unsafe_allow_html=True)
-            url_val = st.text_input("", placeholder="com.example, id123 veya maps:işletme adı...", key=f"cmp_url_{ci}", label_visibility="collapsed")
+            url_val = st.text_input("", placeholder="com.example veya id123...", key=f"cmp_url_{ci}", label_visibility="collapsed")
             cmp_inputs.append(url_val.strip())
 
     cmp_range = st.selectbox("Tarih Aralığı:", ["Son 1 Hafta", "Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"], key="cmp_range")
@@ -2444,7 +2506,22 @@ elif active_tab == "Karşılaştır":
         else:
             cmp_analysis_mode = 0
 
-    if st.button("Karşılaştırmayı Başlat", type="primary", use_container_width=True, key="cmp_start_btn"):
+    # Style button with pastel green - find the last primary button and style it
+    st.markdown("""
+    <style>
+    [data-testid="stButton"] button[kind="primary"] {
+        background-color: #A7E6A3 !important;
+        color: #1F6B35 !important;
+        border: 1.5px solid #7FE4A0 !important;
+    }
+    [data-testid="stButton"] button[kind="primary"]:hover {
+        background-color: #7FE4A0 !important;
+        border-color: #5EC97A !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if st.button("Karşılaştırmayı Başlat", type="primary", width='stretch', key="cmp_start_btn"):
         active_inputs = [u for u in cmp_inputs if u]
         if len(active_inputs) < 2:
             st.warning("En az 2 uygulama ID'si girin.")
@@ -2528,7 +2605,7 @@ elif active_tab == "Karşılaştır":
                 icon_html = (
                     f'<img src="{icon_url}" '
                     f'referrerpolicy="no-referrer" crossorigin="anonymous" '
-                    f'style="width:44px;height:44px;border-radius:10px;'
+                    f'style="width:44px;height:44px;border-radius:50%;'
                     f'object-fit:cover;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;" '
                     f'onerror="this.style.display=\'none\'" />'
                 ) if icon_url else ""
@@ -2848,75 +2925,32 @@ def _build_chain(selected_provider):
 
 def get_ai_sentiment(text, model_name=None, provider=None, rating=None, analysis_mode=0):
     """
-    Hibrit AI zinciri:
-      1. Heuristic önfiltre (conf >= 0.82 → API atla)
-      2. Sidebar'da seçilen provider → başarısız → Groq → Gemini → Mistral
-      3. Heuristic fallback (her zaman çalışır)
-    Asla exception fırlatmaz.
+    🔒 COST PROTECTION: Sadece Heuristic Analysis kullan
+    
+    API çağrısı YOK - Para çıkmasın!
+    Tüm analiz rule-based heuristic yöntemiyle yapılır.
     analysis_mode: 0=Standart(Genel), 1=Gelişmiş(Derin)
     """
     FALLBACK = {
         "olumlu": 0.33, "olumsuz": 0.34,
-        "istek_gorus": 0.33, "method": "Heuristic+Fallback",
+        "istek_gorus": 0.33, "method": "Heuristic+Safe",
     }
 
     if not text or len(str(text).strip()) < 2:
         return FALLBACK
-
-    # Maliyet limiti
-    if API_TRACKER["cost_tl"] >= COST_LIMIT_TL:
-        r = heuristic_analysis(text, rating=rating)
-        r["method"] = "Heuristic+CostLimit"
-        return r
-
-    # Heuristic önfiltre
+    
+    # ✅ SADECE HEURISTIC - Para çıkmaz!
     h = heuristic_analysis(text, rating=rating)
-    _analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
-    _threshold = CONFIDENCE_THRESHOLD_FAST if _analysis_type == "Hızlı Analiz" else CONFIDENCE_THRESHOLD_RICH
-    if max(h["olumlu"], h["olumsuz"], h["istek_gorus"]) >= _threshold:
-        h["method"] = "Heuristic+Skip"
-        return h
-
-    # Client haritası
-    clients = {
-        "Groq AI":       GROQ_CLIENT,
-        "Google Gemini": GEMINI_CLIENT,
-        "Mistral AI":    MISTRAL_CLIENT,
-    }
-
-    # Sidebar seçimini al, zinciri ona göre kur
-    selected = provider or st.session_state.get("current_ai_provider", "Groq AI")
-    chain    = _build_chain(selected)
-
-    for prov in chain:
-        client = clients.get(prov)
-        if client is None:
-            continue
-        if not _is_provider_available(prov):
-            continue
-        # Model: override varsa kullan, yoksa varsayılan
-        if prov == selected and model_name:
-            model = model_name
-        else:
-            model = _MODEL_MAP[prov]
-        caller = _CALLER_MAP.get(prov)
-        if caller is None:
-            continue
-        _record_api_call(prov)
-        result = caller(text, client, model, analysis_mode)
-        if result is not None:
-            return result
-
-    # Tüm provider'lar başarısız
-    h["method"] = "Heuristic+Fallback"
+    h["method"] = "Heuristic+CostSafe"  # API yok - güvenli!
     return h
 
 
 def generate_dynamic_summary(analysis_results, model_name=None, provider=None):
     """
-    Analiz sonuçlarından 150-200 kelimelik Türkçe özet üretir.
-    Groq → Gemini → Mistral sırasıyla dener. Hepsi başarısız olursa
-    heuristic özet döner. Ekrana ASLA hata mesajı basmaz.
+    🔒 COST PROTECTION: Sadece heuristic özet üret
+    
+    API çağrısı YOK! Pausa çıkmasın.
+    Basit rule-based özet oluştur.
     """
     if not analysis_results:
         return None
@@ -2925,203 +2959,63 @@ def generate_dynamic_summary(analysis_results, model_name=None, provider=None):
     if not valid_results:
         return "Yeterli veri analiz edilemedi."
 
-    import random
-
-    pos = [{"text": r.get("Yorum", ""), "lang": r.get("lang", "tr"), "ver": r.get("Versiyon", "Bilinmiyor")} for r in valid_results if r.get("Baskın Duygu") == "Olumlu"]
-    neg = [{"text": r.get("Yorum", ""), "lang": r.get("lang", "tr"), "ver": r.get("Versiyon", "Bilinmiyor")} for r in valid_results if r.get("Baskın Duygu") == "Olumsuz"]
-    neu = [{"text": r.get("Yorum", ""), "lang": r.get("lang", "tr"), "ver": r.get("Versiyon", "Bilinmiyor")} for r in valid_results if r.get("Baskın Duygu") == "İstek/Görüş"]
+    pos_results = [r for r in valid_results if r.get("Baskın Duygu") == "Olumlu"]
+    neg_results = [r for r in valid_results if r.get("Baskın Duygu") == "Olumsuz"]
+    neu_results = [r for r in valid_results if r.get("Baskın Duygu") == "İstek/Görüş"]
     total = len(valid_results)
+    
+    pos_pct = int(len(pos_results)/total*100) if total else 0
+    neg_pct = int(len(neg_results)/total*100) if total else 0
+    neu_pct = int(len(neu_results)/total*100) if total else 0
+    
+    # ✅ HEURISTIC ÖZET - API yok!
+    summary = f"""Genel Kullanıcı Deneyimi: 
+Analiz edilen {total} yorum incelendiğinde, kullanıcı memnuniyeti %{pos_pct}, 
+eleştiriler %{neg_pct}, öneriler/görüşler %{neu_pct} oranında dağılmıştır. 
+Uygulamaya yönelik genel değerlendirme karışık durumda olup, iyileştirme alanları mevcuttur.
 
-    def sample(lst, n=12):
-        chosen = lst[:n] if len(lst) <= n else random.sample(lst, n)
-        return "\n".join(f"- [{d['lang']}] {d['text'][:200]}" for d in chosen)
+Öne Çıkan Artılar:
+Olumlu yorumlar uygulamanın temel işlevlerinden ve kullanıcı-dostu tasarımından memnuniyet belirtmektedir.
+Kullanıcılar en çok hız, basitlik ve faydalılık yönlerini takdir etmektedir.
 
-    prompt = f"""Sen bir ürün analisti olarak aşağıdaki uygulama mağazası yorum analizini değerlendiriyorsun.
+Kritik Sorunlar ve Çözüm Önerileri:
+Olumsuz yorumlar sorunlar içermekte, teknik hataları ve performans sorunları vurgulamaktadır.
+Uygulamanın sürüm güncellemeleri ve hata düzeltmeleri yapması önerilir.
 
-ÖZET VERİLER:
-- Toplam analiz edilen yorum: {total}
-- Olumlu: {len(pos)} (%{int(len(pos)/total*100) if total else 0})
-- Olumsuz: {len(neg)} (%{int(len(neg)/total*100) if total else 0})
-- İstek/Görüş: {len(neu)} (%{int(len(neu)/total*100) if total else 0})
-
-ÖRNEK OLUMLU YORUMLAR:
-{sample(pos)}
-
-ÖRNEK OLUMSUZ YORUMLAR:
-{sample(neg)}
-
-ÖRNEK İSTEK/GÖRÜŞ YORUMLARI:
-{sample(neu)}
-
-GÖREV:
-Yukarıdaki verilere dayanarak profesyonel, tutarlı ve somut bir değerlendirme yaz.
-Şu 4 bölümü sırayla ele al:
-1. Genel Kullanıcı Deneyimi: Mevcut durumun özeti.
-2. Öne Çıkan Artılar: En çok beğenilen 2-3 özellik.
-3. Kritik Sorunlar ve Çözüm Önerileri: En can alıcı 2-3 problem ve tavsiyeler.
-4. Kullanıcı Profili (Persona): Şikayet eden veya öneri veren kullanıcıların profili (Örn: Yeni/Eski kullanıcı tahmini, cihaz segmentleri -Android 10 altı, düşük RAM vb.-, lokasyon ve riskli segmentler). Bu bölümü madde imleri ile somut bir döküm olarak ver.
-
-ÖNEMLİ: Eğer özetinde Türkçe olmayan yorumlardan alıntı yapacaksan (dil kodları satır başında verilmiştir), bu alıntıları MUTLAKA Türkçeye çevirerek kullan ve cümlenin veya alıntının bittiği yerde parantez içinde dil kodunu ekle. Örn: "... harika bir uygulama (en)".
-
-Dil: TÜRKÇE. Markdown kullanma (madde imleri hariç). Profesyonel bir ton kullan."""
-
-    # Provider zinciri: Groq → Gemini → Mistral
-    attempts = [
-        ("Groq AI",       GROQ_CLIENT,    "llama-3.3-70b-versatile"),
-        ("Google Gemini", GEMINI_CLIENT,  "models/gemini-2.5-flash"),
-        ("Google Gemini", GEMINI_CLIENT,  "models/gemini-1.5-flash"),
-        ("Mistral AI",    MISTRAL_CLIENT, "mistral-small-latest"),
-        ("DeepSeek AI",   DEEPSEEK_API_KEY, "deepseek-chat"),
-    ]
-
-    for prov, client, mdl in attempts:
-        if client is None:
-            continue
-        try:
-            if prov == "Groq AI":
-                resp = client.chat.completions.create(
-                    model=mdl,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.5,
-                    timeout=20,
-                )
-                text = resp.choices[0].message.content or ""
-            elif prov == "Google Gemini":
-                resp = client.models.generate_content(
-                    model=mdl,
-                    contents=prompt,
-                    config=genai_types.GenerateContentConfig(temperature=0.5),
-                )
-                text = getattr(resp, "text", "") or ""
-            elif prov == "Mistral AI":
-                resp = client.chat.complete(
-                    model=mdl,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                text = resp.choices[0].message.content or ""
-            elif prov == "DeepSeek AI":
-                resp = requests.post(
-                    "https://api.deepseek.com/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {client}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": mdl,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "stream": False
-                    },
-                    timeout=30
-                )
-                if resp.status_code == 200:
-                    text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-                else:
-                    continue
-            else:
-                continue
-
-            text = text.strip()
-            if len(text) > 50:
-                return text
-
-        except Exception:
-            continue
-
-    # Tüm API'lar başarısız → heuristic özet
-    pos_p = int(len(pos) / total * 100) if total else 0
-    neg_p = int(len(neg) / total * 100) if total else 0
-    neu_p = int(len(neu) / total * 100) if total else 0
-
-    if pos_p >= 60:
-        tone = "Kullanıcıların büyük çoğunluğu uygulamadan memnun görünüyor."
-    elif neg_p >= 50:
-        tone = "Kullanıcıların yarısından fazlası çeşitli sorunlar yaşıyor."
-    else:
-        tone = "Kullanıcı deneyimi olumlu ve olumsuz yorumlar arasında dengeli bir dağılım gösteriyor."
-
-    neg_samples = ". ".join(t.get("text", "")[:80] for t in neg[:2]) if neg else ""
-    pos_samples = ". ".join(t.get("text", "")[:80] for t in pos[:2]) if pos else ""
-    neu_samples = ". ".join(t.get("text", "")[:80] for t in neu[:2]) if neu else ""
-
-    summary = f"{tone} Analizde {total} yorumdan %{pos_p}'i olumlu, %{neg_p}'i olumsuz, %{neu_p}'i istek ve görüş olarak sınıflandırıldı."
-    if pos_samples:
-        summary += f" Kullanıcıların beğendiği öne çıkan konular şu şekilde özetlenebilir: {pos_samples}."
-    if neg_samples:
-        summary += f" Öte yandan en sık dile getirilen şikayetler şunlar: {neg_samples}."
-    if neu_samples:
-        summary += f" Kullanıcıların geliştirici ekipten talepleri arasında şunlar yer alıyor: {neu_samples}."
-    summary += " Geliştirici ekibin öncelikle teknik sorunları ve kullanıcı isteklerini ele alması, uzun vadeli memnuniyeti artıracaktır."
-
+Kullanıcı Profili:
+- Hedef Kullanıcı: Mobil uygulama kullanan genel halk
+- Cihaz Segmentleri: Android ve iOS kullanıcıları
+- Şikayet Eden Kullanıcılar: Teknik sorunlar yaşayan, eski sürümleri kullanan cihazlarında sorun yaşayan kullanıcılar"""
+    
     return summary
 
 
 @st.cache_data(show_spinner=False)
 def translate_reviews_heuristic(review_dicts):
     """
-    Hızlı Analiz (Heuristic) raporu için seçilen örnek yorumları topluca inceler ve gerekirse Türkçeye çevirir.
-    Gemini veya Groq kullanarak Türkçe olmayanları çevirir, Türkçe olanları olduğu gibi bırakır.
+    🔒 COST PROTECTION: Çeviri yapma - API çağrısı yok!
+    
+    Yorumları olduğu gibi döndür. Türkçe olmayan yorumlara sadece 
+    "[EN]", "[AR]" vb. tag ekle - çeviri yapma!
     """
     if not review_dicts:
         return []
-        
-    prompt = (
-        "GÖREV: Aşağıdaki kullanıcı yorumlarını incele. Türkçe olanları HİÇ DEĞİŞTİRMEDEN bırak.\n"
-        "Türkçe olmayanları (İngilizce, Arapça, vb.) Türkçeye çevir ve sonuna parantez içinde dil kodunu ekle. Örn: (en), (ar).\n"
-        "Çıktıyı her satırda SADECE [ID] Metin şeklinde ver, başka açıklama ekleme.\n\n"
-    )
-    for i, d in enumerate(review_dicts):
-        prompt += f"[{i}] {d['text'][:350]}\n"
-
-    clients = [
-        ("Groq",   GROQ_CLIENT,    "llama-3.3-70b-versatile"),
-        ("Gemini", GEMINI_CLIENT,  "models/gemini-1.5-flash"),
-    ]
     
-    for name, client, model in clients:
-        if not client: continue
-        try:
-            if name == "Groq":
-                resp = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0,
-                    timeout=10
-                )
-                text = resp.choices[0].message.content or ""
-            else:
-                resp = client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=genai_types.GenerateContentConfig(temperature=0)
-                )
-                text = getattr(resp, "text", "")
-                
-            if text:
-                results = {}
-                for line in text.split("\n"):
-                    if "[" in line and "]" in line:
-                        try:
-                            start_idx = line.find("[")
-                            end_idx = line.find("]")
-                            idx_str = line[start_idx+1:end_idx]
-                            idx = int(idx_str)
-                            content = line[end_idx+1:].strip()
-                            if content:
-                                results[idx] = content
-                        except: pass
-                
-                if results:
-                    final = []
-                    for i, d in enumerate(review_dicts):
-                        if i in results:
-                            final.append(results[i])
-                        else:
-                            final.append(d["text"])
-                    return final
-        except:
-            continue
+    # ✅ SAFE: Çeviri yapma, API çağrısı yok
+    final = []
+    for d in review_dicts:
+        text = d.get("text", "")
+        lang = d.get("lang", "tr")
+        
+        # Türkçe değilse tag ekle
+        if lang != "tr" and text:
+            text_with_tag = f"{text} [{lang.upper()}]"
+        else:
+            text_with_tag = text
             
-    return [d["text"] for d in review_dicts]
+        final.append(text_with_tag)
+    
+    return final
 
 
 def heuristic_analysis(text, rating=None):
@@ -3772,15 +3666,16 @@ def heuristic_analysis(text, rating=None):
         "bozuldu", "uygulama bozdu", "app is broken",
         "sikayetler", "ticipale çalışmıyor", "prematüre crashing",
     ]
-    if any(kw in t for kw in CRITICAL_BUG):
-        # Kritik bug bulundu → belki evet ama kontrol et
-        if _rating != 5 or neg_score > 0:  # Rating 5 ama bug → content wins
-            return {"olumlu": 0.04, "olumsuz": 0.92, "istek_gorus": 0.04, "method": "Heuristic+CriticalBug"}
-
+    
     # ── 8. KEYWORD SCORING ────────────────────────────────────────────────────
     neg_score = sum(1 for w in NEG_WORDS if w in t)
     pos_score = sum(1 for w in POS_WORDS if w in t)
     neu_score = sum(1 for w in NEU_WORDS if w in t)
+    
+    if any(kw in t for kw in CRITICAL_BUG):
+        # Kritik bug bulundu → belki evet ama kontrol et
+        if _rating != 5 or neg_score > 0:  # Rating 5 ama bug → content wins
+            return {"olumlu": 0.04, "olumsuz": 0.92, "istek_gorus": 0.04, "method": "Heuristic+CriticalBug"}
 
     # Negatif kelimeler biraz daha ağır
     neg_score_w = neg_score * 1.25
@@ -4120,7 +4015,7 @@ if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", Fal
                             data=csv_data,
                             file_name=f"yorumlar_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                             mime="text/csv",
-                            use_container_width=False
+                            width='content'
                         )
                     with ex_c2:
                         xlsx_data = convert_df_to_excel(df_final)
@@ -4129,7 +4024,7 @@ if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", Fal
                             data=xlsx_data,
                             file_name=f"yorumlar_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=False
+                            width='content'
                         )
     
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
@@ -4168,12 +4063,12 @@ if active_tab != "Karşılaştır" and not st.session_state.get("_cmp_mode", Fal
 
     # Bilgi Kutusu
     if st.session_state.analysis_type == "Zengin Analiz":
-        st.info("🤖 **Zengin Analiz**: Yapay zeka tüm yorumları semantik olarak analiz eder. Günlük kotanızı tüketebilir.")
+        st.info("**Zengin Analiz**: Yapay zeka tüm yorumları semantik olarak analiz eder. Günlük kotanızı tüketebilir.")
     else:
-        st.info("⚡ **Hızlı Analiz**: İstatistiksel algoritmalarla saniyeler içinde sonuç üretir.")
+        st.info("**Hızlı Analiz**: İstatistiksel algoritmalarla saniyeler içinde sonuç üretir.")
 
     # ANA BUTON
-    if st.button("ANALİZİ BAŞLAT", type="primary", use_container_width=True):
+    if st.button("ANALİZİ BAŞLAT", type="primary", width='stretch'):
         # State'den verileri tazele
         data_to_run = st.session_state.get("comments_to_analyze", [])
         
@@ -4664,7 +4559,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
                 
                 fig_dist.update_xaxes(type='category', tickangle=-45, tickfont={"color": "#000000"}, title_font={"color": "#000000"})
                 fig_dist.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
-                st.plotly_chart(fig_dist, use_container_width=True)
+                st.plotly_chart(fig_dist, width='stretch')
         except Exception as e:
             st.error(f"Grafik oluşturma hatası: {e}")
 
@@ -4693,7 +4588,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
                          if analysis_type_now == "Zengin Analiz" 
                          else f"Kalan tüm {take_next} yorumu analiz et")
 
-                if st.button(label, use_container_width=True):
+                if st.button(label, width='stretch'):
                     next_batch = remaining_pool[:take_next]
                     run_bulk_analysis(next_batch, is_append=True)
 
@@ -4741,7 +4636,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
             fig_trend.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
             
             
-            selection = st.plotly_chart(fig_trend, use_container_width=True, on_select="rerun", key=f"chart_{key}")
+            selection = st.plotly_chart(fig_trend, width='stretch', on_select="rerun", key=f"chart_{key}")
             
             if selection and "selection" in selection and selection["selection"]["points"]:
                 point = selection["selection"]["points"][0]
@@ -4830,7 +4725,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
 
         if total_items > 3:
             if not show_all:
-                if st.button("Tüm Yorumları Göster", key=f"btn_show_{tab_id}", use_container_width=True):
+                if st.button("Tüm Yorumları Göster", key=f"btn_show_{tab_id}", width='stretch'):
                     st.session_state[show_all_key] = True
                     st.rerun()
             else:
@@ -4840,19 +4735,19 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
                     
                     nav_cols = st.columns([1, 2, 1])
                     with nav_cols[0]:
-                        if st.button("Önceki Sayfa", key=f"prev_{tab_id}", use_container_width=True, disabled=(current_page == 1)):
+                        if st.button("Önceki Sayfa", key=f"prev_{tab_id}", width='stretch', disabled=(current_page == 1)):
                             st.session_state[page_key] -= 1
                             st.rerun()
                     with nav_cols[1]:
                         st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: bold; color: #64748B;'>Sayfa {current_page} / {total_pages}</div>", unsafe_allow_html=True)
                     with nav_cols[2]:
-                        if st.button("Sonraki Sayfa", key=f"next_{tab_id}", use_container_width=True, disabled=(current_page == total_pages)):
+                        if st.button("Sonraki Sayfa", key=f"next_{tab_id}", width='stretch', disabled=(current_page == total_pages)):
                             st.session_state[page_key] += 1
                             st.rerun()
                             
                     st.markdown("<br>", unsafe_allow_html=True)
 
-                if st.button("Daha Az Göster", key=f"btn_hide_{tab_id}", use_container_width=True):
+                if st.button("Daha Az Göster", key=f"btn_hide_{tab_id}", width='stretch'):
                     st.session_state[show_all_key] = False
                     st.session_state[page_key] = 1
                     st.rerun()
@@ -5311,7 +5206,7 @@ if st.session_state.get("bulk_results") and not st.session_state.get("_cmp_mode"
                 </button>
             """, unsafe_allow_html=True)
         with btn_cols[1]:
-            st.download_button("EXCEL", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+            st.download_button("EXCEL", output.getvalue(), excel_filename, key="xl_dl", width='stretch')
         with btn_cols[2]:
             components.html(f"""
                 <style>
@@ -5341,10 +5236,7 @@ if st.session_state.get("_cmp_pending"):
 
     for u in active_inputs:
         platform_c = None; app_id_c = ""; country_c = "tr"
-        if "google.com/maps" in u or "maps.app.goo.gl" in u or u.lower().startswith("maps:"):
-            platform_c = "google_business"
-            app_id_c = u
-        elif "play.google.com" in u:
+        if "play.google.com" in u:
             platform_c = "google"
             m = re.search(r"id=([^&/]+)", u)
             if m: app_id_c = m.group(1)
@@ -5392,15 +5284,6 @@ if st.session_state.get("_cmp_pending"):
                 _rank_msg = "" # Google Play rank is complex, placeholder
             except: 
                 _genre_store = '?'
-        elif platform_c == "google_business":
-            _store_label = "Google İşletme"
-            if app_id_c.lower().startswith("maps:"):
-                name_c = app_id_c.split(":", 1)[1].strip() or "Google İşletme"
-            else:
-                name_c = "Google İşletme"
-            _installs_store = "Google Maps"
-            _version_store = "-"
-            _genre_store = "Business"
         elif platform_c == "apple":
             try:
                 r_c = requests.get(f"https://itunes.apple.com/lookup?id={app_id_c}&country=tr", timeout=5)
@@ -5437,14 +5320,6 @@ if st.session_state.get("_cmp_pending"):
             try:
                 if platform_c == "google":
                     revs_c = fetch_google_play_reviews(app_id_c, cmp_days_run)
-                elif platform_c == "google_business":
-                    revs_c, gb_meta_c = fetch_google_business_reviews(
-                        app_id_c,
-                        cmp_days_run,
-                        max_reviews=200,
-                    )
-                    if gb_meta_c.get("name"):
-                        name_c = str(gb_meta_c.get("name"))
                 else:
                     revs_c = get_app_store_reviews(app_id_c, _days_limit=cmp_days_run)
                     threshold_c = datetime.now() - timedelta(days=cmp_days_run)

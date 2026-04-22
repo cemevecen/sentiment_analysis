@@ -6,7 +6,6 @@ Modern ve akıllı uygulama mağazası yorum analiz platformu. Bu uygulama, Goog
 
 - **Hibrit Analiz Sistemi:** Google Gemini AI (Deep Analysis) ile derinlemesine analiz veya kotasız yerel "Hızlı Tarama" seçenekleri.
 - **Otomatik Veri Çekme:** Mağaza linki üzerinden tarih filtreli yorum çekme.
-- **Google İşletme Desteği:** Google Maps işletme linki veya işletme adı ile yorum çekme (API + Selenium fallback).
 - **Dosya Desteği:** CSV ve Excel dosyalarınızı yükleyerek toplu analiz yapabilme.
 - **Duygu Filtreleme:** Olumlu, Olumsuz ve İstek/Görüş kategorilerinde otomatik sınıflandırma.
 - **Görsel Raporlama:** Etkileşimli grafikler ve paylaşılabilir/indirilebilir PNG rapor kartları.
@@ -24,13 +23,6 @@ pip install -r requirements.txt
 Google Gemini API anahtarını `.env` dosyasına veya platformun "Secrets" alanına ekleyin:
 ```env
 GOOGLE_API_KEY=YOUR_API_KEY_HERE
-GOOGLE_PLACES_API_KEY=YOUR_GOOGLE_PLACES_API_KEY
-```
-
-Google İşletme için giriş örnekleri:
-```text
-https://www.google.com/maps/place/...
-maps:Starbucks Kadıköy
 ```
 
 ### 3. Çalıştırın
