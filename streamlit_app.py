@@ -1232,15 +1232,23 @@ tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin 
 
 with tab1:
     with st.container(border=True):
-        # Geçmiş başlatma
+        # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
             st.session_state.url_history = []
 
-        # Geçmişten seçim yapıldıysa input'a yükle
+        # 2. Geçmişten seçim yapıldıysa input'a yükle
         if st.session_state.get("_url_pick"):
             st.session_state["_store_url_input"] = st.session_state.pop("_url_pick")
 
-        # Geçmiş chip'leri — Giriş kutusunun hemen üzerinde daha görünür
+        # 3. Input alanı
+        store_url = st.text_input(
+            "Uygulama linki veya ID girin:",
+            placeholder="Örn: com.instagram.android veya 1500198745",
+            key="_store_url_input"
+        )
+        st.session_state.app_url = store_url
+
+        # 4. Geçmiş chip'leri — INPUT'UN ALTINDA
         if st.session_state.url_history:
             chips_data = [
                 {"url": h["url"] if isinstance(h, dict) else h,
@@ -1251,10 +1259,11 @@ with tab1:
             components.html(f"""
                 <style>
                     body {{ margin:0; padding:0; background:transparent; overflow:hidden; }}
-                    .chip-wrap {{ display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 4px 0; }}
-                    .chip-label {{ font-size: 0.65rem; color: #94A3B8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-family: 'Poppins', sans-serif; }}
-                    .chip {{ display: inline-block; cursor: pointer; background: #EEF2FF; border: 1px solid #818CF8; color: #4338CA; border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600; font-family: 'Poppins', sans-serif; white-space: nowrap; transition: all 0.15s ease; user-select: none; }}
-                    .chip:hover {{ background: #E0E7FF; border-color: #6366F1; transform: translateY(-1px); }}
+                    .chip-wrap {{ display:flex; flex-wrap:wrap; gap:6px; padding:2px 0 4px 0; }}
+                    .chip-label {{ font-size:0.68rem; color:#94A3B8; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; font-family:'Poppins',sans-serif; }}
+                    .chip {{ display:inline-block; cursor:pointer; background:#EEF2FF; border:1px solid #818CF8; color:#4338CA; border-radius:20px; padding:4px 12px; font-size:0.78rem; font-weight:600; font-family:'Poppins',sans-serif; white-space:nowrap; transition:all 0.15s ease; user-select:none; }}
+                    .chip:hover {{ background:#E0E7FF; border-color:#6366F1; transform:translateY(-1px); }}
+                    .chip:active {{ transform:scale(0.97); }}
                 </style>
                 <div class="chip-label">Son Aramalar</div>
                 <div class="chip-wrap" id="chip-wrap"></div>
@@ -1266,48 +1275,41 @@ with tab1:
                         var span = document.createElement('span');
                         span.className = 'chip';
                         span.textContent = c.name;
+                        span.title = c.url;
                         span.addEventListener('click', function() {{
                             var inp = window.parent.document.querySelector('[data-testid="stTextInput"] input');
                             if (!inp) return;
                             var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                             setter.call(inp, c.url);
-                            inp.dispatchEvent(new Event('input', {{bubbles: true}}));
-                            inp.dispatchEvent(new Event('change', {{bubbles: true}}));
+                            inp.dispatchEvent(new Event('input', {{bubbles:true}}));
+                            inp.dispatchEvent(new Event('change', {{bubbles:true}}));
+                            inp.focus();
                         }});
                         wrap.appendChild(span);
                     }});
                 }})();
                 </script>
-            """, height=65, scrolling=False)
+            """, height=60, scrolling=False)
 
-        store_url = st.text_input(
-            "Uygulama linki veya ID girin:",
-            placeholder="Örn: com.instagram.android veya 1500198745",
-            key="_store_url_input"
-        )
-        st.session_state.app_url = store_url
+        # 5. Yenile butonu — sağa hizalı, küçük (3/5 oranı)
+        _, col_ref = st.columns([3, 2])
+        with col_ref:
+            if st.button("↺ yeniden çek", key="refresh_btn", use_container_width=True):
+                st.session_state["_refresh_token"] = int(time.time())
+                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
+                           "comments_to_analyze", "ai_summary", "last_results_len"]:
+                    st.session_state.pop(_k, None)
+                st.rerun()
 
-        st.markdown('<div class="mini-refresh">', unsafe_allow_html=True)
-        if st.button("↺ yeniden çek", key="refresh_btn"):
-            st.session_state["_refresh_token"] = int(time.time())
-            for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                       "comments_to_analyze", "ai_summary", "last_results_len"]:
-                st.session_state.pop(_k, None)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-
-
+        # 6. Tarih aralığı
         time_range = st.selectbox(
             "Tarih Aralığı Seçin:",
             options=["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl", "Son 2 Yıl", "Son 3 Yıl"],
             index=0
         )
-        
-        
         range_map = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365, "Son 2 Yıl": 730, "Son 3 Yıl": 1095}
         days_limit = range_map[time_range]
-        st.markdown('<div class="no-print" style="margin-top: 6px; margin-bottom: 10px; font-size: 0.85rem; color: #64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="no-print" style="margin-top:6px;margin-bottom:10px;font-size:0.85rem;color:#64748b;">Apple: Mağaza linki veya ID (id...), Play Store: Link veya paket adı (com...) geçerlidir.</div>', unsafe_allow_html=True)
 
 
 
