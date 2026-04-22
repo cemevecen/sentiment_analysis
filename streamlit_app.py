@@ -580,9 +580,12 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2) !important;
         font-weight: 600 !important;
     }
-    /* Hide the default Streamlit selector bar */
-    div[data-testid="stTabList"] > div:last-child {
+    /* Hide the default Streamlit selector bar and highlight line */
+    div[data-testid="stTabList"] > div:last-child,
+    div[data-baseweb="tab-highlight"] {
         display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
     }
 
     /* Idea Chips Styling */
