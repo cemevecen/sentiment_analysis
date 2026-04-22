@@ -133,7 +133,7 @@ API_TRACKER = {"cost_tl": 0.0}
 
 
 if not HAS_GEMINI and not HAS_MISTRAL and "streamlit" in str(st.__file__).lower():
-    st.sidebar.error("⚠️ AI API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY veya MISTRAL_API_KEY tanımlayın.")
+    st.sidebar.error("AI API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY veya MISTRAL_API_KEY tanımlayın.")
     if st.sidebar.button("API'yi Yeniden Kontrol Et"):
         st.cache_resource.clear()
         st.rerun()
@@ -142,11 +142,11 @@ elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
     pass
 
 # Sidebar API Configuration
-st.sidebar.title("🤖 AI Ayarları")
+st.sidebar.title("AI Ayarları")
 cost_now = API_TRACKER.get("cost_tl", 0.0)
 if cost_now > 0:
     st.sidebar.caption(
-        f"💰 Tahmini Maliyet: ₺{cost_now:.2f} / ₺{COST_LIMIT_TL:.0f}"
+        f"Tahmini Maliyet: ₺{cost_now:.2f} / ₺{COST_LIMIT_TL:.0f}"
     )
 ai_provider = st.sidebar.selectbox(
     "AI Sağlayıcı:",
@@ -157,7 +157,7 @@ ai_provider = st.sidebar.selectbox(
 
 if ai_provider == "Google Gemini":
     if not HAS_GEMINI:
-        st.sidebar.error("⚠️ Gemini API Key bulunamadı!")
+        st.sidebar.error("Gemini API Key bulunamadı!")
     ai_model = st.sidebar.selectbox(
         "Model:",
         options=["gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"],
@@ -167,7 +167,7 @@ if ai_provider == "Google Gemini":
     model_full_name = f"models/{ai_model}"
 elif ai_provider == "Mistral AI":
     if not HAS_MISTRAL:
-        st.sidebar.error("⚠️ Mistral API Key bulunamadı!")
+        st.sidebar.error("Mistral API Key bulunamadı!")
     ai_model = st.sidebar.selectbox(
         "Model:",
         options=["mistral-tiny", "mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b", "open-mixtral-8x7b"],
@@ -177,7 +177,7 @@ elif ai_provider == "Mistral AI":
     model_full_name = ai_model
 else:
     if not HAS_GROQ:
-        st.sidebar.error("⚠️ Groq API Key bulunamadı!")
+        st.sidebar.error("Groq API Key bulunamadı!")
     ai_model = st.sidebar.selectbox(
         "Model:",
         options=["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "deepseek-r1-distill-llama-70b"],
@@ -1316,7 +1316,7 @@ with tab1:
             with st.container():
                 loading_placeholder = st.empty()
                 with loading_placeholder.container():
-                    st.markdown(f"### 🔍 {name_for_state} Analizi")
+                    st.markdown(f"### {name_for_state} Analizi")
                     if lottie_loading:
                         st_lottie(lottie_loading, height=130, key="fetch_loader")
                     p_bar = st.progress(0, text="Hazırlanıyor...")
@@ -1363,7 +1363,7 @@ with tab1:
                         # Az yorum uyarısı
                         if len(fetched_comments) < 50:
                             st.warning(
-                                f"⚠️ Bu uygulama için yalnızca **{len(fetched_comments)}** yorum bulundu. "
+                                f"Bu uygulama için yalnızca **{len(fetched_comments)}** yorum bulundu. "
                                 f"Doğru uygulama ID'sini kullandığınızdan emin olun. "
                             )
                         
@@ -1453,7 +1453,7 @@ with tab2:
                     df_upload = pd.read_excel(uploaded_file)
                 
                 if df_upload is not None:
-                    st.markdown(f"### 📄 {uploaded_file.name}")
+                    st.markdown(f"### {uploaded_file.name}")
                     with st.container(border=True):
                         
                         
@@ -2529,7 +2529,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
     if analysis_type == "Zengin Analiz":
         MAX_ITEMS = 500
         if len(data_to_process) > MAX_ITEMS:
-            st.warning(f"⚠️ Zengin Analiz kotası: en fazla {MAX_ITEMS} yorum işleniyor.")
+            st.warning(f"Zengin Analiz kotası: en fazla {MAX_ITEMS} yorum işleniyor.")
             data_to_process = data_to_process[:MAX_ITEMS]
     # Hızlı Analiz'de hiçbir üst sınır yok — tüm liste işlenir
     
@@ -3013,7 +3013,7 @@ if "bulk_results" in st.session_state:
         
         if st.session_state.get("analysis_type") == "Zengin Analiz":
             if "ai_summary" not in st.session_state or st.session_state.get("last_results_len") != len(analysis_df):
-                with st.spinner("🤖 Yapay zeka derinlemesine raporu hazırlıyor..."):
+                with st.spinner("Yapay zeka derinlemesine raporu hazırlıyor..."):
                     summary_text = generate_dynamic_summary(analysis_results=st.session_state.bulk_results)
                     st.session_state.ai_summary = summary_text
                     st.session_state.last_results_len = len(analysis_df)
@@ -3021,7 +3021,7 @@ if "bulk_results" in st.session_state:
             st.markdown(f"""
             <div style="background: #FFFFFF; padding: 25px; border-radius: 12px; border: 2px solid #a78bfa; color: #1e293b; line-height: 1.6; box-shadow: 0 4px 15px rgba(167, 139, 250, 0.1);">
                 <div style="font-weight: 800; font-size: 1.3rem; margin-bottom: 15px; color: #7c3aed; display: flex; align-items: center; gap: 10px;">
-                    <span>✨ Yapay Zeka Derin Analiz Raporu</span>
+                    <span>Yapay Zeka Derin Analiz Raporu</span>
                 </div>
                 <div style="font-size: 0.95rem;">
                     {st.session_state.ai_summary}
@@ -3383,13 +3383,13 @@ if "bulk_results" in st.session_state:
                     
                     nav_cols = st.columns([1, 2, 1])
                     with nav_cols[0]:
-                        if st.button("⬅️ Önceki Sayfa", key=f"prev_{tab_id}", use_container_width=True, disabled=(current_page == 1)):
+                        if st.button("Önceki Sayfa", key=f"prev_{tab_id}", use_container_width=True, disabled=(current_page == 1)):
                             st.session_state[page_key] -= 1
                             st.rerun()
                     with nav_cols[1]:
                         st.markdown(f"<div style='text-align: center; margin-top: 10px; font-weight: bold; color: #64748B;'>Sayfa {current_page} / {total_pages}</div>", unsafe_allow_html=True)
                     with nav_cols[2]:
-                        if st.button("Sonraki Sayfa ➡️", key=f"next_{tab_id}", use_container_width=True, disabled=(current_page == total_pages)):
+                        if st.button("Sonraki Sayfa", key=f"next_{tab_id}", use_container_width=True, disabled=(current_page == total_pages)):
                             st.session_state[page_key] += 1
                             st.rerun()
                             
@@ -3658,17 +3658,17 @@ if "bulk_results" in st.session_state:
                                 if (t) {{
                                     t.document.write('<img src="' + dataUrl + '" style="width:100%;height:auto;">');
                                     t.document.title = 'Analiz Raporu';
-                                    window.notifyBridge('Görseli basılı tutarak kaydedin ⬇️');
+                                    window.notifyBridge('Görseli basılı tutarak kaydedin');
                                 }}
                             }} else {{
                                 const a = document.createElement('a');
                                 a.href = dataUrl;
                                 a.download = '{image_name}';
                                 a.click();
-                                window.notifyBridge('İndirme Başlatıldı! ⬇️');
+                                window.notifyBridge('İndirme Başlatıldı!');
                             }}
                         }} catch(e) {{
-                            window.notifyBridge('Hata oluştu! ❌');
+                            window.notifyBridge('Hata oluştu!');
                         }}
                     }});
                 }}
@@ -3696,7 +3696,7 @@ if "bulk_results" in st.session_state:
                                             files: [file],
                                             title: 'AI Yorum Analiz Raporu'
                                         }});
-                                        btn.innerHTML = '✅ Paylaşıldı!';
+                                        btn.innerHTML = 'Paylaşıldı!';
                                         setTimeout(() => {{
                                             btn.innerHTML = orig;
                                             btn.disabled = false;
@@ -3714,7 +3714,7 @@ if "bulk_results" in st.session_state:
                             }}, 'image/png');
 
                         }} catch(e) {{
-                            btn.innerHTML = '❌ Hata';
+                            btn.innerHTML = 'Hata';
                             setTimeout(() => {{ btn.innerHTML = orig; btn.disabled = false; }}, 2000);
                         }}
                     }});
@@ -3847,7 +3847,7 @@ if "bulk_results" in st.session_state:
                     button:hover {{ filter: brightness(0.9); transform: translateY(-1px); }}
                 </style>
                 <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;'>
-                    🖨️ PDF
+                    PDF
                 </button>
             """, height=48)
                     
