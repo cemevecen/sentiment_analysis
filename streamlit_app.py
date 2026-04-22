@@ -791,29 +791,47 @@ if "bulk_results" in st.session_state:
             
         st.write("Aşağıdaki sekmelerden tüm yorumları tek tek inceleyebilir, grafik üzerinde tarihsel değişimleri takip edebilirsiniz.")
 
-    # NEW: Star Rating Trend Chart (EKSİKSİZ)
+    # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
     if "Puan" in df.columns and df["Puan"].notnull().any():
         st.markdown("---")
-        st.write("#### ⭐ Puan Trendi (Günlük / Haftalık)")
+        st.write("#### 📊 Puan Dağılımı Trendi")
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
-            df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce')
-            df_puan = df_puan.dropna(subset=["Puan_val"])
+            # Ensure ratings are integers 1-5 for clean legend
+            df_puan["Puan_val"] = pd.to_numeric(df_puan["Puan"], errors='coerce').fillna(0).astype(int)
+            df_puan = df_puan[(df_puan["Puan_val"] >= 1) & (df_puan["Puan_val"] <= 5)]
+            
             if not df_puan.empty:
-                df_puan["Tarih"] = pd.to_datetime(df_puan["Tarih"])
-                # Grouping by day for a more granular line chart
-                puan_trend = df_puan.groupby(df_puan["Tarih"].dt.date)["Puan_val"].mean().reset_index()
-                puan_trend.columns = ["Tarih", "Ort_Puan"]
+                df_puan["Tarih"] = pd.to_datetime(df_puan["Tarih"]).dt.date
+                # Group by date and rating value
+                dist_trend = df_puan.groupby(["Tarih", "Puan_val"]).size().reset_index(name='Oy Sayısı')
+                dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
                 
-                fig_stars = px.line(puan_trend, x="Tarih", y="Ort_Puan", 
-                                  range_y=[1, 5],
-                                  labels={"Tarih": "Zaman", "Ort_Puan": "Ort. Yıldız"},
-                                  markers=True,
-                                  color_discrete_sequence=['#FBBF24'])
-                fig_stars.update_layout(height=300, margin={"t": 30, "b": 20, "l": 10, "r": 10},
-                                       xaxis_title="Tarih", yaxis_title="Ortalama Yıldız (1-5)")
-                st.plotly_chart(fig_stars, use_container_width=True)
-        except: pass
+                # Sort for clean stacking
+                dist_trend = dist_trend.sort_values("Puan_val", ascending=True)
+
+                fig_dist = px.bar(dist_trend, x="Tarih", y="Oy Sayısı", color="Puan_Label",
+                                 title="Günlük Puan Dağılımı",
+                                 color_discrete_map={
+                                     "1 Yıldız": "#08306b",
+                                     "2 Yıldız": "#08519c",
+                                     "3 Yıldız": "#2171b5",
+                                     "4 Yıldız": "#6baed6",
+                                     "5 Yıldız": "#deebf7"
+                                 },
+                                 category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]})
+                
+                fig_dist.update_layout(
+                    height=350, 
+                    margin={"t": 40, "b": 20, "l": 10, "r": 10},
+                    xaxis_title="Tarih",
+                    yaxis_title="Oy Sayısı",
+                    legend_title="Puan",
+                    barmode='stack'
+                )
+                st.plotly_chart(fig_dist, use_container_width=True)
+        except Exception as e:
+            st.error(f"Grafik oluşturma hatası: {e}")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
