@@ -1973,15 +1973,15 @@ if "bulk_results" in st.session_state:
 </div>
 <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
 <div style="font-size: 0.7rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">%{pos_p}</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">{t_pos}</div>
 </div>
 <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
 <div style="font-size: 0.7rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">%{neg_p}</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">{t_neg}</div>
 </div>
 <div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
 <div style="font-size: 0.7rem; color: #3B82F6; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Görüş</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">%{neu_p}</div>
+<div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">{t_neu}</div>
 </div>
 </div>
 <div style="display: flex; align-items: center; justify-content: space-around; margin: 40px 0; background: #F8FAFC; border-radius: 20px; padding: 25px;">
