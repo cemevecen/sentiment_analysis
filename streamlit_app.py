@@ -561,21 +561,21 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
     button[data-testid="stTab"] {
-        background-color: #A5B4FC !important; /* Soft Purple/Lavender */
-        color: white !important;
+        background-color: #FFFFFF !important;
+        color: #1E293B !important; /* Dark text for readability on white */
         border-radius: 50px !important;
         padding: 8px 20px !important;
-        border: 1px solid #A5B4FC !important;
+        border: 1px solid #E2E8F0 !important;
         transition: all 0.2s ease !important;
         font-weight: 500 !important;
         height: auto !important;
     }
     button[data-testid="stTab"]:hover {
-        background-color: #818CF8 !important;
-        border-color: #818CF8 !important;
+        background-color: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
     }
     button[data-testid="stTab"][aria-selected="true"] {
-        background-color: #818CF8 !important; /* Lighter Purple */
+        background-color: #818CF8 !important; /* Eflatun */
         color: white !important;
         border-color: #818CF8 !important;
         box-shadow: 0 4px 10px rgba(129, 140, 248, 0.3) !important;
