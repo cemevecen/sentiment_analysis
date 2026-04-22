@@ -662,13 +662,56 @@ st.markdown("""
         margin-left: 5px;
     }
     
-    /* Info/Alert boxes - White */
+    /* Info/Alert boxes — küçük, zarif */
     .stAlert {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 2px solid #E2E8F0 !important;
-        border-radius: 12px !important;
-        margin-bottom: 5px !important;
+        border-radius: 10px !important;
+        margin-bottom: 4px !important;
+        padding: 0 !important;
+    }
+    .stAlert > div {
+        padding: 8px 14px !important;
+        font-size: 0.82rem !important;
+        line-height: 1.5 !important;
+    }
+    /* Success */
+    div[data-testid="stAlert"][data-baseweb="notification"][kind="success"],
+    .stSuccess {
+        background-color: #F0FDF4 !important;
+        border: 1px solid #BBF7D0 !important;
+        border-left: 3px solid #22C55E !important;
+    }
+    /* Info */
+    div[data-testid="stAlert"][data-baseweb="notification"][kind="info"],
+    .stInfo {
+        background-color: #F0F9FF !important;
+        border: 1px solid #BAE6FD !important;
+        border-left: 3px solid #38BDF8 !important;
+    }
+    /* Warning */
+    div[data-testid="stAlert"][data-baseweb="notification"][kind="warning"],
+    .stWarning {
+        background-color: #FFFBEB !important;
+        border: 1px solid #FDE68A !important;
+        border-left: 3px solid #F59E0B !important;
+    }
+    /* Error */
+    div[data-testid="stAlert"][data-baseweb="notification"][kind="error"],
+    .stError {
+        background-color: #FFF1F2 !important;
+        border: 1px solid #FECDD3 !important;
+        border-left: 3px solid #F43F5E !important;
+    }
+    /* İkon küçült */
+    .stAlert [data-testid="stIcon"] {
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 0.8rem !important;
+    }
+    /* Metin rengi */
+    .stAlert p, .stAlert div, .stAlert span {
+        color: #334155 !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
     }
     
     /* Caption spacing */
