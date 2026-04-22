@@ -211,7 +211,7 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash-lite')
+        model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
         prompt = f"""
 Sen bir uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
@@ -249,7 +249,8 @@ Yorum: "{text}"
     except Exception as e:
         err_str = str(e)
         if "429" in err_str or "quota" in err_str.lower():
-            st.info("ℹ️ Gemini 2.5-Flash, ücretsiz planda dakikada en fazla 10 istek analiz edebilir. Kota aşıldı; bu yorum yerel motorla değerlendirildi.")
+            # Track count silently, let the caller display the message
+            st.session_state['_quota_hits'] = st.session_state.get('_quota_hits', 0) + 1
         else:
             st.warning(f"⚠️ Gemini API hatası: {err_str[:120]}")
         return None
@@ -296,6 +297,8 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
             bulk_results = []
             progress_bar = st.progress(0)
             status_text = st.empty()
+            quota_info = st.empty()  # Single placeholder for quota warnings
+            st.session_state['_quota_hits'] = 0
             
             for i, entry in enumerate(comments_to_analyze):
                 comment = entry["text"]
@@ -305,13 +308,28 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                 scores = {"Olumlu": res['olumlu'], "Olumsuz": res['olumsuz'], "İstek/Görüş": res['istek_gorus']}
                 verdict = max(scores, key=scores.get)
                 
+                # Update quota warning placeholder
+                q = st.session_state.get('_quota_hits', 0)
+                if q == 1:
+                    quota_info.info("ℹ️ Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla 15 istek)")
+                elif q > 1:
+                    quota_info.info(f"ℹ️ Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
+                
                 bulk_results.append({
                     "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
                     "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
                     "Tarih": date
                 })
                 progress_bar.progress((i + 1) / len(comments_to_analyze))
-                time.sleep(2)  # ~30 istek/dk kotasına uyum için bekleme
+                # Gemini-3.1-flash-lite-preview: 15 istek/dk → 4 sn bekleme
+                remaining = len(comments_to_analyze) - (i + 1)
+                if remaining > 0:
+                    est_secs = remaining * 4
+                    est_min = est_secs // 60
+                    est_sec = est_secs % 60
+                    time_str = f"{est_min}dk {est_sec}sn" if est_min > 0 else f"{est_sec}sn"
+                    status_text.text(f"Analiz ediliyor ({i+2}/{len(comments_to_analyze)})... ≈ {time_str} kaldı")
+                    time.sleep(4)
             
             st.session_state.bulk_results = bulk_results
             status_text.success("Analiz Başarıyla Tamamlandı!")
