@@ -1176,9 +1176,12 @@ st.markdown(f"""
 if 'comments_to_analyze' not in st.session_state:
     st.session_state.comments_to_analyze = []
 
+if 'cmp_results' not in st.session_state:
+    st.session_state.cmp_results = {}
+
 comments_to_analyze = [] 
 
-tab1, tab2, tab3 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi"])
+tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
 
 with tab1:
     with st.container(border=True):
@@ -1679,6 +1682,187 @@ with tab3:
         else:
             st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
+
+with tab4:
+    st.markdown("### Uygulama Karşılaştırma")
+    st.markdown('<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">2 veya 3 uygulamayı yan yana karşılaştır. Her biri için ID veya link gir.</div>', unsafe_allow_html=True)
+
+    if "cmp_results" not in st.session_state:
+        st.session_state.cmp_results = {}
+
+    num_apps = st.radio("Kaç uygulama?", [2, 3], horizontal=True, key="cmp_num_apps")
+
+    cmp_cols = st.columns(num_apps)
+    cmp_inputs = []
+    for ci in range(num_apps):
+        with cmp_cols[ci]:
+            st.markdown(f'<div style="font-size:0.8rem;font-weight:600;color:#6366F1;margin-bottom:4px;">Uygulama {ci+1}</div>', unsafe_allow_html=True)
+            url_val = st.text_input("", placeholder="com.example veya id123...", key=f"cmp_url_{ci}", label_visibility="collapsed")
+            cmp_inputs.append(url_val.strip())
+
+    cmp_range = st.selectbox("Tarih Aralığı:", ["Son 1 Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl"], key="cmp_range")
+    cmp_days = {"Son 1 Ay": 30, "Son 3 Ay": 90, "Son 6 Ay": 180, "Son 1 Yıl": 365}[cmp_range]
+
+    if st.button("Karşılaştırmayı Başlat", type="primary", use_container_width=True, key="cmp_start_btn"):
+        active_inputs = [u for u in cmp_inputs if u]
+        if len(active_inputs) < 2:
+            st.warning("En az 2 uygulama ID'si girin.")
+        else:
+            st.session_state.cmp_results = {}
+            for u in active_inputs:
+                platform_c = None
+                app_id_c = ""
+                country_c = "tr"
+                if "play.google.com" in u:
+                    platform_c = "google"
+                    m = re.search(r"id=([^&/]+)", u)
+                    if m: app_id_c = m.group(1)
+                elif "apple.com" in u:
+                    platform_c = "apple"
+                    m = re.search(r"id(\d+)", u)
+                    if m: app_id_c = m.group(1)
+                else:
+                    cu = u.lower()
+                    if cu.startswith("id") and cu[2:].isdigit():
+                        platform_c = "apple"; app_id_c = cu[2:]
+                    elif cu.isdigit():
+                        platform_c = "apple"; app_id_c = cu
+                    elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
+                        platform_c = "google"; app_id_c = u
+
+                if not platform_c or not app_id_c:
+                    st.error(f"Geçersiz ID: {u}")
+                    continue
+
+                name_c = app_id_c
+                if platform_c == "google":
+                    try:
+                        info_c = play_app(app_id_c, lang='tr', country='tr')
+                        name_c = info_c.get('title', app_id_c)
+                    except: pass
+                elif platform_c == "apple":
+                    try:
+                        r_c = requests.get(f"https://itunes.apple.com/lookup?id={app_id_c}&country=tr", timeout=5)
+                        if r_c.status_code == 200:
+                            d_c = r_c.json()
+                            if d_c.get('results'):
+                                name_c = d_c['results'][0].get('trackCensoredName', app_id_c)
+                    except: pass
+
+                with st.spinner(f"{name_c} çekiliyor..."):
+                    try:
+                        if platform_c == "google":
+                            revs_c = fetch_google_play_reviews(app_id_c, cmp_days)
+                        else:
+                            revs_c = get_app_store_reviews(app_id_c, _days_limit=cmp_days)
+                            threshold_c = datetime.now() - timedelta(days=cmp_days)
+                            revs_c = [r for r in revs_c if isinstance(r.get('date'), datetime) and r['date'] >= threshold_c and is_valid_comment(r.get('text',''))]
+
+                        pos_c = neg_c = neu_c = 0
+                        for rev in revs_c:
+                            txt = str(rev.get('text',''))
+                            rat = rev.get('rating')
+                            res_c = heuristic_analysis(txt, rating=rat)
+                            scores_c = {"Olumlu": res_c["olumlu"], "Olumsuz": res_c["olumsuz"], "İstek": res_c["istek_gorus"]}
+                            v_c = max(scores_c, key=lambda k: scores_c[k])
+                            if v_c == "Olumlu": pos_c += 1
+                            elif v_c == "Olumsuz": neg_c += 1
+                            else: neu_c += 1
+
+                        total_c = pos_c + neg_c + neu_c or 1
+                        st.session_state.cmp_results[name_c] = {
+                            "total": len(revs_c),
+                            "pos": pos_c, "neg": neg_c, "neu": neu_c,
+                            "pos_pct": int(pos_c/total_c*100),
+                            "neg_pct": int(neg_c/total_c*100),
+                            "neu_pct": int(neu_c/total_c*100),
+                            "score": int((pos_c*100 + neu_c*50) / total_c),
+                        }
+                    except Exception as e:
+                        st.error(f"{name_c} çekilemedi: {e}")
+
+    # Sonuçları göster
+    if st.session_state.cmp_results:
+        results_c = st.session_state.cmp_results
+        n_res = len(results_c)
+        res_cols = st.columns(n_res)
+        best_score = max(v["score"] for v in results_c.values())
+
+        for ci, (app_nm, data) in enumerate(results_c.items()):
+            with res_cols[ci]:
+                is_best = data["score"] == best_score
+                border_c = "#818CF8" if is_best else "#E2E8F0"
+                badge = '<div style="background:#818CF8;color:white;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px;">EN İYİ</div>' if is_best else ""
+
+                st.markdown(f"""
+                <div style="background:#FFFFFF;border:2px solid {border_c};border-radius:14px;padding:16px;text-align:center;">
+                    {badge}
+                    <div style="font-size:0.85rem;font-weight:700;color:#1E293B;margin-bottom:12px;line-height:1.3;">{app_nm}</div>
+                    <div style="font-size:2.2rem;font-weight:800;color:{'#818CF8' if is_best else '#475569'};line-height:1;">{data['score']}</div>
+                    <div style="font-size:0.65rem;color:#94A3B8;font-weight:600;margin-bottom:14px;">/100 skor</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;text-align:left;">
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+                                <span style="color:#10b981;font-weight:600;">Olumlu</span>
+                                <span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span>
+                            </div>
+                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+                                <div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+                                <span style="color:#f43f5e;font-weight:600;">Olumsuz</span>
+                                <span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span>
+                            </div>
+                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+                                <div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
+                                <span style="color:#818cf8;font-weight:600;">Görüş</span>
+                                <span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span>
+                            </div>
+                            <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+                                <div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:0.7rem;color:#94A3B8;">
+                        {data['total']} yorum analiz edildi
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # Radar / özet bar chart
+        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+        import plotly.graph_objects as go_cmp
+        fig_cmp = go_cmp.Figure()
+        colors_cmp = ["#818CF8", "#10b981", "#F4A261"]
+        for idx, (app_nm, data) in enumerate(results_c.items()):
+            fig_cmp.add_trace(go_cmp.Bar(
+                name=app_nm,
+                x=["Olumlu %", "Olumsuz %", "Görüş %", "Skor"],
+                y=[data["pos_pct"], data["neg_pct"], data["neu_pct"], data["score"]],
+                marker_color=colors_cmp[idx % len(colors_cmp)],
+                text=[f"{data['pos_pct']}%", f"{data['neg_pct']}%", f"{data['neu_pct']}%", str(data['score'])],
+                textposition="outside"
+            ))
+
+        fig_cmp.update_layout(
+            barmode="group",
+            height=340,
+            margin={"t": 30, "b": 20, "l": 10, "r": 10},
+            paper_bgcolor="#F0F9FF",
+            plot_bgcolor="#F0F9FF",
+            font={"color": "#000000", "family": "Poppins, sans-serif"},
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "center", "x": 0.5},
+            yaxis={"range": [0, 115]},
+            bargap=0.2,
+            bargroupgap=0.05
+        )
+        st.plotly_chart(fig_cmp, use_container_width=True, config={"displayModeBar": False})
 
 
 comments_to_analyze = st.session_state.comments_to_analyze
