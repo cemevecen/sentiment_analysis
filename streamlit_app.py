@@ -26,21 +26,53 @@ st.set_page_config(
 )
 
 # API Configuration: Optimized via Caching
-@st.cache_resource
+@st.cache_resource(show_spinner="API yapılandırılıyor...")
 def setup_api():
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
+    # Priority: 1. GOOGLE_API_KEY (SDK standard), 2. GEMINI_API_KEY, 3. API_KEY
+    keys_to_check = ["GOOGLE_API_KEY", "GEMINI_API_KEY", "API_KEY"]
+    
+    api_key = None
+    
+    # Check Environment Variables
+    for k in keys_to_check:
+        val = os.getenv(k)
+        if val and str(val).strip():
+            api_key = str(val).strip()
+            break
+            
+    # Check Streamlit Secrets if still not found
     if not api_key:
         try:
-            api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY")
+            for k in keys_to_check:
+                val = st.secrets.get(k)
+                if val and str(val).strip():
+                    api_key = str(val).strip()
+                    break
         except:
-            api_key = None
-    if api_key and str(api_key).strip():
-        client = genai.Client(api_key=str(api_key).strip())
-        return client
+            pass
+
+    if api_key:
+        try:
+            # Initialize client with the found key
+            client = genai.Client(api_key=api_key)
+            return client
+        except Exception as e:
+            st.error(f"API Client başlatma hatası: {e}")
+            return None
     return None
 
 GEMINI_CLIENT = setup_api()
 HAS_GEMINI = GEMINI_CLIENT is not None
+
+# Special check for Streamlit Cloud users
+if not HAS_GEMINI and "streamlit" in str(st.__file__).lower():
+    st.sidebar.error("⚠️ Gemini API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY tanımlayın.")
+    if st.sidebar.button("API'yi Yeniden Kontrol Et"):
+        st.cache_resource.clear()
+        st.rerun()
+elif HAS_GEMINI and "GEMINI_CLIENT" in locals():
+    # Optional: Test client connectivity if needed, but we'll stick to a simple success indicator
+    pass
 
 # --- Lottie Loader ---
 @st.cache_data(ttl=3600)
