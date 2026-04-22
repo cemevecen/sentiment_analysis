@@ -1708,78 +1708,10 @@ with tab4:
         if len(active_inputs) < 2:
             st.warning("En az 2 uygulama ID'si girin.")
         else:
+            st.session_state["_cmp_pending"] = active_inputs
+            st.session_state["_cmp_days"] = cmp_days
             st.session_state.cmp_results = {}
-            for u in active_inputs:
-                platform_c = None
-                app_id_c = ""
-                country_c = "tr"
-                if "play.google.com" in u:
-                    platform_c = "google"
-                    m = re.search(r"id=([^&/]+)", u)
-                    if m: app_id_c = m.group(1)
-                elif "apple.com" in u:
-                    platform_c = "apple"
-                    m = re.search(r"id(\d+)", u)
-                    if m: app_id_c = m.group(1)
-                else:
-                    cu = u.lower()
-                    if cu.startswith("id") and cu[2:].isdigit():
-                        platform_c = "apple"; app_id_c = cu[2:]
-                    elif cu.isdigit():
-                        platform_c = "apple"; app_id_c = cu
-                    elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
-                        platform_c = "google"; app_id_c = u
-
-                if not platform_c or not app_id_c:
-                    st.error(f"Geçersiz ID: {u}")
-                    continue
-
-                name_c = app_id_c
-                if platform_c == "google":
-                    try:
-                        info_c = play_app(app_id_c, lang='tr', country='tr')
-                        name_c = info_c.get('title', app_id_c)
-                    except: pass
-                elif platform_c == "apple":
-                    try:
-                        r_c = requests.get(f"https://itunes.apple.com/lookup?id={app_id_c}&country=tr", timeout=5)
-                        if r_c.status_code == 200:
-                            d_c = r_c.json()
-                            if d_c.get('results'):
-                                name_c = d_c['results'][0].get('trackCensoredName', app_id_c)
-                    except: pass
-
-                with st.spinner(f"{name_c} çekiliyor..."):
-                    try:
-                        if platform_c == "google":
-                            revs_c = fetch_google_play_reviews(app_id_c, cmp_days)
-                        else:
-                            revs_c = get_app_store_reviews(app_id_c, _days_limit=cmp_days)
-                            threshold_c = datetime.now() - timedelta(days=cmp_days)
-                            revs_c = [r for r in revs_c if isinstance(r.get('date'), datetime) and r['date'] >= threshold_c and is_valid_comment(r.get('text',''))]
-
-                        pos_c = neg_c = neu_c = 0
-                        for rev in revs_c:
-                            txt = str(rev.get('text',''))
-                            rat = rev.get('rating')
-                            res_c = heuristic_analysis(txt, rating=rat)
-                            scores_c = {"Olumlu": res_c["olumlu"], "Olumsuz": res_c["olumsuz"], "İstek": res_c["istek_gorus"]}
-                            v_c = max(scores_c, key=lambda k: scores_c[k])
-                            if v_c == "Olumlu": pos_c += 1
-                            elif v_c == "Olumsuz": neg_c += 1
-                            else: neu_c += 1
-
-                        total_c = pos_c + neg_c + neu_c or 1
-                        st.session_state.cmp_results[name_c] = {
-                            "total": len(revs_c),
-                            "pos": pos_c, "neg": neg_c, "neu": neu_c,
-                            "pos_pct": int(pos_c/total_c*100),
-                            "neg_pct": int(neg_c/total_c*100),
-                            "neu_pct": int(neu_c/total_c*100),
-                            "score": int((pos_c*100 + neu_c*50) / total_c),
-                        }
-                    except Exception as e:
-                        st.error(f"{name_c} çekilemedi: {e}")
+            st.rerun()
 
     # Sonuçları göster
     if st.session_state.cmp_results:
@@ -4341,6 +4273,84 @@ if "bulk_results" in st.session_state:
         st.error(f"Paylaşım sistemi hatası: {e}")
 
 
+
+# ── Karşılaştırma analizi — fonksiyonlar tanımlıyken çalışır ──────
+if st.session_state.get("_cmp_pending"):
+    active_inputs = st.session_state.pop("_cmp_pending")
+    cmp_days_run  = st.session_state.pop("_cmp_days", 30)
+
+    for u in active_inputs:
+        platform_c = None; app_id_c = ""; country_c = "tr"
+        if "play.google.com" in u:
+            platform_c = "google"
+            m = re.search(r"id=([^&/]+)", u)
+            if m: app_id_c = m.group(1)
+        elif "apple.com" in u:
+            platform_c = "apple"
+            m = re.search(r"id(\d+)", u)
+            if m: app_id_c = m.group(1)
+        else:
+            cu = u.lower()
+            if cu.startswith("id") and cu[2:].isdigit():
+                platform_c = "apple"; app_id_c = cu[2:]
+            elif cu.isdigit():
+                platform_c = "apple"; app_id_c = cu
+            elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
+                platform_c = "google"; app_id_c = u
+
+        if not platform_c or not app_id_c:
+            st.error(f"Geçersiz ID: {u}")
+            continue
+
+        name_c = app_id_c
+        if platform_c == "google":
+            try:
+                info_c = play_app(app_id_c, lang='tr', country='tr')
+                name_c = info_c.get('title', app_id_c)
+            except: pass
+        elif platform_c == "apple":
+            try:
+                r_c = requests.get(f"https://itunes.apple.com/lookup?id={app_id_c}&country=tr", timeout=5)
+                if r_c.status_code == 200:
+                    d_c = r_c.json()
+                    if d_c.get('results'):
+                        name_c = d_c['results'][0].get('trackCensoredName', app_id_c)
+            except: pass
+
+        with st.spinner(f"{name_c} analiz ediliyor..."):
+            try:
+                if platform_c == "google":
+                    revs_c = fetch_google_play_reviews(app_id_c, cmp_days_run)
+                else:
+                    revs_c = get_app_store_reviews(app_id_c, _days_limit=cmp_days_run)
+                    threshold_c = datetime.now() - timedelta(days=cmp_days_run)
+                    revs_c = [r for r in revs_c
+                              if isinstance(r.get('date'), datetime)
+                              and r['date'] >= threshold_c
+                              and is_valid_comment(r.get('text',''))]
+
+                pos_c = neg_c = neu_c = 0
+                for rev in revs_c:
+                    res_c = heuristic_analysis(str(rev.get('text','')), rating=rev.get('rating'))
+                    sc = {"Olumlu": res_c["olumlu"], "Olumsuz": res_c["olumsuz"], "İstek": res_c["istek_gorus"]}
+                    v_c = max(sc, key=lambda k: sc[k])
+                    if v_c == "Olumlu": pos_c += 1
+                    elif v_c == "Olumsuz": neg_c += 1
+                    else: neu_c += 1
+
+                total_c = pos_c + neg_c + neu_c or 1
+                st.session_state.cmp_results[name_c] = {
+                    "total": len(revs_c),
+                    "pos": pos_c, "neg": neg_c, "neu": neu_c,
+                    "pos_pct": int(pos_c/total_c*100),
+                    "neg_pct": int(neg_c/total_c*100),
+                    "neu_pct": int(neu_c/total_c*100),
+                    "score": int((pos_c*100 + neu_c*50) / total_c),
+                }
+            except Exception as e:
+                st.error(f"{name_c} çekilemedi: {e}")
+
+    st.rerun()
 
 st.divider()
 st.caption("Geliştiren: ivicin")
