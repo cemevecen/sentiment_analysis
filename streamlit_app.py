@@ -1528,13 +1528,13 @@ if active_tab == "Mağaza Linki":
         if "_platform_filter" not in st.session_state:
             st.session_state._platform_filter = "Android"
 
-        # Platform selection and select buttons styling
+        # Unified styling for all buttons
         st.markdown("""
         <style>
         /* Platform selector buttons */
         [data-testid="stButton"] > button[key*="platform_"] {
             width: 100% !important;
-            height: 48px !important;
+            height: 56px !important;
             border-radius: 20px !important;
             font-weight: 600 !important;
             font-family: 'Poppins', sans-serif !important;
@@ -1542,12 +1542,22 @@ if active_tab == "Mağaza Linki":
             border: 2px solid #E5E7EB !important;
             background-color: white !important;
             color: #1F2937 !important;
-            padding: 12px 16px !important;
+            padding: 0 16px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
+            transition: all 0.3s ease !important;
         }
+        
+        /* Selected platform button state */
+        [data-testid="stButton"] > button[key="platform_android"].active,
+        [data-testid="stButton"] > button[key="platform_ios"].active {
+            background-color: #818CF8 !important;
+            color: white !important;
+            border: none !important;
+        }
+        
         /* Select app buttons (search results) */
         [data-testid="stButton"] > button[key*="select_app"] {
             padding: 3px 12px !important;
@@ -1563,44 +1573,37 @@ if active_tab == "Mağaza Linki":
             line-height: 24px !important;
             display: inline-flex !important;
             align-items: center !important;
+            transition: background-color 0.2s ease !important;
         }
+        
         [data-testid="stButton"] > button[key*="select_app"]:hover {
             background-color: #6366F1 !important;
         }
         </style>
         """, unsafe_allow_html=True)
         
-        # Update button colors based on selection state
-        if st.session_state._platform_filter == "Android":
-            st.markdown("""
-            <style>
-            [data-testid="stButton"] > button[key="platform_android"] {
-                background-color: #818CF8 !important;
-                color: white !important;
-                border: none !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <style>
-            [data-testid="stButton"] > button[key="platform_ios"] {
-                background-color: #818CF8 !important;
-                color: white !important;
-                border: none !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
+        # Dynamic styling for selected platform button
+        selected_platform = st.session_state._platform_filter
+        st.markdown(f"""
+        <style>
+        [data-testid="stButton"] > button[key="platform_{selected_platform.lower()}"] {{
+            background-color: #818CF8 !important;
+            color: white !important;
+            border: none !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
         
-        platform_col1, platform_col2 = st.columns(2)
+        # Platform selector buttons container
+        platform_col1, platform_col2 = st.columns(2, gap="medium")
         
         with platform_col1:
-            if st.button("Android", key="platform_android"):
+            if st.button("Android", key="platform_android", use_container_width=True):
                 st.session_state._platform_filter = "Android"
                 st.rerun()
         
         with platform_col2:
-            if st.button("iOS", key="platform_ios"):
+            if st.button("iOS", key="platform_ios", use_container_width=True):
                 st.session_state._platform_filter = "iOS"
                 st.rerun()
 
