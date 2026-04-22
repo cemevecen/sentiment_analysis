@@ -1241,15 +1241,6 @@ with tab1:
                 </script>
             """, height=60, scrolling=False)
 
-        # Yenile butonu — sağa hizalı, küçük
-        _, col_ref = st.columns([5, 1])
-        with col_ref:
-            if st.button("↺ yenile", key="refresh_btn", use_container_width=True):
-                st.session_state["_refresh_token"] = int(time.time())
-                for _k in ["last_fetch_key", "all_fetched_pool", "bulk_results",
-                           "comments_to_analyze", "ai_summary", "last_results_len"]:
-                    st.session_state.pop(_k, None)
-                st.rerun()
 
         # 6. Tarih aralığı
         time_range = st.selectbox(
