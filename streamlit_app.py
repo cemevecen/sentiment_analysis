@@ -7,6 +7,7 @@ import re
 import time
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import io
 from dotenv import load_dotenv
 
@@ -976,13 +977,30 @@ if "bulk_results" in st.session_state:
     
     with col_pie:
         pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        fig_pie = px.pie(pie_data, values='Sayı', names='Duygu', hole=0.6,
-                      color='Duygu', color_discrete_map={'Olumlu':'#10b981', 'Olumsuz':'#f43f5e', 'İstek/Görüş':'#3b82f6'})
-        fig_pie.update_traces(textinfo='percent', textfont_size=14, marker=dict(line=dict(color='#0f172a', width=2)))
-        fig_pie.update_layout(height=350, showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                             font=dict(color='#94a3b8'),
-                             legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5},
-                             margin={"t": 0, "b": 0, "l": 0, "r": 0})
+        # Artistic 3D-like Donut with exploded slices
+        fig_pie = go.Figure(data=[go.Pie(
+            labels=pie_data["Duygu"], 
+            values=pie_data["Sayı"],
+            hole=0.5,
+            pull=[0.05, 0.05, 0.05], # Artistic separation
+            marker=dict(
+                colors=['#10b981', '#f43f5e', '#3b82f6'], # Green, Red, Blue
+                line=dict(color='#F0F9FF', width=3)
+            ),
+            textinfo='percent+label',
+            textfont=dict(color='#000000', size=12),
+            insidetextorientation='radial'
+        )])
+        
+        fig_pie.update_layout(
+            height=380,
+            showlegend=True,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#000000', family="Poppins, sans-serif"),
+            legend={"orientation": "h", "yanchor": "bottom", "y": -0.2, "xanchor": "center", "x": 0.5, "font": {"color": "#000000"}},
+            margin={"t": 30, "b": 30, "l": 0, "r": 0}
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_summary:
