@@ -53,6 +53,12 @@ st.markdown("""
         color: #1E293B !important;
     }
     
+    /* Strict 5px spacing for headers and common text blocks */
+    h1, h2, h3, h4, h5, h6, .stMarkdown div {
+        margin-top: 0px !important;
+        margin-bottom: 5px !important;
+    }
+    
     /* Corrected Global Icon Protection */
     [data-testid="stIcon"], [class*="st-emotion-cache-"], [class*="stIcon"], svg, span[aria-hidden="true"] {
         font-family: inherit !important;
@@ -111,8 +117,8 @@ st.markdown("""
         background-color: #F0F9FF !important;
         border: 2px solid #E0F2FE;
         border-radius: 20px;
-        padding: 25px;
-        margin-bottom: 20px;
+        padding: 20px;
+        margin-bottom: 5px;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.02);
     }
@@ -146,13 +152,13 @@ st.markdown("""
         background-color: transparent !important;
     }
     
-    /* Tighter vertical spacing for the whole app */
+    /* Precise 5px vertical spacing for the whole app */
     [data-testid="stVerticalBlock"] > div {
-        margin-top: -5px !important;
-        margin-bottom: -5px !important;
+        margin-top: 0px !important;
+        margin-bottom: 0px !important;
     }
     [data-testid="stVerticalBlock"] {
-        gap: 0.8rem !important;
+        gap: 5px !important;
     }
     
     .stMarkdown p {
@@ -177,6 +183,12 @@ st.markdown("""
         color: #1E293B !important;
         border: 2px solid #FFD1B3 !important;
         border-radius: 12px !important;
+        margin-bottom: 5px !important;
+    }
+    
+    /* Caption spacing */
+    .stCaption {
+        margin-bottom: 5px !important;
     }
     
     /* Force checkbox to be light */
@@ -257,7 +269,15 @@ st.markdown("""
     .fancy-divider {
         height: 2px;
         background-color: #E2E8F0;
-        margin: 20px 0;
+        margin: 5px 0;
+    }
+    
+    /* Radio button tightening */
+    [data-testid="stRadio"] > div {
+        gap: 5px !important;
+    }
+    [data-testid="stRadio"] label {
+        margin-bottom: 0px !important;
     }
 
     /* Captions */
@@ -410,7 +430,7 @@ with tab2:
 
                         # Unified Status Row (File info + Auto column)
                         st.markdown(f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; background-color: #F0F9FF; padding: 10px 15px; border-radius: 10px; border: 1px solid #E0F2FE; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; background-color: #F0F9FF; padding: 10px 15px; border-radius: 10px; border: 1px solid #E0F2FE; margin-bottom: 5px;">
                             <div style="color: #0369a1; font-weight: 600; font-size: 0.9rem;">
                                 ℹ️ Dosya okundu: {len(df_upload)} satır
                             </div>
