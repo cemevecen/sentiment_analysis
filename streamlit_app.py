@@ -1875,7 +1875,13 @@ comments_to_analyze = st.session_state.comments_to_analyze
 
 
 
-if comments_to_analyze and not st.session_state.get("_cmp_mode"):
+_is_cmp = (
+    st.session_state.get("_cmp_mode", False)
+    or bool(st.session_state.get("cmp_results"))
+    or st.session_state.get("_on_cmp_tab", False)
+)
+
+if comments_to_analyze and not _is_cmp:
     n = len(comments_to_analyze)
 
     def fmt_time(secs):
@@ -3109,22 +3115,20 @@ _is_cmp = (
     or st.session_state.get("_on_cmp_tab", False)
 )
 _trigger = st.session_state.pop("_trigger_analysis", False)
-if (st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger) and not _is_cmp:
-    # Hızlı Analiz seçiliyse all_fetched_pool'dan tüm yorumları al
-    current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
-    all_pool = st.session_state.get("all_fetched_pool", [])
-    
-    if current_analysis_type == "Hızlı Analiz" and all_pool:
-        # Pool'dan tümünü al, limit yok
-        data_for_run = all_pool
-        st.session_state.comments_to_analyze = all_pool
-    else:
-        data_for_run = st.session_state.comments_to_analyze
 
-    if not data_for_run:
-        st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
-    else:
-        run_bulk_analysis(data_for_run)
+if not _is_cmp:
+    if st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger:
+        current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
+        all_pool = st.session_state.get("all_fetched_pool", [])
+        if current_analysis_type == "Hızlı Analiz" and all_pool:
+            data_for_run = all_pool
+            st.session_state.comments_to_analyze = all_pool
+        else:
+            data_for_run = st.session_state.comments_to_analyze
+        if not data_for_run:
+            st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
+        else:
+            run_bulk_analysis(data_for_run)
 
 
 if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
