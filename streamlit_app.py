@@ -1907,13 +1907,15 @@ if "bulk_results" in st.session_state:
             elif "apple.com" in url:
                 if "/app/" in url:
                     try:
-                        app_name = url.split("/app/")[-1].split("/")[0].replace("-", " ").title()
+                        raw_name = url.split("/app/")[-1].split("/")[0].replace("-", " ")
+                        app_name = urllib.parse.unquote(raw_name).title()
                     except: 
                         if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
                 store_type = "App Store"
             elif "play.google" in url:
-                if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
-                app_name = app_name.replace("com.", "").replace("org.", "").split(".")[0].title()
+                if "id=" in url:
+                    raw_id = url.split("id=")[-1].split("&")[0]
+                    app_name = urllib.parse.unquote(raw_id).replace("com.", "").replace("org.", "").split(".")[0].title()
                 store_type = "Google Play"
 
         report_title = f"{app_name.upper()} UYGULAMASI {store_type.upper()} ANALİZ RAPORU"
