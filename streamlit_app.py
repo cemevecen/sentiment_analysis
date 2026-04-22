@@ -661,19 +661,24 @@ with tab1:
                     if fetched_comments:
                         # Clear loading animation
                         loading_placeholder.empty()
+                        
+                        # Store all fetched comments for potential extended analysis
+                        fetched_comments.sort(key=lambda x: x['date'], reverse=True)
+                        st.session_state.all_fetched_pool = fetched_comments
+                        
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
                             total_found = len(fetched_comments)
-                            # Sort by date (newest first) to ensure we always get the *most recent* ones up to threshold
-                            fetched_comments.sort(key=lambda x: x['date'], reverse=True)
-                            fetched_comments = fetched_comments[:MAX_REVIEWS]
+                            # Initial take: first 500
+                            st.session_state.comments_to_analyze = fetched_comments[:MAX_REVIEWS]
                             
-                            min_dt = min([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
-                            max_dt = max([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
+                            min_dt = min([r['date'] for r in st.session_state.comments_to_analyze if r.get('date')]).strftime('%d-%m-%Y')
+                            max_dt = max([r['date'] for r in st.session_state.comments_to_analyze if r.get('date')]).strftime('%d-%m-%Y')
                             
-                            st.warning(f"Toplamda **{total_found}** yorum bulundu. Bu yorumların arasından en güncel olan **{MAX_REVIEWS}** tanesi analize dahil ediliyor. (Seçilen yorumların tarih aralığı: {min_dt} ile {max_dt} arasındadır)")
+                            st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **{MAX_REVIEWS}** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
+                        else:
+                            st.session_state.comments_to_analyze = fetched_comments
                         
-                        st.session_state.comments_to_analyze = fetched_comments
                         st.success(f"**{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
                         st.info(f"{time_range} kriterine uygun yorum bulunamadı.")
@@ -1062,161 +1067,132 @@ def heuristic_analysis(text):
 
 # Analysis Trigger
 ticker_placeholder = st.empty()
+
+# Analysis Logic Wrapper
+def run_bulk_analysis(data_to_process, is_append=False):
+    bulk_results = st.session_state.get("bulk_results", []) if is_append else []
+    
+    time_display = st.empty()
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    quota_info = st.empty()
+    st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
+    st.session_state['_quota_hits'] = 0
+            
+    mode_idx = st.session_state.get("analysis_mode", 0)
+    if mode_idx == 0:
+        ANALYSIS_MODEL = 'gemini-2.5-flash'
+        RPM_LIMIT = 500
+    else:
+        ANALYSIS_MODEL = 'gemini-2.5-pro'
+        RPM_LIMIT = 300
+
+    start_time = time.time()
+    total_items = len(data_to_process)
+    est_total_secs = total_items * (1 if mode_idx == 0 else 2)
+
+    components.html(f"""
+    <script>
+    (function() {{
+        var totalSecs = {est_total_secs};
+        window.parent.onbeforeunload = function(e) {{
+            var msg = 'Analiz henüz tamamlanmadı! Çıkarsanız verileriniz kaybolacak!';
+            e.preventDefault();
+            e.returnValue = msg;
+            return msg;
+        }};
+    }})();
+    </script>
+    """, height=0)
+
+    def update_time(done, total, start):
+        elapsed = int(time.time() - start)
+        el_m, el_s = divmod(elapsed, 60)
+        el_str = f"{el_m} dk {el_s} sn" if el_m > 0 else f"{el_s} sn"
+        if done > 0:
+            avg = (time.time() - start) / done
+            rem_secs = int(avg * (total - done))
+            rem_m, rem_s = divmod(rem_secs, 60)
+            rem_str = f"{rem_m} dk {rem_s} sn" if rem_m > 0 else f"{rem_s} sn"
+        else:
+            rem_str = "—"
+        time_display.markdown(f"**Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; **Tahmini kalan:** {rem_str}")
+
+    import concurrent.futures
+
+    def fetch_sentiment_worker(args):
+        idx, entry = args
+        comment = entry["text"]
+        is_valid = entry.get("is_valid", True)
+        if not is_valid or not comment:
+            return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
+        
+        res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
+        err = None
+        if res_api is None or "_error" in res_api:
+            err = res_api["_error"] if res_api else "unknown"
+            res_api = heuristic_analysis(comment)
+        
+        scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
+        verdict = max(scores, key=scores.get)
+        return idx, entry, res_api, verdict, err
+
+    completed_count = 0
+    workers = 10 if mode_idx == 0 else 6
+    
+    start_offset = len(bulk_results)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        tasks = [executor.submit(fetch_sentiment_worker, (i, e)) for i, e in enumerate(data_to_process)]
+        
+        for future in concurrent.futures.as_completed(tasks):
+            i, entry, res, verdict, err = future.result()
+            completed_count += 1
+            
+            status_text.text(f"Analiz ediliyor: {completed_count} / {total_items}")
+            update_time(completed_count - 1, total_items, start_time)
+            
+            if err == "quota":
+                q = st.session_state.get('_quota_hits', 0) + 1
+                st.session_state['_quota_hits'] = q
+            elif err:
+                st.warning(err)
+            
+            comment = entry["text"]
+            date = entry.get("date")
+            ticker_date = f"{date.strftime('%d-%m-%Y')}" if date else ""
+
+            ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
+            ticker_placeholder.markdown(f"""
+            <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
+                    <span>ŞU AN EKLENEN (#{start_offset + i + 1})</span>
+                    <span>{ticker_date}</span>
+                </div>
+                <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
+                <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
+                    {verdict.upper()}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            bulk_results.append({
+                "No": start_offset + i + 1, "Yorum": comment, "Baskın Duygu": verdict,
+                "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
+                "Tarih": date, "Puan": entry.get('rating')
+            })
+            progress_bar.progress(completed_count / total_items)
+
+    st.session_state.bulk_results = sorted(bulk_results, key=lambda x: x["No"])
+    status_text.success("Analiz Başarıyla Tamamlandı!")
+    components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
+    st.rerun()
+
 if st.button("Analizini Yap", use_container_width=True):
     if not comments_to_analyze:
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
-        bulk_results = []
-        # Eski sonuçları hemen temizle — yeni analiz başlamadan önce
-        if "bulk_results" in st.session_state:
-            del st.session_state["bulk_results"]
-
-        time_display = st.empty()  # MOVED: Immediately below button
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        quota_info = st.empty()
-        st.warning("Analiz süresince bu sayfayı kapatmayın veya yenilemeyin. Verileriniz kaybolabilir.")
-        st.session_state['_quota_hits'] = 0
-            
-        # Seçilen moda göre model ve bekleme süresi (0=Hızlı, 1=Yavaş)
-        mode_idx = st.session_state.get("analysis_mode", 0)
-        if mode_idx == 0:  # Hızlı
-            ANALYSIS_MODEL = 'gemini-2.5-flash'
-            DELAY_SECS = 0
-            RPM_LIMIT = 500
-        else:  # Yavaş
-            ANALYSIS_MODEL = 'gemini-2.5-pro'
-            DELAY_SECS = 0  
-            RPM_LIMIT = 300
-
-
-
-        start_time = time.time()
-        total_items = len(comments_to_analyze)
-        est_total_secs = total_items * (1 if mode_idx == 0 else 2) # tahmin: hızlıda 1sn, yavaşta 2sn
-
-        # JavaScript: sayfadan ayrılmaya karşı uyarı
-        components.html(f"""
-        <script>
-        (function() {{
-            var totalSecs = {est_total_secs};
-            window.parent.onbeforeunload = function(e) {{
-                var m = Math.floor(totalSecs / 60);
-                var s = totalSecs % 60;
-                var timeStr = (m > 0 ? m + ' dakika ' : '') + s + ' saniye';
-                var msg = 'Analiz henüz tamamlanmadı! Tahmini kalan süre: ' + timeStr + '. Çıkarsanız verileriniz kaybolacak!';
-                e.preventDefault();
-                e.returnValue = msg;
-                return msg;
-            }};
-        }})();
-        </script>
-        """, height=0)
-
-        def update_time(done, total, start):
-            elapsed = int(time.time() - start)
-            el_m, el_s = divmod(elapsed, 60)
-            el_str = f"{el_m} dk {el_s} sn" if el_m > 0 else f"{el_s} sn"
-            if done > 0:
-                avg = (time.time() - start) / done
-                rem_secs = int(avg * (total - done))
-                rem_m, rem_s = divmod(rem_secs, 60)
-                rem_str = f"{rem_m} dk {rem_s} sn" if rem_m > 0 else f"{rem_s} sn"
-            else:
-                rem_str = "—"
-            time_display.markdown(
-                f"**Geçen süre:** {el_str} &nbsp;&nbsp;&nbsp; **Tahmini kalan:** {rem_str}"
-            )
-
-
-        import concurrent.futures
-
-        def fetch_sentiment_worker(args):
-            idx, entry = args
-            comment = entry["text"]
-            is_valid = entry.get("is_valid", True)
-            if not is_valid or not comment:
-                return idx, entry, {"olumlu": 0, "olumsuz": 0, "istek_gorus": 0}, "—", None
-            
-            res_api = get_gemini_sentiment(comment, model_name=ANALYSIS_MODEL)
-            err = None
-            if res_api is None or "_error" in res_api:
-                err = res_api["_error"] if res_api else "unknown"
-                res_api = heuristic_analysis(comment)
-            
-            scores = {"Olumlu": res_api['olumlu'], "Olumsuz": res_api['olumsuz'], "İstek/Görüş": res_api['istek_gorus']}
-            verdict = max(scores, key=scores.get)
-            return idx, entry, res_api, verdict, err
-
-        completed_count = 0
-        workers = 10 if mode_idx == 0 else 6
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-            tasks = [executor.submit(fetch_sentiment_worker, (i, e)) for i, e in enumerate(comments_to_analyze)]
-            
-            for future in concurrent.futures.as_completed(tasks):
-                i, entry, res, verdict, err = future.result()
-                completed_count += 1
-                
-                status_text.text(f"Analiz ediliyor: {completed_count} / {total_items}")
-                update_time(completed_count - 1, total_items, start_time)
-                
-                if err == "quota":
-                    q = st.session_state.get('_quota_hits', 0) + 1
-                    st.session_state['_quota_hits'] = q
-                    if q == 1:
-                        quota_info.info(f"Gemini kota aşıldı. Bu yorum yerel motorla değerlendirildi. (Model: dakikada en fazla {RPM_LIMIT} istek)")
-                    elif q > 1:
-                        quota_info.info(f"Toplam **{q} yorum** kota nedeniyle yerel motorla değerlendirildi.")
-                elif err:
-                    st.warning(err)
-                
-                comment = entry["text"]
-                date = entry.get("date")
-                ticker_date = ""
-                if date:
-                    try: ticker_date = f"{date.strftime('%d-%m-%Y')}"
-                    except: pass
-
-                ticker_color = "#34D399" if verdict == "Olumlu" else ("#F87171" if verdict == "Olumsuz" else "#60A5FA")
-                ticker_placeholder.markdown(f"""
-                <div style="border: 2px solid {ticker_color}; padding: 15px; border-radius: 12px; background: #FFFFFF; margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #64748b; margin-bottom: 5px;">
-                        <span>ŞU AN EKLENEN (#{i+1})</span>
-                        <span>{ticker_date}</span>
-                    </div>
-                    <div style="font-weight: 600; color: #1E293B;">{comment[:250]}{'...' if len(comment)>250 else ''}</div>
-                    <div style="margin-top: 10px; display: inline-block; padding: 2px 8px; border-radius: 4px; background: {ticker_color}; color: white; font-size: 0.8em; font-weight: bold;">
-                        {verdict.upper()}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                bulk_results.append({
-                    "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
-                    "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
-                    "Tarih": date,
-                    "Puan": entry.get('rating')
-                })
-                
-                progress_bar.progress(completed_count / total_items)
-
-        # Sonuçları orjinal sıraya geri diz
-        bulk_results = sorted(bulk_results, key=lambda x: x["No"])
-
-        ticker_placeholder.markdown(f"""
-        <div style="border: 2px solid #10B981; padding: 20px; border-radius: 12px; background: #ECFDF5; margin: 10px 0; text-align: center;">
-            <div style="font-size: 2em; margin-bottom: 10px;"></div>
-            <div style="font-weight: 700; color: #065F46; font-size: 1.2em;">ANALİZ TAMAMLANDI</div>
-            <div style="font-size: 0.9em; color: #047857; margin-top: 5px;">Toplam {total_items} satır başarıyla işlendi.</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        
-        st.session_state.bulk_results = bulk_results
-        status_text.success("Analiz Başarıyla Tamamlandı!")
-        # Sayfadan ayrılma uyarısını kaldır
-        components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
+        run_bulk_analysis(comments_to_analyze)
 
 # --- Persistent Results Display ---
 if "bulk_results" in st.session_state:
@@ -1441,6 +1417,22 @@ if "bulk_results" in st.session_state:
             st.error(f"Grafik oluşturma hatası: {e}")
 
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    # --- Extended Analysis Prompt ---
+    all_pool = st.session_state.get("all_fetched_pool", [])
+    if all_pool:
+        # Indices of comments already analyzed
+        analyzed_count = len(df)
+        remaining_pool = all_pool[analyzed_count:]
+        
+        if remaining_pool:
+            st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+            with st.container(border=True):
+                st.write(f"🔍 **Havuzda henüz analiz edilmemiş {len(remaining_pool)} yorum daha var.**")
+                take_next = min(len(remaining_pool), 500)
+                if st.button(f"Sonraki {take_next} yorumu da analiz et ve sonuçlara ekle", use_container_width=True):
+                    next_batch = remaining_pool[:take_next]
+                    run_bulk_analysis(next_batch, is_append=True)
 
     # Chart & List Logic
     def render_trend_chart(filtered_df, key, title_suffix=""):
