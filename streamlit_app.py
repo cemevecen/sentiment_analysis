@@ -598,11 +598,14 @@ with tab1:
                     if fetched_comments:
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
-                            # Representatif örnekleme (homojen dağılım) -> Tüm dönemi kapsamak için
-                            import numpy as np
-                            indices = np.linspace(0, len(fetched_comments)-1, MAX_REVIEWS, dtype=int)
-                            fetched_comments = [fetched_comments[i] for i in indices]
-                            st.warning(f"⚠️ Dönem içindeki toplam yorum sayısı {MAX_REVIEWS}'ü aştığı için, seçtiğiniz tarih aralığını tam kapsayacak şekilde {MAX_REVIEWS} adet temsilî yorum eklendi.")
+                            # Sort by date (newest first) to ensure we always get the *most recent* ones up to threshold
+                            fetched_comments.sort(key=lambda x: x['date'], reverse=True)
+                            fetched_comments = fetched_comments[:MAX_REVIEWS]
+                            
+                            min_dt = min([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
+                            max_dt = max([r['date'] for r in fetched_comments if r.get('date')]).strftime('%d-%m-%Y')
+                            
+                            st.warning(f"⚠️ En son {MAX_REVIEWS} yorum analize eklendi. (Dahil edilen tarih aralığı: {min_dt} — {max_dt})")
                         
                         st.session_state.comments_to_analyze = fetched_comments
                         st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
