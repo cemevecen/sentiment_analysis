@@ -322,32 +322,46 @@ with tab2:
                     with st.container(border=True):
                         st.info(f"Dosya okundu: {len(df_upload)} satir")
                         
-                        # Smart Column Detection
-                        target_keys = ["review", "yorum", "text", "metin", "content", "body"]
-                        avoid_keys = ["id", "name", "isim", "name", "rating", "star", "vers", "date", "tarih", "saat"]
+                        # Date & Rating Detection
+                        date_keys = ["date", "time", "tarih", "saat", "submit"]
+                        rate_keys = ["rating", "star", "puan", "yildiz", "skor", "score"]
                         
+                        date_col = None
+                        rate_col = None
+                        
+                        for col in df_upload.columns:
+                            col_l = col.lower()
+                            if not date_col and any(dk in col_l for dk in date_keys): date_col = col
+                            if not rate_col and any(rk in col_l for rk in rate_keys): rate_col = col
+
+                        # Advanced Sentiment Column Scoring
                         scores = []
                         for col in df_upload.columns:
                             col_l = col.lower()
                             score = 0
-                            if any(k in col_l for k in target_keys): score += 10
-                            if any(k in col_l for k in avoid_keys): score -= 15
                             
-                            sample = df_upload[col].head(5).astype(str).tolist()
-                            avg_len = sum(len(s) for s in sample) / 5 if sample else 0
-                            if avg_len > 15: score += 10
+                            # Textual keywords
+                            if any(k in col_l for k in ["review", "yorum", "text", "metin", "content", "mesaj"]): score += 20
+                            
+                            # Metadata keywords (Avoid for sentiment)
+                            if any(k in col_l for k in ["id", "rating", "star", "puan", "date", "tarih"]): score -= 25
+                            
+                            # Content Analysis
+                            sample = df_upload[col].dropna().head(10).astype(str).tolist()
+                            if sample:
+                                avg_len = sum(len(s) for s in sample) / len(sample)
+                                if avg_len > 30: score += 15 # High narrative factor
+                                if avg_len < 10: score -= 20 # Too short/numeric likely
+                                
+                                # Check for Turkish stop words/common words to confirm natural language
+                                common_tr = [" bir ", " bu ", " çok ", " ve ", " ama ", " için "]
+                                text_blobs = " ".join(sample).lower()
+                                if any(w in text_blobs for w in common_tr): score += 15
+                            
                             scores.append((score, col))
                         
                         scores.sort(key=lambda x: x[0], reverse=True)
                         best_col = scores[0][1] if scores else df_upload.columns[0]
-                        
-                        # Date Column Detection
-                        date_keys = ["date", "time", "tarih", "saat", "submit"]
-                        date_col = None
-                        for col in df_upload.columns:
-                            if any(dk in col.lower() for dk in date_keys):
-                                date_col = col
-                                break
 
                         # Replace Dropdown (Selectbox) with Radio Buttons
                         col_name = st.radio(
@@ -371,7 +385,11 @@ with tab2:
                             with stat_col2:
                                 st.metric("Ort. Yorum Boyu", f"{int(avg_len)} krk")
                             with stat_col3:
-                                st.metric("Satir Sayisi", len(df_upload))
+                                meta_status = []
+                                if date_col: meta_status.append("📅 Tarih")
+                                if rate_col: meta_status.append("⭐ Puan")
+                                st.write("**Bulunan Ek Veriler:**")
+                                st.write(", ".join(meta_status) if meta_status else "Yok")
 
                             # Pre-filter logic
                             def is_valid_comment(text):
@@ -386,6 +404,8 @@ with tab2:
                             for _, row in df_upload.iterrows():
                                 if pd.notnull(row[col_name]) and is_valid_comment(row[col_name]):
                                     entry = {"text": str(row[col_name]).strip()}
+                                    
+                                    # Capture Date
                                     if date_col and pd.notnull(row[date_col]):
                                         dt_val = row[date_col]
                                         if not isinstance(dt_val, (int, float)):
@@ -393,6 +413,11 @@ with tab2:
                                             if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
                                                 parsed_date = parsed_date.tz_localize(None)
                                             entry["date"] = parsed_date
+                                    
+                                    # Capture Rating
+                                    if rate_col and pd.notnull(row[rate_col]):
+                                        entry["rating"] = str(row[rate_col])
+                                        
                                     all_comments.append(entry)
                                     valid_in_file += 1
                                     
@@ -599,7 +624,8 @@ if st.button("Analizini Yap", use_container_width=True):
             bulk_results.append({
                 "No": i + 1, "Yorum": comment, "Baskın Duygu": verdict,
                 "Olumlu %": f"{res['olumlu']:.2%}", "İstek/Görüş %": f"{res['istek_gorus']:.2%}", "Olumsuz %": f"{res['olumsuz']:.2%}",
-                "Tarih": date
+                "Tarih": date,
+                "Puan": results_df.iloc[i].get('rating', None) if 'rating' in results_df.columns else None
             })
             progress_bar.progress((i + 1) / len(comments_to_analyze))
 
@@ -789,17 +815,20 @@ if "bulk_results" in st.session_state:
             if highlight:
                 cls = "neon-pos" if sentiment == "Olumlu" else ("neon-neg" if sentiment == "Olumsuz" else "neon-neu")
             
-            # Format date
-            date_info = ""
+            # Format extra info (Date & Rating)
+            extra_info = ""
             if "Tarih" in row and pd.notnull(row["Tarih"]):
                 try:
                     d = pd.to_datetime(row["Tarih"])
-                    date_info = f" | 📅 {d.strftime('%d-%m-%Y')}"
+                    extra_info += f" | 📅 {d.strftime('%d-%m-%Y')}"
                 except: pass
+            
+            if "Puan" in row and pd.notnull(row["Puan"]):
+                extra_info += f" | ⭐ {row['Puan']}"
 
             st.markdown(f"""
             <div class="{cls}">
-                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}{date_info}</span><br>
+                <span style="font-size: 0.8em; color: #aaa;">#{row['No']} | {sentiment}{extra_info}</span><br>
                 {row['Yorum']}
             </div>
             """, unsafe_allow_html=True)
