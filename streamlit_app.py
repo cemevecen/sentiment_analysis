@@ -2006,67 +2006,36 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- IRONCLAD UNIFIED TRAY (Native + CSS Overlays) ---
+        # --- ROBUST BIG CARDS UNIFIED TRAY ---
         import base64
         import json
         
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_").replace(":", "_")
         excel_filename = image_name.replace(".png", ".xlsx")
         
-        # 1. Inject CSS and Parent Bridge (Zero Large Data Leakage)
-        st.markdown(f"""
+        # 1. Background Logic inside an invisible component (Guaranteed to run, no leaks)
+        import streamlit.components.v1 as components
+        components.html(f"""
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-            <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 14px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: sans-serif; white-space: nowrap;">
-                <span id="uMsg">Hazırlanıyor...</span>
-            </div>
-            <style>
-                /* Unified Container Styling */
-                [data-testid="stHorizontalBlock"] {{
-                    background: #F8FAFC;
-                    padding: 15px;
-                    border-radius: 20px;
-                    border: 1px solid #E2E8F0;
-                    margin: 20px 0;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }}
-                /* Style all buttons and links in columns to be 48x48 square icons */
-                div[data-testid="stColumn"] button, 
-                div[data-testid="stColumn"] [data-testid="stMarkdownContainer"] a {{
-                    width: 48px !important;
-                    height: 48px !important;
-                    min-height: 48px !important;
-                    padding: 0 !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    border-radius: 12px !important;
-                    border: 1px solid #E2E8F0 !important;
-                    background: white !important;
-                    color: inherit !important;
-                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                    text-decoration: none !important;
-                }}
-                div[data-testid="stColumn"] button:hover, 
-                div[data-testid="stColumn"] [data-testid="stMarkdownContainer"] a:hover {{
-                    transform: translateY(-3px) !important;
-                    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
-                    border-color: #CBD5E1 !important;
-                }}
-                /* Hide native button text to allow SVG overlays */
-                div[data-testid="stColumn"] button p {{ display: none !important; }}
-                
-                /* Icon Colors & Overlay Logic */
-                .wa-svg {{ fill: #25D366; }} .li-svg {{ fill: #0077B5; }} .x-svg {{ fill: #000000; }}
-                .tg-svg {{ fill: #0088CC; }} .mail-svg {{ fill: #D44638; }}
-                .xl-svg {{ fill: #1D6F42; }} .pdf-svg {{ fill: #F4A261; }} .png-svg {{ fill: #6366F1; }}
-            </style>
             <script>
+                // Add Notification UI dynamically to parent body
+                if (!window.parent.document.getElementById('uNotif')) {{
+                    const div = window.parent.document.createElement('div');
+                    div.id = 'uNotif';
+                    div.innerHTML = '<span id="uMsg">Hazırlanıyor...</span>';
+                    Object.assign(div.style, {{
+                        position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%) translateY(-20px) scale(0.9)',
+                        background: '#10B981', color: 'white', padding: '14px 28px', borderRadius: '12px', fontWeight: '700',
+                        opacity: '0', transition: 'all 0.4s cubic-bezier(0.19, 1, 0.22, 1)', zIndex: '9999999',
+                        boxShadow: '0 15px 30px rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', gap: '10px',
+                        pointerEvents: 'none', fontFamily: '"Poppins", sans-serif', whiteSpace: 'nowrap'
+                    }});
+                    window.parent.document.body.appendChild(div);
+                }}
+
                 window.parent.notifyBridge = function(msg) {{
-                    const n = document.getElementById('uNotif');
-                    const m = document.getElementById('uMsg');
+                    const n = window.parent.document.getElementById('uNotif');
+                    const m = window.parent.document.getElementById('uMsg');
                     if(n && m) {{
                         m.innerText = msg; n.style.opacity = '1';
                         n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
@@ -2076,63 +2045,101 @@ if "bulk_results" in st.session_state:
                         }}, 3000);
                     }}
                 }};
+                
                 window.parent.triggerExport = function(type) {{
-                    if(type === 'pdf') window.print();
+                    if(type === 'pdf') window.parent.print();
                     if(type === 'png') {{
-                        const target = document.getElementById('nlp-report-card');
+                        const target = window.parent.document.getElementById('nlp-report-card');
                         if(!target) return;
                         window.parent.notifyBridge("Görsel Hazırlanıyor... ⏳");
-                        html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF' }}).then(canvas => {{
+                        window.html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
                             const link = document.createElement('a');
                             link.download = "{image_name}";
                             link.href = canvas.toDataURL('image/png');
                             link.click();
                             window.parent.notifyBridge("İndirme Başlatıldı! ⬇️");
-                        }});
+                        }}).catch(e => console.error(e));
                     }}
                 }};
             </script>
-        """, unsafe_allow_html=True)
+        """, height=0)
 
-        # 2. Render 8 Columns (Using Inline SVGs for 100% Reliability)
-        cols = st.columns(8)
-        
-        # Inline SVG Library
-        svgs = {
-            "wa": '<svg viewBox="0 0 448 512" width="22" height="22" class="wa-svg"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.4-8.6-44.6-27.5-16.5-14.7-27.6-32.8-30.8-38.4-3.2-5.6-.3-8.6 2.5-11.4 2.5-2.5 5.5-6.4 8.3-9.7 2.8-3.3 3.8-5.7 5.7-9.4 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.5 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.5 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>',
-            "li": '<svg viewBox="0 0 448 512" width="20" height="20" class="li-svg"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5-17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>',
-            "x": '<svg viewBox="0 0 512 512" width="18" height="18" class="x-svg"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg>',
-            "tg": '<svg viewBox="0 0 496 512" width="20" height="20" class="tg-svg"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm121.8 169.9l-40.7 191.8c-3 13.6-11.1 16.9-22.4 10.5l-62-45.7-29.9 28.8c-3.3 3.3-6.1 6.1-12.5 6.1l4.4-63.1 114.9-103.8c5-4.4-1.1-6.9-7.7-2.5l-142 89.4-61.2-19.1c-13.3-4.2-13.6-13.3 2.8-19.7l239.1-92.2c11.1-4 20.8 2.7 17.2 19.5z"/></svg>',
-            "mail": '<svg viewBox="0 0 512 512" width="20" height="20" class="mail-svg"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>',
-            "xl": '<svg viewBox="0 0 384 512" width="20" height="20" class="xl-svg"><path d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM155.7 250.2L192 302.1l36.3-51.9c4.4-6.3 13-7.8 19.2-3.4s7.8 13 3.4 19.2L210.9 320l40.1 57.3c4.4 6.3 2.8 14.8-3.4 19.2s-14.8 2.8-19.2-3.4L192 337.9l-36.3 51.9c-4.4 6.3-13 7.8-19.2 3.4s-7.8-13-3.4-19.2L173.1 320l-40.1-57.3c-4.4-6.3-2.8-14.8 3.4-19.2s14.8-2.8 19.2 3.4z"/></svg>',
-            "pdf": '<svg viewBox="0 0 512 512" width="20" height="20" class="pdf-svg"><path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V288H216c-13.3 0-24 10.7-24 24s10.7 24 24 24H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128zM176 352h32c30.9 0 56 25.1 56 56s-25.1 56-56 56H192v32c0 13.3-10.7 24-24 24s-24-10.7-24-24V376c0-13.3 10.7-24 24-24zm32 64h-16v-16h16c4.4 0 8 3.6 8 8s-3.6 8-8 8z"/></svg>',
-            "png": '<svg viewBox="0 0 512 512" width="20" height="20" class="png-svg"><path d="M448 80c8.8 0 16 7.2 16 16V415.8l-5-6.5-136-176c-4.5-5.9-11.6-9.3-19-9.3s-14.4 3.4-19 9.3L202 340.7l-30.5-42.7C167 291.7 159.8 288 152 288s-15 3.7-19.5 10.1l-80 112L48 416.3V96c0-8.8 7.2-16 16-16H448zM64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zm80 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/></svg>'
-        }
+        # 2. Render the UI
+        share_ui = textwrap.dedent(f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+            <style>
+                .u-tray {{ display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 20px 0; }}
+                .u-btn {{
+                    width: 48px; height: 48px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
+                    display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
+                    transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
+                }}
+                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; color: #1E293B; }}
+                .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
+                .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
+                
+                .dl-main-btn {{
+                    width: 100%; max-width: 600px; margin: 0 auto; min-width: 280px; min-height: 50px; background: #5a67d8; color: #FFFFFF; 
+                    border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; 
+                    box-shadow: 0 4px 12px rgba(90, 103, 216, 0.3); transition: all 0.2s;
+                    display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Poppins', sans-serif;
+                }}
+                .dl-main-btn:hover {{ background: #4c51bf; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(90, 103, 216, 0.4); }}
+                
+                /* Make standard download button green! */
+                div[data-testid="stDownloadButton"] button {{
+                    background-color: #5CB85C !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 12px !important;
+                    height: 50px !important;
+                    font-weight: 600 !important;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+                    transition: all 0.2s !important;
+                }}
+                div[data-testid="stDownloadButton"] button:hover {{
+                    background-color: #4cae4c !important;
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
+                }}
+                div[data-testid="stDownloadButton"] button p {{
+                    color: white !important;
+                }}
+            </style>
 
-        # Social links (Markdown)
-        with cols[0]: st.markdown(f'<a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" title="WhatsApp">{svgs["wa"]}</a>', unsafe_allow_html=True)
-        with cols[1]: st.markdown(f'<a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" title="LinkedIn">{svgs["li"]}</a>', unsafe_allow_html=True)
-        with cols[2]: st.markdown(f'<a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" title="X (Twitter)">{svgs["x"]}</a>', unsafe_allow_html=True)
-        with cols[3]: st.markdown(f'<a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" title="Telegram">{svgs["tg"]}</a>', unsafe_allow_html=True)
-        with cols[4]: st.markdown(f'<a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" title="E-Posta">{svgs["mail"]}</a>', unsafe_allow_html=True)
-        
-        # Excel (Native - No Large Data Leakage)
-        with cols[5]: 
-            st.download_button(label="XL", data=output.getvalue(), file_name=excel_filename, key="btn_xl")
-            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;">{svgs["xl"]}</div>', unsafe_allow_html=True)
+            <div class="u-tray">
+                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa"><i class="fa-brands fa-whatsapp"></i></a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x"><i class="fa-brands fa-x-twitter"></i></a>
+                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg"><i class="fa-brands fa-telegram"></i></a>
+                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail"><i class="fa-solid fa-envelope"></i></a>
+            </div>
+            
+            <div style="max-width: 600px; margin: 15px auto; padding: 0 10px;">
+                <button class="dl-main-btn" onclick="window.parent.triggerExport('png')">
+                    <i class="fa-solid fa-camera"></i> 📷 Kartı PNG Görseli Olarak İndir
+                </button>
+            </div>
+        """).strip()
+        st.markdown(share_ui, unsafe_allow_html=True)
 
-        # PDF & PNG (Native)
-        with cols[6]:
-            if st.button("PDF", key="btn_pdf"): st.markdown('<script>window.parent.triggerExport("pdf")</script>', unsafe_allow_html=True)
-            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;">{svgs["pdf"]}</div>', unsafe_allow_html=True)
-        with cols[7]:
-            if st.button("PNG", key="btn_png"): st.markdown('<script>window.parent.triggerExport("png")</script>', unsafe_allow_html=True)
-            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;">{svgs["png"]}</div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        btn_cols = st.columns(2)
+        with btn_cols[0]:
+            st.download_button("Sonuçları Excel Olarak İndir", output.getvalue(), excel_filename, key="xl_dl", use_container_width=True)
+        with btn_cols[1]:
+            components.html(f"""
+                <style>body {{ margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }}</style>
+                <button onclick='window.parent.print()' style='width: 100%; height: 50px; background: #F4A261; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: "Poppins", sans-serif;'>
+                    Raporu PDF Olarak İndir / Yazdır
+                </button>
+            """, height=53)
                     
     except Exception as e:
         st.error(f"Paylaşım sistemi hatası: {e}")
 
 # Footer
+
 st.divider()
 st.caption("Geliştiren: ivicin")
 
