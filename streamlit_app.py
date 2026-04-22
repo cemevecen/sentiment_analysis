@@ -1044,36 +1044,38 @@ if "bulk_results" in st.session_state:
                 dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
                 dist_trend = dist_trend.sort_values(["Grup", "Puan_val"], ascending=[True, True])
 
-                fig_dist = px.bar(dist_trend, x="Grup_Label", y="Oy Sayısı", color="Puan_Label",
-                                 title=title_txt,
-                                 color_discrete_map={
-                                     "1 Yıldız": "#08306b",
-                                     "2 Yıldız": "#08519c",
-                                     "3 Yıldız": "#2171b5",
-                                     "4 Yıldız": "#6baed6",
-                                     "5 Yıldız": "#deebf7"
-                                 },
-                                 category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]},
-                                 labels={"Puan_Label": "", "Grup_Label": "Zaman", "Oy Sayısı": "Sayı"})
+                # Spectacular 3D Chart
+                fig_dist = px.scatter_3d(dist_trend, 
+                                        x="Grup_Label", 
+                                        y="Puan_val", 
+                                        z="Oy Sayısı",
+                                        color="Puan_Label",
+                                        size="Oy Sayısı",
+                                        title=f"3D {title_txt}",
+                                        labels={"Grup_Label": "Zaman", "Puan_val": "Yıldız Sayısı", "Oy Sayısı": "Yorum Miktarı", "Puan_Label": "Puan"},
+                                        color_discrete_map={
+                                            "1 Yıldız": "#08306b",
+                                            "2 Yıldız": "#08519c",
+                                            "3 Yıldız": "#2171b5",
+                                            "4 Yıldız": "#6baed6",
+                                            "5 Yıldız": "#deebf7"
+                                        },
+                                        opacity=0.8,
+                                        template="plotly_white")
                 
                 fig_dist.update_layout(
-                    height=450, 
-                    margin={"t": 60, "b": 100, "l": 10, "r": 10},
-                    xaxis_title="",
-                    yaxis_title="Yorum / Puan Sayısı",
-                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
-                    barmode='stack',
-                    bargap=0.3,
-                    template="plotly_white",
+                    height=700,
+                    margin={"t": 50, "b": 10, "l": 10, "r": 10},
                     paper_bgcolor="#F0F9FF",
-                    plot_bgcolor="#F0F9FF",
                     font={"color": "#000000", "family": "Poppins, sans-serif"},
-                    title_font={"color": "#000000", "size": 18}
+                    scene=dict(
+                        xaxis=dict(backgroundcolor="#F0F9FF", gridcolor="white", showbackground=True, zerolinecolor="white", tickfont=dict(color="#000000"), title_font=dict(color="#000000")),
+                        yaxis=dict(backgroundcolor="#F0F9FF", gridcolor="white", showbackground=True, zerolinecolor="white", tickfont=dict(color="#000000"), title_font=dict(color="#000000")),
+                        zaxis=dict(backgroundcolor="#F0F9FF", gridcolor="white", showbackground=True, zerolinecolor="white", tickfont=dict(color="#000000"), title_font=dict(color="#000000")),
+                    ),
+                    legend={"orientation": "h", "yanchor": "bottom", "y": 1, "xanchor": "right", "x": 1, "font": {"color": "#000000"}}
                 )
                 
-                # Force categorical X axis and black ticks
-                fig_dist.update_xaxes(type='category', tickangle=-45, tickfont={"color": "#000000"}, title_font={"color": "#000000"})
-                fig_dist.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
                 st.plotly_chart(fig_dist, use_container_width=True)
         except Exception as e:
             st.error(f"Grafik oluşturma hatası: {e}")
