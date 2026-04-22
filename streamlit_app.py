@@ -1476,7 +1476,37 @@ def clear_current_tab_data():
     st.session_state.bulk_results = None
     st.session_state.all_fetched_pool = []
 
-tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
+# ── UST KATEGORI SECIMI ──────────────────────────────────────────
+st.markdown('<div class="no-print">', unsafe_allow_html=True)
+
+CATEGORIES = {
+    "📱 Mobil Uygulama": ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"],
+    "🏢 Google İşletme": ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"],
+    "🛒 Satıcı Profili": ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"],
+}
+
+if "active_category" not in st.session_state:
+    st.session_state.active_category = "📱 Mobil Uygulama"
+
+active_category = st.radio(
+    "Kategori",
+    list(CATEGORIES.keys()),
+    label_visibility="collapsed",
+    horizontal=True,
+    key="active_category",
+)
+
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div style="margin-top: 6px;"></div>', unsafe_allow_html=True)
+
+# ── ALT SEKMELER (mevcut calisir yapi aynen korunuyor) ────────────
+tabs = CATEGORIES[active_category]
+
+# Google Isletme ve Satici Profili henuz hazir degil — uyari goster, sekmeleri gizle
+if active_category != "📱 Mobil Uygulama":
+    st.info(f"**{active_category}** modulu yakinda aktif olacak. Simdilik Mobil Uygulama analizini kullanabilirsiniz.")
+    st.stop()
+
 st.markdown('<div class="no-print">', unsafe_allow_html=True)
 active_tab = st.radio(
     "Navigasyon",
