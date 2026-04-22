@@ -581,8 +581,8 @@ with tab2:
                                 st.metric("Ort. Yorum Boyu", f"{int(avg_len)} Karakter")
                             with stat_col3:
                                 meta_status = []
-                                if date_col: meta_status.append("📅 Tarih")
-                                if rate_col: meta_status.append("⭐ Puan")
+                                if date_col: meta_status.append("Tarih")
+                                if rate_col: meta_status.append("Puan")
                                 st.write("**Bulunan Ek Veriler:**")
                                 st.write(", ".join(meta_status) if meta_status else "Yok")
 
@@ -630,7 +630,7 @@ with tab2:
 # ── Analiz Yapılandırması ──────────────────────
 if comments_to_analyze:
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("### ⚙️ Analiz Yapılandırması")
+    st.markdown("### Analiz Yapılandırması")
     
     n = len(comments_to_analyze)
 
@@ -866,7 +866,7 @@ if st.button("Analizini Yap", use_container_width=True):
 
         
         st.session_state.bulk_results = bulk_results
-        status_text.success("✅ Analiz Başarıyla Tamamlandı!")
+        status_text.success("Analiz Başarıyla Tamamlandı!")
         # Sayfadan ayrılma uyarısını kaldır
         components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
 
@@ -935,7 +935,7 @@ if "bulk_results" in st.session_state:
 """, unsafe_allow_html=True)
 
     st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
-    st.markdown("### 📊 Analiz Özeti")
+    st.markdown("### Analiz Özeti")
     
     analysis_df = df[df["Baskın Duygu"] != "—"].copy()
     counts = analysis_df["Baskın Duygu"].value_counts()
@@ -981,7 +981,7 @@ if "bulk_results" in st.session_state:
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_summary:
-        st.write("#### � Yapay Zeka Görüsü")
+        st.write("#### Yapay Zeka Görüşü")
         if counts.idxmax() == "Olumlu":
             st.success(f"Topluluk genel olarak **Olumlu** bir tavır sergiliyor. ({m_olumlu} yorum)")
         elif counts.idxmax() == "Olumsuz":
@@ -998,7 +998,7 @@ if "bulk_results" in st.session_state:
         # UI for Frequency Selection
         g_col1, g_col2 = st.columns([2, 1])
         with g_col1:
-            st.write("#### 📊 Puan Dağılımı Trendi")
+            st.write("#### Puan Dağılımı Trendi")
         with g_col2:
             freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=2, horizontal=True, key="puan_freq_sel")
 
@@ -1149,7 +1149,7 @@ if "bulk_results" in st.session_state:
             if "Tarih" in row and pd.notnull(row["Tarih"]):
                 try: 
                     d = pd.to_datetime(row["Tarih"])
-                    date_tag = f"📅 {d.strftime('%d-%m-%Y')}"
+                    date_tag = f"Tarih: {d.strftime('%d-%m-%Y')}"
                 except: pass
 
             st.markdown(f"""
@@ -1163,7 +1163,7 @@ if "bulk_results" in st.session_state:
             """, unsafe_allow_html=True)
 
     # --- Tabs and Unified Display ---
-    st.write("### 💬 Yorum Listesi")
+    st.write("### Yorum Listesi")
     
     t_pos = counts.get('Olumlu', 0)
     t_neg = counts.get('Olumsuz', 0)
