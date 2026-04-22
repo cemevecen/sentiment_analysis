@@ -1341,7 +1341,16 @@ with tab1:
             if store_url.strip():
                 st.warning("Geçerli bir Play Store veya App Store linki bulunamadı.")
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
-             pass
+            # Cache'den geliyor — geçmişe ekle
+            current_url = store_url.strip()
+            current_name = st.session_state.get("detected_app_name", current_url)
+            existing_urls = [h["url"] if isinstance(h, dict) else h for h in st.session_state.url_history]
+            if current_url and current_url not in existing_urls:
+                st.session_state.url_history.insert(0, {
+                    "url": current_url,
+                    "name": current_name
+                })
+                st.session_state.url_history = st.session_state.url_history[:5]
         else:
             if "bulk_results" in st.session_state:
                 del st.session_state.bulk_results
@@ -2899,7 +2908,7 @@ if "bulk_results" in st.session_state:
                     transform="rotate(-90 70 70)"/>
                 <!-- Merkez -->
                 <text x="70" y="75" text-anchor="middle"
-                    style="font-size:21px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
+                    style="font-size:14px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
                     {pos_pct}%
                 </text>
             </svg>
