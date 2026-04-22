@@ -12,6 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 import requests
+import urllib.parse
 from typing import List, Dict, Any, Optional, Union, cast
 from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
@@ -1932,7 +1933,6 @@ if "bulk_results" in st.session_state:
         summary_text += f"Sen de uygulamanın analizini yap: [tıkla]({app_host})\n"
         summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
         
-        import urllib.parse
         encoded_text = urllib.parse.quote(summary_text)
         
         share_data = [
