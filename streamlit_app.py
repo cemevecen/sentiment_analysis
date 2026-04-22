@@ -185,7 +185,7 @@ st.markdown("""
 # Custom Header
 st.markdown(f"""
     <div class="header-container">
-        <div class="header-title">🧠 AI Yorum Analizi</div>
+        <div class="header-title">AI Yorum Analizi</div>
         <div class="header-desc">
             En gelişmiş yapay zeka modelleri ile yorumlarınızdaki derin duyguları ve istekleri saniyeler içinde çözümler.
         </div>
