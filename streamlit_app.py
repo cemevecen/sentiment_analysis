@@ -1726,14 +1726,21 @@ if active_tab == "Mağaza Linki":
                         
                         # Display select button as chip
                         with col_btn:
-                            # Chip styling for select button - override global styles
+                            # Chip styling for select button - ONLY affect select_app buttons, NOT platform buttons
                             st.markdown("""
                             <style>
-                            [data-testid="stButton"] {
+                            /* Ensure platform buttons stay wide (56px height, full width) */
+                            [data-testid="stButton"] > button[key*="platform_"] {
+                                height: 56px !important;
+                                min-height: 56px !important;
+                                width: 100% !important;
+                                min-width: 100% !important;
+                            }
+                            
+                            /* Only style select_app buttons as chips */
+                            [data-testid="stButton"] > button[key*="select_app"] {
                                 float: right;
                                 margin-top: 0px !important;
-                            }
-                            [data-testid="stButton"] button {
                                 padding: 3px 12px !important;
                                 border-radius: 16px !important;
                                 background-color: #818CF8 !important;
@@ -1749,12 +1756,12 @@ if active_tab == "Mağaza Linki":
                                 align-items: center !important;
                                 justify-content: center !important;
                             }
-                            [data-testid="stButton"] button > span {
+                            [data-testid="stButton"] > button[key*="select_app"] > span {
                                 line-height: 1 !important;
                                 display: flex !important;
                                 align-items: center !important;
                             }
-                            [data-testid="stButton"] button:hover {
+                            [data-testid="stButton"] > button[key*="select_app"]:hover {
                                 background-color: #6366F1 !important;
                             }
                             </style>
