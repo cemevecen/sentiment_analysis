@@ -816,6 +816,25 @@ st.markdown("""
     [data-testid="stButton"] {
         width: 100% !important;
     }
+    /* Yeniden çek butonu — sabit 100x26 */
+    [data-testid="stButton"]:has(button[data-testid="baseButton-secondary"][key="refresh_btn"]),
+    [data-testid="stElementContainer"]:has(> [data-testid="stButton"] button[key="refresh_btn"]) {
+        width: 100px !important;
+        min-width: 100px !important;
+        max-width: 100px !important;
+    }
+    [data-testid="stButton"] button[key="refresh_btn"] {
+        width: 100px !important;
+        min-width: 100px !important;
+        max-width: 100px !important;
+        height: 26px !important;
+        min-height: 26px !important;
+        font-size: 0.72rem !important;
+        padding: 0 8px !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+    }
+
     .stButton > button[kind="primary"] {
         background-color: #F4A261 !important; /* Pastel Orange */
         color: #FFFFFF !important;
@@ -846,25 +865,6 @@ st.markdown("""
         transform: scale(1.02);
     }
 
-/* Mini yenile butonu — zarif ve küçük */
-    .mini-refresh [data-testid="stButton"] { width: auto !important; }
-    .mini-refresh button {
-        height: 18px !important;
-        font-size: 0.62rem !important;
-        padding: 0 8px !important;
-        width: auto !important;
-        min-width: 0 !important;
-        border-radius: 10px !important;
-        background: transparent !important;
-        border: 1px solid #818CF8 !important;
-        color: #6366F1 !important;
-        box-shadow: none !important;
-        line-height: 1 !important;
-    }
-    .mini-refresh button:hover {
-        background: #EEF2FF !important;
-        transform: none !important;
-    }
 
 
     /* File Uploader Button - Restored & Refined */
@@ -1291,8 +1291,8 @@ with tab1:
                 </script>
             """, height=60, scrolling=False)
 
-        # 5. Yenile butonu — sağa hizalı, küçük (3/5 oranı)
-        _, col_ref = st.columns([3, 2])
+        # 5. Yenile butonu — sağa hizalı, küçük (5/1 oranı)
+        _, col_ref = st.columns([5, 1])
         with col_ref:
             if st.button("↺ yeniden çek", key="refresh_btn", use_container_width=True):
                 st.session_state["_refresh_token"] = int(time.time())
