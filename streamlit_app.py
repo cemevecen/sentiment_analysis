@@ -1876,84 +1876,60 @@ with tab4:
 
         for ci, (app_nm, data) in enumerate(results_c.items()):
             with depth_cols[ci]:
-                _acc   = app_colors_sum[ci % len(app_colors_sum)]
-                _pos   = data["pos_pct"]
-                _neg   = data["neg_pct"]
-                _neu   = data["neu_pct"]
-                _sc    = data["score"]
-                _tot   = data["total"]
+                _acc = app_colors_sum[ci % len(app_colors_sum)]
+                _pos = data["pos_pct"]
+                _neg = data["neg_pct"]
+                _neu = data["neu_pct"]
+                _sc  = data["score"]
+                _tot = data["total"]
 
-                if _pos >= 70:
-                    _strength = "Kullanıcı tabanının büyük çoğunluğu memnun. Sadakat ve önerme oranı yüksek."
-                elif _pos >= 55:
-                    _strength = "Kullanıcıların çoğunluğu olumlu deneyim bildiriyor. Temel işlevler beğeni topluyor."
-                else:
-                    _strength = "Olumlu geri bildirimler mevcut ancak baskın değil."
-
-                if _neg >= 50:
-                    _weakness = "Olumsuz yorumlar baskın. Teknik sorunlar veya beklenti karşılanmaması kritik risk."
-                elif _neg >= 30:
-                    _weakness = "Kayda değer olumsuz geri bildirim var. Teknik sorunlar veya UX eksiklikleri gündemde."
-                else:
-                    _weakness = "Olumsuz yorumlar sınırlı. Mevcut şikayetler izole sorunlar niteliğinde."
-
-                if _neu >= 20:
-                    _req = "Kullanıcıların önemli bir kısmı yeni özellik talep ediyor. Ürün geliştirme için değerli veri."
-                elif _neu >= 10:
-                    _req = "Orta düzeyde özellik talebi mevcut. Belirli istekler öne çıkıyor."
-                else:
-                    _req = "İstek yorumları düşük oranda. Kullanıcılar mevcut yapıdan genel olarak memnun görünüyor."
-
+                # Ton
                 if _sc >= 75:
-                    _vtext = "Güçlü"
-                    _vcol  = "#10b981"
+                    _tone = "güçlü bir kullanıcı memnuniyeti tablosuna sahip"
                 elif _sc >= 50:
-                    _vtext = "Orta"
-                    _vcol  = "#f59e0b"
+                    _tone = "orta düzeyde bir kullanıcı memnuniyeti sergilemekte"
                 else:
-                    _vtext = "Zayıf"
-                    _vcol  = "#f43f5e"
+                    _tone = "ciddi kullanıcı memnuniyeti sorunlarıyla karşı karşıya"
+
+                # Olumlu
+                if _pos >= 70:
+                    _pos_txt = f"Kullanıcıların %{_pos}'i uygulamadan memnun olup olumlu deneyimlerini aktif biçimde paylaşıyor; bu oran uygulamanın güçlü bir sadakat tabanı oluşturduğuna işaret ediyor."
+                elif _pos >= 55:
+                    _pos_txt = f"Kullanıcıların %{_pos}'i olumlu geri bildirim bırakıyor; temel işlevler genel itibarıyla beğeni toplamakta ve kullanıcı kitlesi uygulamayı tercih etmeye devam ediyor."
+                else:
+                    _pos_txt = f"Olumlu geri bildirimler %{_pos} oranında kalıyor; mevcut deneyim bazı kullanıcıları memnun etse de geniş kitleye hitap konusunda gelişime ihtiyaç var."
+
+                # Olumsuz
+                if _neg >= 50:
+                    _neg_txt = f"Öte yandan yorumların %{_neg}'i olumsuz nitelik taşıyor; teknik aksaklıklar ve karşılanmayan beklentiler ön plana çıkıyor, bu durum öncelikli müdahale gerektiriyor."
+                elif _neg >= 30:
+                    _neg_txt = f"Yorumların %{_neg}'i olumsuz olup teknik sorunlar veya kullanıcı deneyimi eksiklikleri bu şikayetlerin merkezinde yer alıyor; geliştirici ekibin bu alanlara odaklanması öneriliyor."
+                else:
+                    _neg_txt = f"Olumsuz yorumlar %{_neg} gibi sınırlı bir oranda seyrediyor; mevcut şikayetler izole nitelikte olup genel deneyimi belirgin biçimde etkilemiyor."
+
+                # İstek
+                if _neu >= 20:
+                    _neu_txt = f"Kullanıcıların %{_neu}'i istek ve görüş bildiriyor; yeni özellik talepleri ürün yol haritası için değerli bir kaynak oluşturuyor."
+                elif _neu >= 10:
+                    _neu_txt = f"Yorumların %{_neu}'i istek ve öneri içeriyor; öne çıkan belirli talepler önceliklendirildiğinde kullanıcı deneyimi iyileştirilebilir."
+                else:
+                    _neu_txt = f"İstek ve görüş yorumları %{_neu} gibi düşük bir orana karşılık geliyor; bu durum mevcut özellik setinin büyük ölçüde yeterli bulunduğunu gösteriyor."
+
+                _paragraph = (
+                    f"{app_nm}, {_tot} yorum analizi sonucunda {_tone}. "
+                    f"{_pos_txt} "
+                    f"{_neg_txt} "
+                    f"{_neu_txt} "
+                    f"Genel deneyim skoru {_sc}/100 olarak hesaplanmıştır."
+                )
 
                 _html = (
                     "<div style='background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;'>"
                     "<div style='background:" + _acc + ";padding:8px 14px;'>"
                     "<div style='font-size:0.72rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:0.8px;'>Duygu Derinlik Analizi</div>"
                     "</div>"
-                    "<div style='padding:14px;display:flex;flex-direction:column;gap:10px;'>"
-                    "<div style='display:flex;align-items:center;justify-content:space-between;'>"
-                    "<span style='font-size:0.7rem;color:#94A3B8;font-weight:700;text-transform:uppercase;'>Genel Karar</span>"
-                    "<span style='font-size:0.85rem;font-weight:800;color:" + _vcol + ";'>" + _vtext + " · " + str(_sc) + "/100</span>"
-                    "</div>"
-                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #10b981;'>"
-                    "<div style='font-size:0.65rem;color:#10b981;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>Güçlü Yön</div>"
-                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _strength + "</div>"
-                    "</div>"
-                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #f43f5e;'>"
-                    "<div style='font-size:0.65rem;color:#f43f5e;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>Zayıf Yön</div>"
-                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _weakness + "</div>"
-                    "</div>"
-                    "<div style='background:white;border-radius:8px;padding:10px 12px;border-left:3px solid #818cf8;'>"
-                    "<div style='font-size:0.65rem;color:#818cf8;font-weight:700;text-transform:uppercase;margin-bottom:4px;'>İstek & Görüş</div>"
-                    "<div style='font-size:0.8rem;color:#334155;line-height:1.55;'>" + _req + "</div>"
-                    "</div>"
-                    "<div style='display:flex;gap:6px;'>"
-                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
-                    "<div style='font-size:1rem;font-weight:800;color:#10b981;'>" + str(_pos) + "%</div>"
-                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Olumlu</div>"
-                    "</div>"
-                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
-                    "<div style='font-size:1rem;font-weight:800;color:#f43f5e;'>" + str(_neg) + "%</div>"
-                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Olumsuz</div>"
-                    "</div>"
-                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
-                    "<div style='font-size:1rem;font-weight:800;color:#818cf8;'>" + str(_neu) + "%</div>"
-                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Görüş</div>"
-                    "</div>"
-                    "<div style='flex:1;background:white;border-radius:8px;padding:8px;text-align:center;border:1px solid #E2E8F0;'>"
-                    "<div style='font-size:1rem;font-weight:800;color:" + _acc + ";'>" + str(_tot) + "</div>"
-                    "<div style='font-size:0.58rem;color:#94A3B8;font-weight:600;'>Yorum</div>"
-                    "</div>"
-                    "</div>"
+                    "<div style='padding:16px;'>"
+                    "<p style='font-size:0.85rem;color:#334155;line-height:1.75;margin:0;'>" + _paragraph + "</p>"
                     "</div>"
                     "</div>"
                 )
