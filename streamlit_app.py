@@ -1707,21 +1707,26 @@ if active_tab == "Mağaza Linki":
                             # Styling ONLY for select_app buttons - NO platform button styles here
                             st.markdown("""
                             <style>
+                            /* Container for select_app button - make it compact */
+                            [data-testid="stButton"]:has(> button[key*="select_app"]) {
+                                width: auto !important;
+                                display: inline-block !important;
+                            }
+                            
                             /* Only style select_app buttons as material design chips */
                             [data-testid="stButton"] > button[key*="select_app"] {
-                                float: right;
-                                margin-top: 0px !important;
-                                padding: 4px 10px !important;
-                                border-radius: 20px !important;
+                                width: auto !important;
+                                padding: 3px 9px !important;
+                                border-radius: 16px !important;
                                 background-color: #818CF8 !important;
                                 color: white !important;
                                 border: none !important;
-                                font-size: 11px !important;
+                                font-size: 10px !important;
                                 font-weight: 600 !important;
                                 font-family: 'Poppins', sans-serif !important;
-                                height: 22px !important;
-                                min-height: 22px !important;
-                                line-height: 22px !important;
+                                height: 20px !important;
+                                min-height: 20px !important;
+                                line-height: 20px !important;
                                 display: inline-flex !important;
                                 align-items: center !important;
                                 justify-content: center !important;
@@ -1730,10 +1735,10 @@ if active_tab == "Mağaza Linki":
                                 line-height: 1 !important;
                                 display: flex !important;
                                 align-items: center !important;
+                                white-space: nowrap !important;
                             }
                             [data-testid="stButton"] > button[key*="select_app"]:hover {
                                 background-color: #6366F1 !important;
-                                transform: scale(1.05);
                                 transition: all 0.2s ease !important;
                             }
                             </style>
