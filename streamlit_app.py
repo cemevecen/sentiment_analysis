@@ -806,7 +806,14 @@ if "bulk_results" in st.session_state:
     # NEW: Star Rating Distribution Chart (Sütunlu ve Renkli)
     if "Puan" in df.columns and df["Puan"].notnull().any():
         st.markdown("---")
-        st.write("#### 📊 Puan Dağılımı Trendi")
+        
+        # UI for Frequency Selection
+        g_col1, g_col2 = st.columns([2, 1])
+        with g_col1:
+            st.write("#### 📊 Puan Dağılımı Trendi")
+        with g_col2:
+            freq = st.radio("Zaman Ölçeği:", ["Günlük", "Haftalık", "Aylık"], index=1, horizontal=True, key="puan_freq_sel")
+
         df_puan = df.dropna(subset=["Tarih", "Puan"]).copy()
         try:
             # Ensure ratings are integers 1-5 for clean legend
@@ -814,16 +821,26 @@ if "bulk_results" in st.session_state:
             df_puan = df_puan[(df_puan["Puan_val"] >= 1) & (df_puan["Puan_val"] <= 5)]
             
             if not df_puan.empty:
-                df_puan["Tarih"] = pd.to_datetime(df_puan["Tarih"]).dt.date
-                # Group by date and rating value
-                dist_trend = df_puan.groupby(["Tarih", "Puan_val"]).size().reset_index(name='Oy Sayısı')
-                dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
+                df_puan["Tarih_dt"] = pd.to_datetime(df_puan["Tarih"])
                 
-                # Sort for clean stacking
+                # Resample based on chosen frequency
+                if freq == "Haftalık":
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('W').apply(lambda r: r.start_time)
+                    title_txt = "Haftalık Puan Dağılımı"
+                elif freq == "Aylık":
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.to_period('M').apply(lambda r: r.start_time)
+                    title_txt = "Aylık Puan Dağılımı"
+                else:
+                    df_puan["Grup"] = df_puan["Tarih_dt"].dt.date
+                    title_txt = "Günlük Puan Dağılımı"
+
+                # Group by chosen period and rating value
+                dist_trend = df_puan.groupby(["Grup", "Puan_val"]).size().reset_index(name='Oy Sayısı')
+                dist_trend["Puan_Label"] = dist_trend["Puan_val"].apply(lambda x: f"{x} Yıldız")
                 dist_trend = dist_trend.sort_values("Puan_val", ascending=True)
 
-                fig_dist = px.bar(dist_trend, x="Tarih", y="Oy Sayısı", color="Puan_Label",
-                                 title="Günlük Puan Dağılımı",
+                fig_dist = px.bar(dist_trend, x="Grup", y="Oy Sayısı", color="Puan_Label",
+                                 title=title_txt,
                                  color_discrete_map={
                                      "1 Yıldız": "#08306b",
                                      "2 Yıldız": "#08519c",
@@ -834,12 +851,19 @@ if "bulk_results" in st.session_state:
                                  category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]})
                 
                 fig_dist.update_layout(
-                    height=350, 
-                    margin={"t": 40, "b": 20, "l": 10, "r": 10},
-                    xaxis_title="Tarih",
-                    yaxis_title="Oy Sayısı",
+                    height=450, 
+                    margin={"t": 60, "b": 20, "l": 10, "r": 10},
+                    xaxis_title="Zaman Dönemi",
+                    yaxis_title="Yorum / Puan Sayısı",
                     legend_title="Puan",
-                    barmode='stack'
+                    barmode='stack',
+                    bargap=0.1
+                )
+                
+                # Dynamic X-axis formatting
+                fig_dist.update_xaxes(
+                    tickformat="%b %Y" if freq == "Aylık" else "%d %b %y",
+                    tickangle=-45
                 )
                 st.plotly_chart(fig_dist, use_container_width=True)
         except Exception as e:
