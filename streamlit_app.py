@@ -3492,11 +3492,11 @@ if "bulk_results" in st.session_state:
                 fig_dist = px.bar(dist_trend, x="Grup_Label", y="Oy Sayısı", color="Puan_Label",
                                  title=title_txt,
                                  color_discrete_map={
-                                     "1 Yıldız": "#08306b",
-                                     "2 Yıldız": "#08519c",
-                                     "3 Yıldız": "#2171b5",
-                                     "4 Yıldız": "#6baed6",
-                                     "5 Yıldız": "#deebf7"
+                                     "1 Yıldız": "#E53E3E",
+                                     "2 Yıldız": "#F6AD55",
+                                     "3 Yıldız": "#F6E05E",
+                                     "4 Yıldız": "#68D391",
+                                     "5 Yıldız": "#2F855A"
                                  },
                                  category_orders={"Puan_Label": ["1 Yıldız", "2 Yıldız", "3 Yıldız", "4 Yıldız", "5 Yıldız"]},
                                  labels={"Puan_Label": "", "Grup_Label": "Zaman", "Oy Sayısı": "Sayı"})
@@ -3577,7 +3577,7 @@ if "bulk_results" in st.session_state:
             trend_data['Grup_str'] = trend_data['Grup'].astype(str)
             fig_trend = px.bar(trend_data, x="Grup", y="Adet", color="Baskın Duygu",
                                title=f"{chart_title_prefix} Duygu Dağılımı {title_suffix}",
-                               color_discrete_map={'Olumlu':'#2ecc71', 'Olumsuz':'#e74c3c', 'İstek/Görüş':'#3498db'},
+                               color_discrete_map={'Olumlu':'#10B981', 'Olumsuz':'#F43F5E', 'İstek/Görüş':'#818CF8'},
                                barmode='group',
                                labels={"Baskın Duygu": ""},
                                custom_data=["Grup_str", "Baskın Duygu"])
