@@ -2836,53 +2836,85 @@ if "bulk_results" in st.session_state:
     col_pie, col_summary = st.columns([1, 1])
     
     with col_pie:
-        pie_data = pd.DataFrame({"Duygu": counts.index, "Sayı": counts.values})
-        
-        order_map = {"Olumlu": 1, "Olumsuz": 2, "İstek/Görüş": 3}
-        pie_data['order'] = pie_data['Duygu'].map(order_map).fillna(4)
-        pie_data = pie_data.sort_values('order')
-        
-        color_map = {"Olumlu": "#34D399", "Olumsuz": "#FB7185", "İstek/Görüş": "#60A5FA"}
-        pie_colors = [color_map.get(d, "#94a3b8") for d in pie_data["Duygu"]]
-        
-        t_val = m_olumlu + m_olumsuz + m_istek
-        pos_pct = int((m_olumlu / t_val) * 100) if t_val > 0 else 0
-        
-        fig_pie = go.Figure(data=[go.Pie(
-            labels=pie_data["Duygu"], 
-            values=pie_data["Sayı"],
-            hole=0.82,
-            marker=dict(
-                colors=pie_colors,
-                line=dict(color='#F0F9FF', width=6)
-            ),
-            textinfo='none',
-            hoverinfo='label+percent+value',
-            direction='clockwise',
-            sort=False
-        )])
-        
-        fig_pie.update_layout(
-            annotations=[
-                dict(
-                    text=f"<span style='font-size: 3.5rem; font-weight: 800; color: #1E293B;'>{pos_pct}%</span><br><span style='font-size: 0.95rem; color: #64748B; font-weight: 700; letter-spacing: 1px;'>OLUMLU</span>",
-                    x=0.5, y=0.5,
-                    showarrow=False,
-                    align="center"
-                )
-            ],
-            height=360,
-            showlegend=True,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#000000', family="Poppins, sans-serif"),
-            legend=dict(
-                orientation="h", xanchor="center", x=0.5, y=-0.1,
-                font=dict(color="#475569", size=13)
-            ),
-            margin=dict(t=10, b=10, l=10, r=10)
-        )
-        st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
+        total_for_chart = m_olumlu + m_olumsuz + m_istek or 1
+        pos_pct = int((m_olumlu / total_for_chart) * 100)
+        neg_pct = int((m_olumsuz / total_for_chart) * 100)
+        neu_pct = 100 - pos_pct - neg_pct
+
+        # Çember çevresi (2πr)
+        r_outer, r_mid, r_inner = 54, 38, 22
+        c_outer = 2 * 3.14159 * r_outer  # ~339.3
+        c_mid   = 2 * 3.14159 * r_mid    # ~238.8
+        c_inner = 2 * 3.14159 * r_inner  # ~138.2
+
+        def arc(pct, circ):
+            filled = round(circ * pct / 100, 1)
+            gap    = round(circ - filled, 1)
+            return filled, gap
+
+        pf, pg = arc(pos_pct, c_outer)
+        nf, ng = arc(neg_pct, c_mid)
+        uf, ug = arc(neu_pct, c_inner)
+
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:20px;padding:8px 0 4px 0;">
+            <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0;">
+                <!-- Arka plan halkaları -->
+                <circle cx="70" cy="70" r="{r_outer}" fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <circle cx="70" cy="70" r="{r_mid}"   fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <circle cx="70" cy="70" r="{r_inner}" fill="none" stroke="#E2E8F0" stroke-width="10"/>
+                <!-- Olumlu -->
+                <circle cx="70" cy="70" r="{r_outer}" fill="none" stroke="#10b981" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{pf} {pg}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- Olumsuz -->
+                <circle cx="70" cy="70" r="{r_mid}" fill="none" stroke="#f43f5e" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{nf} {ng}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- İstek -->
+                <circle cx="70" cy="70" r="{r_inner}" fill="none" stroke="#818cf8" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="{uf} {ug}"
+                    transform="rotate(-90 70 70)"/>
+                <!-- Merkez -->
+                <text x="70" y="65" text-anchor="middle"
+                    style="font-size:20px;font-weight:700;fill:#1E293B;font-family:Poppins,sans-serif;">
+                    {pos_pct}%
+                </text>
+                <text x="70" y="80" text-anchor="middle"
+                    style="font-size:9px;font-weight:600;fill:#94A3B8;font-family:Poppins,sans-serif;letter-spacing:1px;">
+                    OLUMLU
+                </text>
+            </svg>
+            <!-- Legend -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#10b981;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#10b981;line-height:1.2;">{pos_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">Olumlu</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#f43f5e;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#f43f5e;line-height:1.2;">{neg_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">Olumsuz</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:4px;border-radius:2px;background:#818cf8;"></div>
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:700;color:#818cf8;line-height:1.2;">{neu_pct}%</div>
+                        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;">İstek/Görüş</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         
         total_valid = m_olumlu + m_olumsuz + m_istek
         if total_valid > 0:
