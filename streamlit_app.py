@@ -218,7 +218,8 @@ def fetch_google_play_reviews(app_id, days_limit, _progress_callback=None):
     threshold_date = now - timedelta(days=days_limit)
     total_requested_secs = (now - threshold_date).total_seconds()
     
-    if days_limit <= 30: fetch_limit = 2000
+    # For high-traffic apps (like Subway Surfers), limits need to be generous
+    if days_limit <= 30: fetch_limit = 10000
     elif days_limit <= 90: fetch_limit = 10000
     elif days_limit <= 180: fetch_limit = 25000
     else: fetch_limit = 50000
@@ -784,14 +785,21 @@ with tab1:
                             
                             st.session_state.comments_to_analyze = limited_comments
                             
-                            valid_dates = [r.get('date') for r in limited_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
-                            if valid_dates:
-                                # Cast to datetime to satisfy strict linter rules
-                                min_val = cast(datetime, min(valid_dates))
-                                max_val = cast(datetime, max(valid_dates))
-                                min_dt = min_val.strftime('%d-%m-%Y')
-                                max_dt = max_val.strftime('%d-%m-%Y')
-                                st.warning(f"Toplamda **{total_found}** yorum bulundu. İşlem güvenliği için ilk aşamada en güncel **500** tanesi analize hazırlandı. (Aralık: {min_dt} ile {max_dt})")
+                            # Analyzed Range (Top 500)
+                            v_dates_anal = [r.get('date') for r in limited_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
+                            # Total Range (Entire Pool)
+                            v_dates_pool = [r.get('date') for r in fetched_comments if r.get('date') is not None and isinstance(r.get('date'), datetime)]
+                            
+                            if v_dates_anal and v_dates_pool:
+                                pool_start = cast(datetime, min(v_dates_pool)).strftime('%d-%m-%Y')
+                                pool_end = cast(datetime, max(v_dates_pool)).strftime('%d-%m-%Y')
+                                anal_start = cast(datetime, min(v_dates_anal)).strftime('%d-%m-%Y')
+                                anal_end = cast(datetime, max(v_dates_anal)).strftime('%d-%m-%Y')
+                                
+                                st.warning(f"""
+                                    Toplamda **{total_found}** yorum bulundu (Tüm Aralık: {pool_start} - {pool_end}).
+                                    Hızlı analiz için **en güncel 500 tanesi** seçildi (Analiz Aralığı: {anal_start} - {anal_end}).
+                                """)
                         else:
                             st.session_state.comments_to_analyze = fetched_comments
                         
