@@ -115,50 +115,50 @@ def is_valid_comment(text):
 
 @st.cache_data(show_spinner=False, ttl=600)
 def get_app_store_reviews(app_id, country='tr'):
-    """Fetch reviews using App Store RSS Feed (More reliable than outdated libraries)"""
-    url = f"https://itunes.apple.com/{country}/rss/customerreviews/id={app_id}/sortBy=mostRecent/json"
+    """Fetch reviews using App Store RSS Feed (Pagination)"""
     reviews = []
     try:
-        response = requests.get(url, timeout=12)
-        if response.status_code != 200:
-            return []
+        for page in range(1, 11): # Up to 10 pages * 50 = 500 reviews
+            url = f"https://itunes.apple.com/{country}/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
+            response = requests.get(url, timeout=10)
+            if response.status_code != 200:
+                break
+                
+            data = response.json()
+            entries = data.get('feed', {}).get('entry', [])
+            if not entries: break
+                
+            # If only one entry, it's not a list
+            if isinstance(entries, dict): entries = [entries]
             
-        data = response.json()
-        entries = data.get('feed', {}).get('entry', [])
-        if not entries: return []
-            
-        # If only one entry, it's not a list
-        if isinstance(entries, dict): entries = [entries]
-        
-        # Entry[0] is often app metadata, others are reviews
-        for entry in entries:
-            # Review content check (metadata doesn't have content.label)
-            content = entry.get('content', {}).get('label')
-            if not content: continue
-            
-            updated = entry.get('updated', {}).get('label', '')
-            try:
-                r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
-                if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
-            except: r_date = None
-            
-            rating = entry.get('im:rating', {}).get('label', '0')
-            
-            reviews.append({
-                "text": content,
-                "date": r_date,
-                "rating": str(rating)
-            })
+            # Entry[0] is often app metadata on first page, content label check filters it out automatically usually
+            for entry in entries:
+                content = entry.get('content', {}).get('label')
+                if not content: continue
+                
+                updated = entry.get('updated', {}).get('label', '')
+                try:
+                    r_date = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+                    if r_date.tzinfo is not None: r_date = r_date.replace(tzinfo=None)
+                except: r_date = None
+                
+                rating = entry.get('im:rating', {}).get('label', '0')
+                
+                reviews.append({
+                    "text": content,
+                    "date": r_date,
+                    "rating": str(rating)
+                })
         return reviews
     except Exception as e:
-        return []
+        return reviews
 
 @st.cache_data(show_spinner=False, ttl=600)
 def fetch_google_play_reviews(app_id, days_limit):
     """Cached Google Play fetcher"""
     from google_play_scraper import Sort, reviews as play_reviews
     threshold_date = datetime.now() - timedelta(days=days_limit)
-    fetch_count = 500 if days_limit <= 30 else 1000
+    fetch_count = 1000 if days_limit <= 30 else 5000
     
     try:
         result, _ = play_reviews(
@@ -598,8 +598,12 @@ with tab1:
                     if fetched_comments:
                         MAX_REVIEWS = 500
                         if len(fetched_comments) > MAX_REVIEWS:
-                            st.warning(f"⚠️ En son {MAX_REVIEWS} yorum analize eklendi (Toplam bulunan {len(fetched_comments)}).")
-                            fetched_comments = fetched_comments[:MAX_REVIEWS]
+                            # Representatif örnekleme (homojen dağılım) -> Tüm dönemi kapsamak için
+                            import numpy as np
+                            indices = np.linspace(0, len(fetched_comments)-1, MAX_REVIEWS, dtype=int)
+                            fetched_comments = [fetched_comments[i] for i in indices]
+                            st.warning(f"⚠️ Dönem içindeki toplam yorum sayısı {MAX_REVIEWS}'ü aştığı için, seçtiğiniz tarih aralığını tam kapsayacak şekilde {MAX_REVIEWS} adet temsilî yorum eklendi.")
+                        
                         st.session_state.comments_to_analyze = fetched_comments
                         st.success(f"✅ **{len(st.session_state.comments_to_analyze)}** adet {time_range} yorumu başarıyla çekildi!")
                     else:
