@@ -47,6 +47,34 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# --- AUTO-RELOAD MECHANISM ---
+# Define the current version (to be updated on each deployment)
+CURRENT_VERSION = "2026-03-17-22-02"
+
+# JavaScript to poll for version changes and reload
+components.html(f"""
+    <script>
+    (function() {{
+        const currentVersion = "{CURRENT_VERSION}";
+        const pollInterval = 10000; // Poll every 10 seconds
+
+        setInterval(() => {{
+            // We use a dummy request to the same origin to check if the app is still alive
+            // and potentially fetch a version from a metadata endpoint or similar.
+            // For Streamlit Cloud, the most reliable way is often a simple periodic reload check
+            // if we can't easily access a version file.
+            // However, a simple way is to check if the 'CURRENT_VERSION' in the DOM matches.
+            
+            const serverVersion = window.parent.document.querySelector('meta[name="app-version"]')?.content;
+            if (serverVersion && serverVersion !== currentVersion) {{
+                window.parent.location.reload();
+            }}
+        }}, pollInterval);
+    }})();
+    </script>
+    <meta name="app-version" content="{CURRENT_VERSION}">
+""", height=0)
+
 
 @st.cache_resource(show_spinner="API yapılandırılıyor...")
 def setup_api():
