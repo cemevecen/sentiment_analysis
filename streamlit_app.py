@@ -1693,11 +1693,11 @@ with tab4:
     if "cmp_results" not in st.session_state:
         st.session_state.cmp_results = {}
 
-    num_apps = st.radio("Kaç uygulama?", [2, 3], horizontal=True, key="cmp_num_apps")
+    num_apps = 2
 
-    cmp_cols = st.columns(num_apps)
+    cmp_cols = st.columns(2)
     cmp_inputs = []
-    for ci in range(num_apps):
+    for ci in range(2):
         with cmp_cols[ci]:
             st.markdown(f'<div style="font-size:0.8rem;font-weight:600;color:#6366F1;margin-bottom:4px;">Uygulama {ci+1}</div>', unsafe_allow_html=True)
             url_val = st.text_input("", placeholder="com.example veya id123...", key=f"cmp_url_{ci}", label_visibility="collapsed")
@@ -3099,8 +3099,9 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
+_is_cmp = st.session_state.get("_cmp_mode", False) or bool(st.session_state.get("cmp_results"))
 _trigger = st.session_state.pop("_trigger_analysis", False)
-if (st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger) and not st.session_state.get("_cmp_mode"):
+if (st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger) and not _is_cmp:
     # Hızlı Analiz seçiliyse all_fetched_pool'dan tüm yorumları al
     current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
     all_pool = st.session_state.get("all_fetched_pool", [])
