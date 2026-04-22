@@ -1008,9 +1008,10 @@ def render_google_business_ui() -> None:
 
         # Giriş alanı
         gb_input = st.text_input(
-            "",
+            "Google linki veya işletme adı",
             placeholder="🔍 İşletme adı veya Google Maps linki girin",
             key="gb_url_input",
+            label_visibility="collapsed",
         )
 
         # Input değiştiyse seçili işletmeyi sıfırla
