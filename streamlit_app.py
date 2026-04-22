@@ -1184,10 +1184,7 @@ comments_to_analyze = []
 tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
 
 with tab1:
-    st.session_state["_on_cmp_tab"] = False
-    # Karşılaştırma modundan çıkış
-    if st.session_state.get("_cmp_mode"):
-        st.session_state.pop("_cmp_mode", None)
+    st.session_state["_cmp_mode"] = False  # Karşılaştırma modunu kapat
     with st.container(border=True):
         # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
@@ -1467,7 +1464,7 @@ with tab1:
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
 with tab2:
-    st.session_state["_on_cmp_tab"] = False
+    st.session_state["_cmp_mode"] = False
     uploaded_files = st.file_uploader("Dosya Yükle", type=["csv", "xlsx"], accept_multiple_files=True, label_visibility="collapsed")
     if uploaded_files:
         # Use a list of file info as a key to detect if files changed
@@ -1628,7 +1625,7 @@ with tab2:
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
 with tab3:
-    st.session_state["_on_cmp_tab"] = False
+    st.session_state["_cmp_mode"] = False
     text_input = st.text_area(
         "Yorumları alt alta girin:",
         height=200,
@@ -1691,7 +1688,6 @@ with tab3:
 
 with tab4:
     st.markdown("### Uygulama Karşılaştırma")
-    st.session_state["_on_cmp_tab"] = True
     st.markdown('<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">2 uygulama için de ID veya link gir.</div>', unsafe_allow_html=True)
 
     if "cmp_results" not in st.session_state:
@@ -1727,57 +1723,6 @@ with tab4:
         n_res = len(results_c)
         app_colors_sum = ["#818CF8", "#F4A261", "#38BDF8"]
 
-        # Mağaza meta verileri
-        cmp_meta = {}
-        active_valid = [u for u in cmp_inputs if u.strip()]
-        for u in active_valid:
-            try:
-                cu = u.lower().strip()
-                aid_m = ""
-                plat_m = ""
-                if "play.google.com" in u:
-                    plat_m = "google"
-                    m2 = re.search(r"id=([^&/]+)", u)
-                    if m2: aid_m = m2.group(1)
-                elif "apple.com" in u:
-                    plat_m = "apple"
-                    m2 = re.search(r"id(\d+)", u)
-                    if m2: aid_m = m2.group(1)
-                elif cu.startswith("id") and cu[2:].isdigit():
-                    plat_m = "apple"; aid_m = cu[2:]
-                elif cu.isdigit():
-                    plat_m = "apple"; aid_m = cu
-                elif "." in u and re.match(r"^[a-zA-Z0-9._]+$", u):
-                    plat_m = "google"; aid_m = u
-
-                if not aid_m: continue
-
-                if plat_m == "google":
-                    info_m = play_app(aid_m, lang='tr', country='tr')
-                    nm_m = info_m.get('title', aid_m)
-                    cmp_meta[nm_m] = {
-                        "rating": round(float(info_m.get('score') or 0), 1),
-                        "ratings": info_m.get('ratings', 0),
-                        "installs": info_m.get('installs', '?'),
-                        "version": info_m.get('version', '?'),
-                        "store": "Google Play",
-                    }
-                elif plat_m == "apple":
-                    r_m = requests.get(f"https://itunes.apple.com/lookup?id={aid_m}&country=tr", timeout=5)
-                    if r_m.status_code == 200:
-                        d_m = r_m.json()
-                        if d_m.get('results'):
-                            rc_m = d_m['results'][0]
-                            nm_m = rc_m.get('trackCensoredName', aid_m)
-                            cmp_meta[nm_m] = {
-                                "rating": round(float(rc_m.get('averageUserRating') or 0), 1),
-                                "ratings": rc_m.get('userRatingCount', 0),
-                                "installs": "App Store",
-                                "version": rc_m.get('version', '?'),
-                                "store": "App Store",
-                            }
-            except: pass
-
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
         sum_cols = st.columns(n_res)
 
@@ -1799,13 +1744,13 @@ with tab4:
                     tone_body = f"Olumlu (%{data['pos_pct']}) ve olumsuz (%{data['neg_pct']}) yorumlar dengeli seyrediyor."
                     bg_col = "#FEFCE8"; bdr_col = "#FDE68A"
 
-                # Mağaza meta
-                meta = cmp_meta.get(app_nm, {})
-                rating_val = meta.get("rating", 0)
-                ratings_cnt = meta.get("ratings", 0)
-                installs_val = meta.get("installs", "")
-                version_val = meta.get("version", "")
-                store_val = meta.get("store", "")
+                # Verileri doğrudan data'dan al
+                icon_url      = data.get("icon", "")
+                store_val     = data.get("store", "")
+                rating_val    = data.get("rating", 0)
+                ratings_cnt   = data.get("ratings", 0)
+                installs_val  = data.get("installs", "")
+                version_val   = data.get("version", "")
 
                 stars_filled = int(rating_val)
                 star_html = ""
@@ -1838,36 +1783,47 @@ with tab4:
   </div>
 </div>"""
 
-                card = f"""<div style="background:#FFFFFF;border:2px solid #E2E8F0;border-radius:14px;overflow:hidden;">
-<div style="background:{accent};padding:14px;text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;">
-<div style="font-size:0.78rem;font-weight:700;color:white;line-height:1.3;">{app_nm}</div>
-<div style="font-size:2rem;font-weight:800;color:white;line-height:1;">{data['score']}<span style="font-size:0.7rem;opacity:0.75;">/100</span></div>
-<div style="font-size:0.62rem;color:rgba(255,255,255,0.75);">{store_val}</div>
-</div>
-<div style="padding:14px;">
-{meta_html}
-<div style="font-size:0.72rem;font-weight:700;color:#1E293B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">{tone_title}</div>
-<p style="font-size:0.82rem;color:#334155;line-height:1.65;margin:0 0 12px 0;">{tone_body}</p>
-<div style="display:flex;flex-direction:column;gap:6px;">
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#10b981;font-weight:600;">Olumlu</span><span style="color:#10b981;font-weight:700;">{data['pos_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['pos_pct']}%;height:100%;background:#10b981;border-radius:3px;"></div></div></div>
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#f43f5e;font-weight:600;">Olumsuz</span><span style="color:#f43f5e;font-weight:700;">{data['neg_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['neg_pct']}%;height:100%;background:#f43f5e;border-radius:3px;"></div></div></div>
-<div>
-<div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;">
-<span style="color:#818cf8;font-weight:600;">Görüş</span><span style="color:#818cf8;font-weight:700;">{data['neu_pct']}%</span></div>
-<div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-<div style="width:{data['neu_pct']}%;height:100%;background:#818cf8;border-radius:3px;"></div></div></div>
-</div>
-<div style="margin-top:10px;font-size:0.7rem;color:#94A3B8;text-align:right;">{data['total']} yorum analiz edildi</div>
-</div>
-</div>"""
+
+
+                icon_html = (
+                    f'<img src="{icon_url}" '
+                    f'referrerpolicy="no-referrer" crossorigin="anonymous" '
+                    f'style="width:44px;height:44px;border-radius:10px;'
+                    f'object-fit:cover;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;" '
+                    f'onerror="this.style.display=\'none\'" />'
+                ) if icon_url else ""
+
+                header_html = (
+                    f'<div style="background:{accent};padding:14px;">'
+                    f'<div style="display:flex;align-items:center;gap:12px;">'
+                    f'{icon_html}'
+                    f'<div style="flex:1;min-width:0;">'
+                    f'<div style="font-size:0.78rem;font-weight:700;color:white;line-height:1.3;'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{app_nm}</div>'
+                    f'<div style="font-size:1.8rem;font-weight:800;color:white;line-height:1.1;">'
+                    f'{data["score"]}<span style="font-size:0.7rem;opacity:0.75;">/100</span></div>'
+                    f'<div style="font-size:0.62rem;color:rgba(255,255,255,0.75);">{store_val}</div>'
+                    f'</div>'
+                    f'</div>'
+                    f'</div>'
+                )
+
+                card = (
+                    '<div style="background:#FFFFFF;border:2px solid #E2E8F0;border-radius:14px;overflow:hidden;">'
+                    + header_html
+                    + '<div style="padding:14px;">'
+                    + meta_html
+                    + '<div style="font-size:0.72rem;font-weight:700;color:#1E293B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">' + tone_title + '</div>'
+                    + '<p style="font-size:0.82rem;color:#334155;line-height:1.65;margin:0 0 12px 0;">' + tone_body + '</p>'
+                    + '<div style="display:flex;flex-direction:column;gap:6px;">'
+                    + '<div><div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;"><span style="color:#10b981;font-weight:600;">Olumlu</span><span style="color:#10b981;font-weight:700;">' + str(data['pos_pct']) + '%</span></div><div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;"><div style="width:' + str(data['pos_pct']) + '%;height:100%;background:#10b981;border-radius:3px;"></div></div></div>'
+                    + '<div><div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;"><span style="color:#f43f5e;font-weight:600;">Olumsuz</span><span style="color:#f43f5e;font-weight:700;">' + str(data['neg_pct']) + '%</span></div><div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;"><div style="width:' + str(data['neg_pct']) + '%;height:100%;background:#f43f5e;border-radius:3px;"></div></div></div>'
+                    + '<div><div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:2px;"><span style="color:#818cf8;font-weight:600;">Görüş</span><span style="color:#818cf8;font-weight:700;">' + str(data['neu_pct']) + '%</span></div><div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;"><div style="width:' + str(data['neu_pct']) + '%;height:100%;background:#818cf8;border-radius:3px;"></div></div></div>'
+                    + '</div>'
+                    + '<div style="margin-top:10px;font-size:0.7rem;color:#94A3B8;text-align:right;">' + str(data['total']) + ' yorum analiz edildi</div>'
+                    + '</div>'
+                    + '</div>'
+                )
                 st.markdown(card, unsafe_allow_html=True)
 
         # Duygu derinlik analizi
@@ -1936,54 +1892,7 @@ with tab4:
                 st.markdown(_html, unsafe_allow_html=True)
 
 
-comments_to_analyze = st.session_state.comments_to_analyze
 
-
-
-_is_cmp = (
-    st.session_state.get("_cmp_mode", False)
-    or bool(st.session_state.get("cmp_results"))
-    or st.session_state.get("_on_cmp_tab", False)
-)
-
-if comments_to_analyze and not _is_cmp:
-    n = len(comments_to_analyze)
-
-    def fmt_time(secs):
-        m, s = divmod(secs, 60)
-        return f"{m} dakika {s} saniye" if m > 0 else f"{s} saniye"
-
-    col_method, col_depth = st.columns([1, 1])
-    
-    with col_method:
-        analysis_type = st.radio(
-            "Yöntem:",
-            options=["Hızlı Analiz", "Zengin Analiz"],
-            index=0,
-            key="analysis_type"
-        )
-
-    with col_depth:
-        if analysis_type == "Zengin Analiz":
-            mode_idx = st.radio(
-                "Derinlik:",
-                options=[0, 1],
-                format_func=lambda x: ["Genel", "Derin"][x],
-                captions=[
-                    f"~ {fmt_time(max(int((n * (1 - 0.82) * 0.7 / 28) * 60 / min(10, 28/60*3) + 10), 8))}",
-                    f"~ {fmt_time(max(int((n * (1 - 0.65) * 0.7 / 28) * 60 / min(10, 3) * 1.4 + 15), 15))}"
-                ],
-                key="analysis_mode"
-            )
-        else:
-            
-            st.session_state.analysis_mode = 0
-            mode_idx = 0
-
-    if analysis_type == "Zengin Analiz":
-        st.info("Zengin Analiz: Sonuçlar yapay zeka tarafından derinlemesine taranır.")
-    else:
-        st.info("Hızlı Tarama: Kelime bazlı analiz yapar. Basit derinlikte sonuç üretir.")
 
 
 import threading as _threading
@@ -3174,26 +3083,7 @@ def run_bulk_analysis(data_to_process, is_append=False):
     components.html("<script>window.parent.onbeforeunload = null;</script>", height=0)
     st.rerun()
 
-_is_cmp = (
-    st.session_state.get("_cmp_mode", False)
-    or bool(st.session_state.get("cmp_results"))
-    or st.session_state.get("_on_cmp_tab", False)
-)
-_trigger = st.session_state.pop("_trigger_analysis", False)
 
-if not _is_cmp:
-    if st.button("Analizini Yap", type="primary", use_container_width=True) or _trigger:
-        current_analysis_type = st.session_state.get("analysis_type", "Hızlı Analiz")
-        all_pool = st.session_state.get("all_fetched_pool", [])
-        if current_analysis_type == "Hızlı Analiz" and all_pool:
-            data_for_run = all_pool
-            st.session_state.comments_to_analyze = all_pool
-        else:
-            data_for_run = st.session_state.comments_to_analyze
-        if not data_for_run:
-            st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
-        else:
-            run_bulk_analysis(data_for_run)
 
 
 if "bulk_results" in st.session_state and not st.session_state.get("_cmp_mode"):
@@ -4452,10 +4342,25 @@ if st.session_state.get("_cmp_pending"):
             continue
 
         name_c = app_id_c
+        _icon = ""
+        _store_label = ""
+        _rating_store = 0.0
+        _ratings_store = 0
+        _installs_store = ""
+        _version_store = ""
+
         if platform_c == "google":
             try:
                 info_c = play_app(app_id_c, lang='tr', country='tr')
                 name_c = info_c.get('title', app_id_c)
+                _icon = (info_c.get('icon') or 
+                                 info_c.get('iconImage') or 
+                                 info_c.get('headerImage') or '')
+                _store_label = "Google Play"
+                _rating_store = round(float(info_c.get('score') or 0), 1)
+                _ratings_store = info_c.get('ratings', 0)
+                _installs_store = info_c.get('installs', '?')
+                _version_store = info_c.get('version', '?')
             except: pass
         elif platform_c == "apple":
             try:
@@ -4463,7 +4368,16 @@ if st.session_state.get("_cmp_pending"):
                 if r_c.status_code == 200:
                     d_c = r_c.json()
                     if d_c.get('results'):
-                        name_c = d_c['results'][0].get('trackCensoredName', app_id_c)
+                        rc_c = d_c['results'][0]
+                        name_c = rc_c.get('trackCensoredName', app_id_c)
+                        _icon = (rc_c.get('artworkUrl512') or 
+                                         rc_c.get('artworkUrl100') or 
+                                         rc_c.get('artworkUrl60') or '')
+                        _store_label = "App Store"
+                        _rating_store = round(float(rc_c.get('averageUserRating') or 0), 1)
+                        _ratings_store = rc_c.get('userRatingCount', 0)
+                        _installs_store = "App Store"
+                        _version_store = rc_c.get('version', '?')
             except: pass
 
         with st.spinner(f"{name_c} analiz ediliyor..."):
@@ -4495,11 +4409,68 @@ if st.session_state.get("_cmp_pending"):
                     "neg_pct": int(neg_c/total_c*100),
                     "neu_pct": int(neu_c/total_c*100),
                     "score": int((pos_c*100 + neu_c*50) / total_c),
+                    "icon": _icon,
+                    "store": _store_label,
+                    "rating": _rating_store,
+                    "ratings": _ratings_store,
+                    "installs": _installs_store,
+                    "version": _version_store,
                 }
             except Exception as e:
                 st.error(f"{name_c} çekilemedi: {e}")
 
     st.rerun()
+
+# --- KESİN ÇÖZÜM: ANALİZ BUTONU BLOĞU ---
+
+# Analiz edilecek veri var mı kontrol et
+_has_data = len(st.session_state.get("comments_to_analyze", [])) > 0
+
+# Veri varsa butonu göster
+if _has_data:
+    st.markdown('<div class="fancy-divider"></div>', unsafe_allow_html=True)
+    
+    # Seçenekler için iki kolon
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        # Key çakışmasını önlemek için benzersiz key: "final_method_sel"
+        a_type = st.radio(
+            "Yöntem Seçin:",
+            ["Hızlı Analiz", "Zengin Analiz"],
+            key="final_method_sel",
+            index=0 if st.session_state.get("analysis_type") == "Hızlı Analiz" else 1
+        )
+        st.session_state.analysis_type = a_type
+
+    with c2:
+        if st.session_state.analysis_type == "Zengin Analiz":
+            a_mode = st.radio(
+                "Derinlik:",
+                [0, 1],
+                format_func=lambda x: ["Genel", "Derin"][x],
+                key="final_mode_sel"
+            )
+            st.session_state.analysis_mode = a_mode
+        else:
+            st.session_state.analysis_mode = 0
+
+    # Bilgi Kutusu
+    if st.session_state.analysis_type == "Zengin Analiz":
+        st.info("🤖 Zengin Analiz: Yapay zeka tüm yorumları anlamlandırarak işler.")
+    else:
+        st.info("⚡ Hızlı Analiz: Kelime bazlı algoritmalarla anlık sonuç üretir.")
+
+    # İŞTE ANA BUTON
+    if st.button("🚀 ANALİZİ BAŞLAT", type="primary", use_container_width=True):
+        # Hızlı analizde eğer tüm havuz varsa onu kullan (daha kapsamlı sonuç için)
+        data_to_run = st.session_state.comments_to_analyze
+        if st.session_state.analysis_type == "Hızlı Analiz" and st.session_state.get("all_fetched_pool"):
+            data_to_run = st.session_state.all_fetched_pool
+            
+        # Analiz fonksiyonunu çağır
+        run_bulk_analysis(data_to_run)
+
 
 st.divider()
 st.caption("Geliştiren: ivicin")
