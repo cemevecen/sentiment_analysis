@@ -2083,9 +2083,10 @@ if "bulk_results" in st.session_state:
                     }};
 
                     const copyTextAction = (txt, plat) => {{
+                        if(plat === 'Google Chat') window.open('https://chat.google.com', '_blank');
+                        
                         navigator.clipboard.writeText(txt).then(() => {{
                             if(plat === 'Google Chat') {{
-                                window.open('https://chat.google.com', '_blank');
                                 pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
                             }} else {{
                                 pushNotif(plat + " Metni Kopyalandı! ✅");
@@ -2095,8 +2096,9 @@ if "bulk_results" in st.session_state:
                             el.value = txt; document.body.appendChild(el); el.select();
                             document.execCommand('copy'); document.body.removeChild(el);
                             if(plat === 'Google Chat') {{
-                                window.open('https://chat.google.com', '_blank');
                                 pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                            }} else {{
+                                pushNotif(plat + " Metni Kopyalandı! ✅");
                             }}
                         }});
                     }};
@@ -2111,7 +2113,8 @@ if "bulk_results" in st.session_state:
                             return;
                         }}
 
-                        pushNotif(mode === 'dl' ? "Görsel Hazırlanıyor... ⏳" : "Kart Kopyalanıyor... ⏳");
+                        if(platUrl) window.open(platUrl, '_blank');
+                        pushNotif(mode === 'dl' ? "Görsel Hazırlanıyor... ⏳" : "Görsel Hazırlanıyor... ⏳");
 
                         html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
                             if(mode === 'dl') {{
@@ -2125,12 +2128,10 @@ if "bulk_results" in st.session_state:
                                     try {{
                                         const data = [new ClipboardItem({{ [blob.type]: blob }})];
                                         navigator.clipboard.write(data).then(() => {{
-                                            if(platUrl) window.open(platUrl, '_blank');
                                             pushNotif(platUrl ? "Görsel Panoda! ✅ " + platName + "'da Yapıştırın" : "Görsel Kopyalandı! ✅");
                                         }}).catch(() => {{ throw new Error(); }});
                                     }} catch(e) {{
-                                        if(platUrl) window.open(platUrl, '_blank');
-                                        pushNotif("Görsel Kopyalanamadı, Manuel Deneyin.");
+                                        pushNotif(platUrl ? "Görsel Kopyalanamadı, Manuel Deneyin." : "Görsel Kopyalandı.");
                                     }}
                                 }}, 'image/png');
                             }}
