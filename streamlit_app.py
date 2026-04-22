@@ -2006,98 +2006,104 @@ if "bulk_results" in st.session_state:
         st.markdown(card_html, unsafe_allow_html=True)
         st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
 
-        # --- ULTIMATE UNIFIED SHARE & DOWNLOAD SYSTEM (Parent Frame) ---
-        import textwrap
-        import json
+        # --- NATIVE STREAMLIT UNIFIED TRAY ---
         import base64
+        import json
         
-        summary_escaped = json.dumps(summary_text)
+        # 1. Parent JS for PNG & PDF
         image_name = f"{app_name} ai sentiment report.png".replace(" ", "_")
-        excel_filename = image_name.replace(".png", ".xlsx")
-        excel_b64 = base64.b64encode(output.getvalue()).decode()
-        excel_href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_b64}"
-
-        ultimate_share_html = textwrap.dedent(f"""
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        st.markdown(f"""
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
             <div id="uNotif" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px) scale(0.9); background: #10B981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; opacity: 0; transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 9999999; box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); display: flex; align-items: center; gap: 10px; pointer-events: none; font-family: 'Poppins', sans-serif; white-space: nowrap;">
                 <span id="uMsg">Metin Kopyalandı!</span>
             </div>
-
             <style>
-                .u-tray {{ display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 30px 0; align-items: center; }}
-                .u-btn {{
-                    width: 46px; height: 46px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-                    display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer;
-                    transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-decoration: none !important;
+                /* Styler for native Streamlit buttons to look like sharing icons */
+                div[data-testid="stColumn"] button, div[data-testid="stColumn"] a {{
+                    min-height: 48px !important; height: 48px !important; width: 100% !important;
+                    padding: 0 !important; border-radius: 12px !important; border: 1px solid #E2E8F0 !important;
+                    background-color: white !important; color: #475569 !important; font-size: 1.2rem !important;
+                    transition: all 0.2s ease !important; display: flex !important; align-items: center !important; justify-content: center !important;
+                    text-decoration: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
                 }}
-                .u-btn:hover {{ transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: #CBD5E1; }}
-                .u-wa {{ color: #25D366; }} .u-li {{ color: #0077B5; }} .u-x {{ color: #000000; }}
-                .u-tg {{ color: #0088CC; }} .u-mail {{ color: #D44638; }}
-                .u-xl {{ color: #1D6F42; border-color: rgba(29, 111, 66, 0.1); }}
-                .u-pdf {{ color: #F4A261; border-color: rgba(244, 162, 97, 0.1); }}
-                .u-png {{ color: #6366F1; border-color: rgba(99, 102, 241, 0.1); }}
+                div[data-testid="stColumn"] button:hover, div[data-testid="stColumn"] a:hover {{
+                    transform: translateY(-3px) !important; box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important; border-color: #CBD5E1 !important;
+                }}
+                /* Color hints */
+                .wa-icon {{ color: #25D366 !important; }}
+                .li-icon {{ color: #0077B5 !important; }}
+                .x-icon {{ color: #000000 !important; }}
+                .tg-icon {{ color: #0088CC !important; }}
+                .mail-icon {{ color: #D44638 !important; }}
+                .xl-icon {{ color: #1D6F42 !important; }}
+                .pdf-icon {{ color: #F4A261 !important; }}
+                .png-icon {{ color: #6366F1 !important; }}
             </style>
-
-            <div class="u-tray">
-                <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="u-btn u-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="u-btn u-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="u-btn u-x" title="X (Twitter)"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="u-btn u-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
-                <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="u-btn u-mail" title="E-Posta"><i class="fa-solid fa-envelope"></i></a>
-                
-                <a href="{excel_href}" download="{excel_filename}" class="u-btn u-xl" title="Excel İndir"><i class="fa-solid fa-file-excel"></i></a>
-                <div class="u-btn u-pdf" onclick="window.parent.print()" title="PDF Yazdır / Kaydet"><i class="fa-solid fa-file-pdf"></i></div>
-                <div class="u-btn u-png" onclick="doUltimateAction('dl')" title="PNG Görseli İndir"><i class="fa-solid fa-file-image"></i></div>
-            </div>
-
             <script>
-                (function() {{
-                    const summary = {summary_escaped};
-                    const filename = "{image_name}";
-
-                    window.doUltimateAction = function(type) {{
-                        if (type === 'dl') {{
-                            const target = document.getElementById('nlp-report-card');
-                            if(!target) return;
-                            
-                            const pushNotif = (msg) => {{
-                                const n = document.getElementById('uNotif');
-                                const m = document.getElementById('uMsg');
-                                if(!n || !m) return;
-                                m.innerText = msg;
-                                n.style.opacity = '1';
-                                n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                                setTimeout(() => {{ 
-                                    n.style.opacity = '0';
-                                    n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
-                                }}, 3000);
-                            }};
-
-                            if (typeof html2canvas === 'undefined') {{
-                                pushNotif("Sistem Hazırlanıyor... ⏳");
-                                return;
-                            }}
-
-                            pushNotif("Görsel Hazırlanıyor... ⏳");
-
-                            html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF' }}).then(canvas => {{
-                                const link = document.createElement('a');
-                                link.download = filename;
-                                link.href = canvas.toDataURL('image/png');
-                                link.click();
-                                pushNotif("İndirme Başlatıldı! ⬇️");
-                            }}).catch(err => {{
-                                console.error("html2canvas error:", err);
-                                pushNotif("İşlem sırasında bir hata oluştu.");
-                            }});
-                        }}
-                    }};
-                }})();
+                function notify(msg) {{
+                    const n = document.getElementById('uNotif');
+                    const m = document.getElementById('uMsg');
+                    if(n && m) {{
+                        m.innerText = msg; n.style.opacity = '1';
+                        n.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                        setTimeout(() => {{ 
+                            n.style.opacity = '0';
+                            n.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
+                        }}, 3000);
+                    }}
+                }}
+                window.parent.triggerAction = function(type) {{
+                    if(type === 'pdf') window.print();
+                    if(type === 'png') {{
+                        const target = document.getElementById('nlp-report-card');
+                        if(!target) return;
+                        notify("Görsel Hazırlanıyor... ⏳");
+                        html2canvas(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF' }}).then(canvas => {{
+                            const link = document.createElement('a');
+                            link.download = "{image_name}";
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                            notify("İndirme Başlatıldı! ⬇️");
+                        }});
+                    }}
+                }}
             </script>
-        """).strip()
-        st.markdown(ultimate_share_html, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+
+        # 2. Native Columns
+        cols = st.columns(8)
+        
+        # 1-5 Social Links (using HTML inside columns for target="_blank" support)
+        links = [
+            (cols[0], "WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}", "fa-brands fa-whatsapp", "wa-icon"),
+            (cols[1], "LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}", "fa-brands fa-linkedin-in", "li-icon"),
+            (cols[2], "X", f"https://twitter.com/intent/tweet?text={encoded_text}", "fa-brands fa-x-twitter", "x-icon"),
+            (cols[3], "Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}", "fa-brands fa-telegram", "tg-icon"),
+            (cols[4], "Mail", f"mailto:?subject=NLP Analiz Raporu&body={encoded_text}", "fa-solid fa-envelope", "mail-icon")
+        ]
+        
+        for col, title, url, icon, cls in links:
+            with col:
+                st.markdown(f'<a href="{url}" target="_blank" title="{title}"><i class="{icon} {cls}"></i></a>', unsafe_allow_html=True)
+        
+        # 6. Native Excel Download
+        with cols[5]:
+             st.download_button(label=" ", data=output.getvalue(), file_name=image_name.replace(".png", ".xlsx"), 
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                                help="Excel İndir", key="icon_xl")
+             st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-excel xl-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
+
+        # 7. Native PDF Button
+        with cols[6]:
+            if st.button(" ", key="icon_pdf", help="PDF Olarak Yazdır"):
+                st.markdown('<script>window.parent.triggerAction("pdf");</script>', unsafe_allow_html=True)
+            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-pdf pdf-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
+
+        # 8. Native PNG Button
+        with cols[7]:
+            if st.button(" ", key="icon_png", help="PNG Görseli İndir"):
+                st.markdown('<script>window.parent.triggerAction("png");</script>', unsafe_allow_html=True)
+            st.markdown(f'<div style="margin-top:-48px; pointer-events:none; height:48px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-image png-icon" style="font-size:1.2rem;"></i></div>', unsafe_allow_html=True)
                     
     except Exception as e:
         st.error(f"Paylaşım sistemi hatası: {e}")
