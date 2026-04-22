@@ -503,21 +503,24 @@ st.markdown("""
         transform: scale(1.02);
     }
     
-    /* Primary Analyze Button Styling */
+    /* Primary Analyze Button Styling - Expanded as requested */
     .stButton > button[kind="primary"] {
         background-color: #F4A261 !important; /* Pastel Orange */
         color: #FFFFFF !important;
         border: none !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-        height: 50px !important;
-        font-weight: 600 !important;
+        box-shadow: 0 6px 12px rgba(244, 162, 97, 0.2) !important;
+        height: 65px !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        letter-spacing: 0.5px !important;
     }
     .stButton > button[kind="primary"] * {
         color: #FFFFFF !important;
     }
     .stButton > button[kind="primary"]:hover {
         background-color: #F8B478 !important;
-        transform: scale(1.02);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(244, 162, 97, 0.3) !important;
     }
 
     /* File Uploader Button - Restored & Refined */
