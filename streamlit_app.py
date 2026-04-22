@@ -3,6 +3,7 @@ import google.generativeai as genai
 import os
 import json
 import re
+import time
 import pandas as pd
 import plotly.express as px
 import io
@@ -210,7 +211,7 @@ def get_gemini_sentiment(text):
     if not HAS_GEMINI:
         return None
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash-lite')
         prompt = f"""
 Sen bir uygulama yorumu duygu analizi uzmanısın.
 Aşağıdaki yorumu oku ve kullanıcının genel duygusunu belirle.
@@ -310,6 +311,7 @@ if st.button("Duygu Durumunu Analiz Et", use_container_width=True):
                     "Tarih": date
                 })
                 progress_bar.progress((i + 1) / len(comments_to_analyze))
+                time.sleep(2)  # ~30 istek/dk kotasına uyum için bekleme
             
             st.session_state.bulk_results = bulk_results
             status_text.success("Analiz Başarıyla Tamamlandı!")
