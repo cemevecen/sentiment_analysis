@@ -133,69 +133,7 @@ COST_LIMIT_TL = 150.0
 API_TRACKER = {"cost_tl": 0.0}
 
 
-# AI API Configuration Logic (Main Flow)
-if 'ai_settings_expander' not in st.session_state:
-    st.session_state.ai_settings_expander = False
-
-def render_ai_settings():
-    with st.expander("🛠️ AI Ayarları & Maliyet", expanded=st.session_state.ai_settings_expander):
-        if not HAS_GEMINI and not HAS_MISTRAL and "streamlit" in str(st.__file__).lower():
-            st.error("AI API Key bulunamadı! Lütfen Streamlit Cloud 'Secrets' kısmına GOOGLE_API_KEY veya MISTRAL_API_KEY tanımlayın.")
-            if st.button("API'yi Yeniden Kontrol Et"):
-                st.cache_resource.clear()
-                st.rerun()
-
-        cost_now = API_TRACKER.get("cost_tl", 0.0)
-        if cost_now > 0:
-            st.info(f"💰 Tahmini Toplam Maliyet: ₺{cost_now:.2f} / ₺{COST_LIMIT_TL:.0f}")
-        
-        col_prov, col_mod = st.columns(2)
-        with col_prov:
-            ai_provider = st.selectbox(
-                "AI Sağlayıcı:",
-                options=["Google Gemini", "Mistral AI", "Groq AI"],
-                index=0 if HAS_GEMINI else 1 if HAS_MISTRAL else 2 if HAS_GROQ else 0,
-                key="ai_provider"
-            )
-        
-        if ai_provider == "Google Gemini":
-            with col_mod:
-                if not HAS_GEMINI:
-                    st.error("Gemini API Key bulunamadı!")
-                ai_model = st.selectbox(
-                    "Model:",
-                    options=["gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"],
-                    index=0,
-                    key="ai_model_gemini"
-                )
-            model_full_name = f"models/{ai_model}"
-        elif ai_provider == "Mistral AI":
-            with col_mod:
-                if not HAS_MISTRAL:
-                    st.error("Mistral API Key bulunamadı!")
-                ai_model = st.selectbox(
-                    "Model:",
-                    options=["mistral-tiny", "mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "open-mistral-7b", "open-mixtral-8x7b"],
-                    index=1,
-                    key="ai_model_mistral"
-                )
-            model_full_name = ai_model
-        else:
-            with col_mod:
-                if not HAS_GROQ:
-                    st.error("Groq API Key bulunamadı!")
-                ai_model = st.selectbox(
-                    "Model:",
-                    options=["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "deepseek-r1-distill-llama-70b"],
-                    index=0,
-                    key="ai_model_groq"
-                )
-            model_full_name = ai_model
-
-        st.session_state.current_ai_provider = ai_provider
-        st.session_state.current_ai_model = model_full_name
-
-# Initial setup to ensure variables exist before they are used
+# AI API Configuration Logic (Silent Init)
 initial_provider = "Google Gemini" if HAS_GEMINI else "Mistral AI" if HAS_MISTRAL else "Groq AI"
 initial_model = "models/gemini-2.0-flash-lite" if HAS_GEMINI else "mistral-small-latest" if HAS_MISTRAL else "llama-3.3-70b-versatile"
 
@@ -1233,9 +1171,6 @@ st.markdown(f"""
         <div class="header-title" style="margin-bottom: 0px;">AI Yorum Analizi</div>
     </div>
 """, unsafe_allow_html=True)
-
-# ── 3. AI AYARLARI (EXPANDER) ───────────────────────────────────────────────
-render_ai_settings()
 
 
 if 'comments_to_analyze' not in st.session_state:
