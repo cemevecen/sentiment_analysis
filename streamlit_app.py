@@ -109,12 +109,37 @@ st.markdown("""
         color: #1E293B !important;
     }
     
-    /* File Uploader */
+    /* File Uploader - Complete Makeover */
     [data-testid="stFileUploader"] {
-        background-color: #FFFFFF;
-        border: 2px dashed #FFD1B3;
+        background-color: #FFFFFF !important;
+        border: 2px dashed #FFD1B3 !important;
+        border-radius: 16px;
+        padding: 20px;
+    }
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #FFF9F5 !important; /* Very light pastel orange */
+        border: none !important;
         border-radius: 12px;
-        padding: 10px;
+    }
+    [data-testid="stFileUploader"] section {
+        background-color: transparent !important;
+    }
+    /* Change Browse Files Text */
+    [data-testid="stFileUploader"] button {
+        background-color: #FFB067 !important;
+        color: white !important;
+        border: none !important;
+        font-size: 0px !important; /* Hide original text */
+        border-radius: 8px !important;
+    }
+    [data-testid="stFileUploader"] button::after {
+        content: "Dosya Yükle";
+        font-size: 14px !important;
+        font-weight: 600;
+        visibility: visible;
+    }
+    [data-testid="stFileUploader"] button:hover {
+        background-color: #FB923C !important;
     }
     
     /* Info/Alert boxes - Pastelize */
