@@ -1391,8 +1391,8 @@ if "bulk_results" in st.session_state:
             p_neg = (m_olumsuz / total_all) * 100
             
             # Create a smooth but weighted gradient
-            # Green -> Blue -> Red
-            grad_bg = f"linear-gradient(90deg, #dcfce7 0%, #dcfce7 {p_pos}%, #dbeafe {p_pos}%, #dbeafe {p_pos+p_neu}%, #fee2e2 {p_pos+p_neu}%, #fee2e2 100%)"
+            # Vertical Stack: Green (Top) -> Blue (Middle) -> Red (Bottom)
+            grad_bg = f"linear-gradient(180deg, #dcfce7 0%, #dcfce7 {p_pos}%, #dbeafe {p_pos}%, #dbeafe {p_pos+p_neu}%, #fee2e2 {p_pos+p_neu}%, #fee2e2 100%)"
             border_c = "#10b981" if p_pos > p_neg and p_pos > p_neu else ("#f43f5e" if p_neg > p_pos and p_neg > p_neu else "#3b82f6")
         else:
             grad_bg = "#F8FAFC"
