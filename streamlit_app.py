@@ -604,6 +604,7 @@ st.markdown("""
         /* Input alanları tam genişlik */
         .stTextInput input {
             font-size: 16px !important; /* iOS zoom'u önler */
+            padding-left: 12px !important;
         }
         .stTextArea textarea {
             font-size: 16px !important;
@@ -1513,7 +1514,7 @@ if active_tab == "Mağaza Linki":
         # 3. Giriş alanı
         store_url = st.text_input(
             "",
-            placeholder="Uygulama ismi, linki veya ID girerek arama yapın",
+            placeholder="🔍 Uygulama ismi, linki veya ID girerek arama yapın",
             key="_store_url_input"
         )
         st.session_state.app_url = store_url
