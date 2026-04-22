@@ -1771,10 +1771,21 @@ if "bulk_results" in st.session_state:
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
         
         app_name = "Uygulama"
+        store_type = "STORE"
         if st.session_state.get('app_url'):
-            if "id=" in st.session_state.app_url: app_name = st.session_state.app_url.split("id=")[-1].split("&")[0]
-            elif "/id" in st.session_state.app_url: app_name = st.session_state.app_url.split("/id")[-1].split("?")[0]
+            url = st.session_state.app_url
+            if "youtube.com" in url or "youtu.be" in url:
+                app_name = "YouTube Video"
+                store_type = "YouTube"
+            elif "apple.com" in url:
+                if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
+                elif "/id" in url: app_name = url.split("/id")[-1].split("?")[0]
+                store_type = "App Store"
+            elif "play.google" in url:
+                if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
+                store_type = "Google Play"
 
+        report_title = f"{app_name.upper()} UYGULAMASI {store_type.upper()} ANALİZ RAPORU"
         summary_text = f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
         summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
         summary_text += f"Toplam Veri: {total_q} Yorum\n"
@@ -1806,7 +1817,7 @@ if "bulk_results" in st.session_state:
         st.markdown(f"""
 <div style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black;">
 <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">📊 NLP ANALİZ RAPORU</h2>
+<h2 style="margin: 0; color: #000000; font-size: 1.5rem;">📊 {report_title}</h2>
 <p style="color: #64748B; margin: 5px 0 0 0; font-size: 0.9rem;">Cem Evecen NLP Analiz Sistemi v3.0</p>
 </div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
