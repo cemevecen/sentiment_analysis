@@ -301,6 +301,13 @@ st.markdown("""
         color: #1E293B !important;
     }
     
+    /* Expand the main container width to 1000px for a "bigger" look */
+    [data-testid="stAppViewBlockContainer"] {
+        max-width: 1000px !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+
     /* Strict 5px spacing for headers and common text blocks */
     h1, h2, h3, h4, h5, h6, .stMarkdown div {
         margin-top: 0px !important;
