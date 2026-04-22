@@ -1008,6 +1008,70 @@ st.markdown("""
         position: absolute !important;
     }
 
+    /* ── Custom Chip Radio Buttons ────────────────── */
+    div[data-testid="stRadio"] > div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        background: transparent !important;
+        padding: 5px 0 !important;
+    }
+
+    div[data-testid="stRadio"] div[role="radiogroup"] > label {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        color: #475569 !important;
+        padding: 8px 20px !important;
+        border-radius: 50px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        margin: 0 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    }
+
+    div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+        background-color: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
+        transform: translateY(-1px);
+    }
+
+    /* Active State for Chips */
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
+        display: none !important; /* Hide the radio circle */
+    }
+
+    /* When the radio input inside the label is checked, style the parent label */
+    /* Streamlit's radio buttons are structured as: label > div > input */
+    /* Since we can't easily target the parent label based on child state in CSS without :has(), 
+       we use a sibling selector or rely on Streamlit's class application if possible. 
+       Actually, Streamlit's active radio label has a specific attribute or child. 
+       Let's use a simpler approach: targeting the 'checked' state. */
+
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+        background-color: #818CF8 !important; /* Indigo primary */
+        color: white !important;
+        border-color: #818CF8 !important;
+        box-shadow: 0 4px 10px rgba(129, 140, 248, 0.3) !important;
+        font-weight: 600 !important;
+    }
+
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p {
+        color: white !important;
+    }
+
+    /* Mobile adjustments for chips */
+    @media (max-width: 768px) {
+        div[data-testid="stRadio"] > div[role="radiogroup"] {
+            gap: 6px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            padding: 6px 14px !important;
+            font-size: 0.85rem !important;
+        }
+    }
+
     /* ── PRINT / PDF MODU ─────────────────────────────── */
     @media print {
 
@@ -1179,11 +1243,35 @@ if 'comments_to_analyze' not in st.session_state:
 if 'cmp_results' not in st.session_state:
     st.session_state.cmp_results = {}
 
-comments_to_analyze = [] 
+# --- TAB NAVIGATION ---
+def on_tab_change():
+    """Reset inputs and fetched data when switching tabs (unless analysis is active)."""
+    # Clear current fetching states
+    if "comments_to_analyze" in st.session_state:
+        st.session_state.comments_to_analyze = []
+    if "all_fetched_pool" in st.session_state:
+        st.session_state.all_fetched_pool = []
+    # Clear specific input keys to 'zero' the screen
+    st.session_state["_store_url_input"] = ""
+    st.session_state["manual_text_input"] = ""
+    # Reset file uploader by changing its key (indirectly) or just trusting it clears
+    if "last_files_key" in st.session_state:
+        st.session_state.last_files_key = ""
 
-tab1, tab2, tab3, tab4 = st.tabs(["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"])
+tabs = ["Mağaza Linki", "Dosya Yükle (CSV/Excel)", "Metin Girişi", "Karşılaştır"]
+active_tab = st.radio(
+    "Navigasyon",
+    tabs,
+    label_visibility="collapsed",
+    horizontal=True,
+    key="active_tab",
+    on_change=on_tab_change
+)
 
-with tab1:
+st.markdown('<div style="margin-top: 15px;"></div>', unsafe_allow_html=True)
+
+# Render Content based on active_tab
+if active_tab == "Mağaza Linki":
     with st.container(border=True):
         # 1. Geçmiş başlatma
         if "url_history" not in st.session_state:
@@ -1462,7 +1550,7 @@ with tab1:
                     loading_placeholder.empty()
                     st.error(f"Yorumlar çekilirken bir hata oluştu: {e}")
         
-with tab2:
+elif active_tab == "Dosya Yükle (CSV/Excel)":
     uploaded_files = st.file_uploader("Dosya Yükle", type=["csv", "xlsx"], accept_multiple_files=True, label_visibility="collapsed")
     if uploaded_files:
         # Use a list of file info as a key to detect if files changed
@@ -1622,7 +1710,7 @@ with tab2:
                     st.info(f"Hızlı Analiz: tüm **{len(all_comments)}** yorum işlenecek.")
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** gerçek yorum analiz için hazır!")
 
-with tab3:
+elif active_tab == "Metin Girişi":
     text_input = st.text_area(
         "Yorumları alt alta girin:",
         height=200,
@@ -1683,7 +1771,7 @@ with tab3:
             st.session_state.comments_to_analyze = processed_comments
             st.success(f"Toplam **{len(st.session_state.comments_to_analyze)}** geçerli satır eklendi!")
 
-with tab4:
+elif active_tab == "Karşılaştır":
     st.markdown("### Uygulama Karşılaştırma")
     st.markdown('<div style="font-size:0.85rem;color:#64748B;margin-bottom:12px;">2 uygulama için de ID veya link gir.</div>', unsafe_allow_html=True)
 
