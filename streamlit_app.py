@@ -219,6 +219,20 @@ st.markdown("""
         background-color: #FB923C !important;
         transform: scale(1.02);
     }
+
+    /* Excel Download Button - Specific Styling */
+    .stDownloadButton > button {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    }
+    .stDownloadButton > button:hover {
+        background-color: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
+        color: #000000 !important;
+        transform: scale(1.02);
+    }
     
     /* File Uploader Button - Restored & Refined */
     [data-testid="stFileUploader"] button[kind="secondary"] {
@@ -1094,7 +1108,7 @@ if "bulk_results" in st.session_state:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
-        st.download_button(label="📥 Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl")
+        st.download_button(label=" Sonuçları Excel Olarak İndir", data=output.getvalue(), file_name="analiz.xlsx", key="bulk_dl")
     except: pass
 
 # Footer
