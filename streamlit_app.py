@@ -3030,7 +3030,6 @@ if "bulk_results" in st.session_state:
     m_olumlu = counts.get("Olumlu", 0)
     m_olumsuz = counts.get("Olumsuz", 0)
     m_istek = counts.get("İstek/Görüş", 0)
-    m_skipped = len(df[df["Baskın Duygu"] == "—"])
     
     st.markdown(f"""
     <div class="metric-container">
@@ -3045,10 +3044,6 @@ if "bulk_results" in st.session_state:
         <div class="metric-card">
             <div class="metric-value" style="color: #3b82f6;">{m_istek}</div>
             <div class="metric-label">İstek / Görüş</div>
-        </div>
-        <div class="metric-card" style="border-style: dashed !important; opacity: 0.7;">
-            <div class="metric-value" style="color: #64748b;">{m_skipped}</div>
-            <div class="metric-label">Kısa / Atlandı</div>
         </div>
         <div class="metric-card">
             <div class="metric-value" style="color: #a78bfa;">{len(df)}</div>
