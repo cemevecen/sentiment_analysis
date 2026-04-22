@@ -1898,254 +1898,215 @@ if "bulk_results" in st.session_state:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         st.subheader("Analiz Raporunu Paylaş")
         
-        # Calculate Stats for Sharing
+        # --- PIE CHART & STATS PREPARATION ---
         total_q = len(df)
         pos_p = int((t_pos / total_q) * 100) if total_q > 0 else 0
         neg_p = int((t_neg / total_q) * 100) if total_q > 0 else 0
-        neu_p = int((t_neu / total_q) * 100) if total_q > 0 else 0 # İstek/Görüş (Neutral/Request)
+        neu_p = int((t_neu / total_q) * 100) if total_q > 0 else 0
         
-        # Calculate stops for 3D CSS Pie
-        stop1 = (t_pos / total_q) * 100 if total_q > 0 else 0
-        stop2 = ((t_pos + t_neg) / total_q) * 100 if total_q > 0 else 0
+        import math
+        def get_svg_path(start_pct, end_pct):
+            if end_pct - start_pct >= 99.9: 
+                return "M 0 -1 A 1 1 0 1 1 -0.001 -1 Z"
+            start_rad = math.radians(start_pct * 3.6 - 90)
+            end_rad = math.radians(end_pct * 3.6 - 90)
+            x1, y1 = math.cos(start_rad), math.sin(start_rad)
+            x2, y2 = math.cos(end_rad), math.sin(end_rad)
+            large_arc = 1 if (end_pct - start_pct) > 50 else 0
+            return f"M 0 0 L {x1:.3f} {y1:.3f} A 1 1 0 {large_arc} 1 {x2:.3f} {y2:.3f} Z"
 
-        # Priority: Use detected names from previous fetch if available
+        p_path = get_svg_path(0, pos_p)
+        n_path = get_svg_path(pos_p, pos_p + neg_p)
+        u_path = get_svg_path(pos_p + neg_p, 100)
+
+        # Priority: Use detected names
         app_name = urllib.parse.unquote(st.session_state.get('detected_app_name', "Uygulama"))
         store_type = st.session_state.get('detected_store_type', "STORE")
+        report_title = f"{app_name.upper()} {store_type.upper()} ANALİZ RAPORU"
 
-        # Fallback/Refinement for Link Input (if session state is missing)
-        if app_name == "Uygulama" and st.session_state.get('app_url'):
-            url = st.session_state.app_url
-            if "youtube.com" in url or "youtu.be" in url:
-                app_name = "YouTube Video"
-                store_type = "YouTube"
-            elif "apple.com" in url:
-                if "/app/" in url:
-                    try:
-                        raw_name = url.split("/app/")[-1].split("/")[0].replace("-", " ")
-                        app_name = urllib.parse.unquote(raw_name).title()
-                    except: 
-                        if "id=" in url: app_name = url.split("id=")[-1].split("&")[0]
-                store_type = "App Store"
-            elif "play.google" in url:
-                if "id=" in url:
-                    raw_id = url.split("id=")[-1].split("&")[0]
-                    app_name = urllib.parse.unquote(raw_id).replace("com.", "").replace("org.", "").split(".")[0].title()
-                store_type = "Google Play"
-
-        report_title = f"{app_name.upper()} UYGULAMASI {store_type.upper()} ANALİZ RAPORU"
-        summary_text = f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
-        summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
-        summary_text += f"Toplam Veri: {total_q} Yorum\n"
-        summary_text += f"Olumlu Deneyim: %{pos_p}\n"
-        summary_text += f"Olumsuz Deneyim: %{neg_p}\n"
+        # Text generation for sharing (Robust newlines)
+        summary_text = (
+            f"{app_name} Analiz Raporu (v3.0 Parallel Engine)\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Toplam Veri: {total_q} Yorum\n"
+            f"Olumlu Deneyim: %{pos_p}\n"
+            f"Olumsuz Deneyim: %{neg_p}\n"
+        )
         if st.session_state.get('ai_summary'):
             summary_text += f"Stratejik Tespit: {st.session_state.ai_summary[:150]}...\n"
-        summary_text += f"━━━━━━━━━━━━━━━━━━━━━\n"
-        app_host = "https://sentimentanalysis-aimode.streamlit.app/"
-        summary_text += f"Sen de uygulamanın analizini yap: [tıkla]({app_host})\n"
-        summary_text += "#NLP #BigData #SentimentAnalysis #CemEvecen"
-
+        summary_text += "━━━━━━━━━━━━━━━━━━━━━\n"
+        summary_text += f"Analizini yap: https://sentimentanalysis-aimode.streamlit.app/\n"
+        summary_text += "#NLP #SentimentAnalysis #CemEvecen"
+        
         encoded_text = urllib.parse.quote(summary_text)
-        
-        share_data = [
-            ("WhatsApp", f"https://api.whatsapp.com/send?text={encoded_text}"),
-            ("LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}"),
-            ("Twitter / X", f"https://twitter.com/intent/tweet?text={encoded_text}"),
-            ("Telegram", f"https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}"),
-            ("Facebook", f"https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}"),
-            ("E-posta", f"mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}"),
-            ("Reddit", f"https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}"),
-            ("Slack", f"slack://share?text={encoded_text}"),
-            ("Google Chat", summary_text),
-            ("Kopyala", summary_text)
-        ]
 
-        # Digital Report Card (Visual Summary)
+        # --- DIGITAL REPORT CARD (SVG 3D) ---
         st.markdown(f"""
-<div id="nlp-report-card" style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); font-family: 'Poppins', sans-serif; color: black; max-width: 650px; margin-left: auto; margin-right: auto;">
-<div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 20px;">
-<h2 style="margin: 0; color: #1E293B; font-size: 1.4rem; letter-spacing: -0.5px;">{report_title}</h2>
-</div>
-<div style="display: flex; justify-content: space-around; margin-bottom: 30px;">
-<div style="text-align: center; flex: 1;">
-<div style="font-size: 0.7rem; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Analiz</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #334155;">{total_q}</div>
-</div>
-<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-<div style="font-size: 0.7rem; color: #10B981; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumlu</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #10B981;">{t_pos}</div>
-</div>
-<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-<div style="font-size: 0.7rem; color: #EF4444; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Olumsuz</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #EF4444;">{t_neg}</div>
-</div>
-<div style="text-align: center; border-left: 1px solid #F1F5F9; flex: 1; padding: 0 10px;">
-<div style="font-size: 0.7rem; color: #3B82F6; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Görüş</div>
-<div style="font-size: 1.3rem; font-weight: 800; color: #3B82F6;">{t_neu}</div>
-</div>
-</div>
-<div style="display: flex; align-items: center; justify-content: space-around; margin: 40px 0; background: #F8FAFC; border-radius: 20px; padding: 25px;">
-<div style="perspective: 600px; width: 140px; height: 140px;">
-<div style="width: 140px; height: 140px; border-radius: 50%; background: conic-gradient(#10B981 0% {stop1}%, #EF4444 {stop1}% {stop2}%, #3B82F6 {stop2}% 100%); transform: rotateX(55deg) rotateZ(0deg); box-shadow: 0 12px 0 #CBD5E1, 0 15px 25px rgba(0,0,0,0.1);"></div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 12px;">
-<div style="display: flex; align-items: center; gap: 10px;">
-<div style="width: 14px; height: 14px; background: #10B981; border-radius: 4px;"></div>
-<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumlu (%{pos_p})</div>
-</div>
-<div style="display: flex; align-items: center; gap: 10px;">
-<div style="width: 14px; height: 14px; background: #EF4444; border-radius: 4px;"></div>
-<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Olumsuz (%{neg_p})</div>
-</div>
-<div style="display: flex; align-items: center; gap: 10px;">
-<div style="width: 14px; height: 14px; background: #3B82F6; border-radius: 4px;"></div>
-<div style="font-size: 0.9rem; color: #334155; font-weight: 500;">Görüş/Talep (%{neu_p})</div>
-</div>
-</div>
-</div>
-<div style="background: #FFFFFF; border-radius: 14px; padding: 20px; border: 1px solid #F1F5F9; border-left: 5px solid #6366F1; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-<div style="font-weight: 700; color: #1E293B; margin-bottom: 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-<span>💡</span> Stratejik Özet
-</div>
-<div style="color: #475569; font-size: 0.92rem; line-height: 1.6;">
-{st.session_state.get('ai_summary', 'Analiz özeti hazırlandığında burada görünecektir.')}
-</div>
-</div>
-<div style="margin-top: 30px; text-align: center; font-size: 0.8rem; color: #94A3B8; font-weight: 500;">
-📊 AI-Powered Sentiment Intelligence Report
-</div>
-</div>
-""", unsafe_allow_html=True)
+        <div id="nlp-report-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 35px; margin: 20px auto; box-shadow: 0 15px 35px rgba(0,0,0,0.08); font-family: 'Poppins', sans-serif; color: #1E293B; max-width: 600px; position: relative; overflow: hidden;">
+            <div style="text-align: center; border-bottom: 2px solid #F1F5F9; padding-bottom: 15px; margin-bottom: 25px;">
+                <h2 style="margin: 0; color: #0F172A; font-size: 1.3rem; font-weight: 700;">{report_title}</h2>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 35px; gap: 10px;">
+                <div style="text-align: center; flex: 1; background: #F8FAFC; padding: 12px; border-radius: 12px;">
+                    <div style="font-size: 0.65rem; color: #64748B; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Analiz</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #334155;">{total_q}</div>
+                </div>
+                <div style="text-align: center; flex: 1; background: #ECFDF5; padding: 12px; border-radius: 12px; border: 1px solid #D1FAE5;">
+                    <div style="font-size: 0.65rem; color: #059669; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumlu</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #059669;">{t_pos}</div>
+                </div>
+                <div style="text-align: center; flex: 1; background: #FEF2F2; padding: 12px; border-radius: 12px; border: 1px solid #FEE2E2;">
+                    <div style="font-size: 0.65rem; color: #DC2626; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Olumsuz</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #DC2626;">{t_neg}</div>
+                </div>
+                <div style="text-align: center; flex: 1; background: #EFF6FF; padding: 12px; border-radius: 12px; border: 1px solid #DBEAFE;">
+                    <div style="font-size: 0.65rem; color: #2563EB; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Görüş</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #2563EB;">{t_neu}</div>
+                </div>
+            </div>
 
-        st.info("💡 Yukarıdaki kartı ekran görüntüsü alarak veya aşağıdaki butonlarla paylaşabilirsiniz.")
-        
-        # --- PREMIUM SHARE TRAY ---
+            <div style="display: flex; align-items: center; justify-content: space-around; background: #F8FAFC; border-radius: 20px; padding: 30px; margin-bottom: 25px;">
+                <div style="width: 140px; height: 140px; position: relative;">
+                    <!-- Depth simulate (More reliable for capture) -->
+                    <div style="position: absolute; width: 130px; height: 130px; background: #CBD5E1; border-radius: 50%; top: 10px; transform: scaleY(0.6);"></div>
+                    <svg width="130" height="130" viewBox="-1.1 -1.1 2.2 2.2" style="position: absolute; top: 0; transform: scaleY(0.6); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); overflow: visible;">
+                        <path d="{p_path}" fill="#10B981" stroke="#FFFFFF" stroke-width="0.02" />
+                        <path d="{n_path}" fill="#EF4444" stroke="#FFFFFF" stroke-width="0.02" />
+                        <path d="{u_path}" fill="#3B82F6" stroke="#FFFFFF" stroke-width="0.02" />
+                    </svg>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #10B981; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumlu %{pos_p}</span></div>
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #EF4444; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Olumsuz %{neg_p}</span></div>
+                    <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 12px; height: 12px; background: #3B82F6; border-radius: 3px;"></div><span style="font-size: 0.85rem; font-weight: 600;">Görüş %{neu_p}</span></div>
+                </div>
+            </div>
+
+            <div style="background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #F1F5F9; border-left: 6px solid #6366F1; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="font-weight: 800; color: #1E293B; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.2rem;">💡</span> Stratejik Özet
+                </div>
+                <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; font-weight: 500;">
+                    {st.session_state.get('ai_summary', 'Analiz özeti hazırlanıyor...')}
+                </div>
+            </div>
+            <div style="margin-top: 30px; text-align: center; color: #94A3B8; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;">
+                📊 AI SENTIMENT INTELLIGENCE
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.info("💡 Yukarıdaki kartı kopyalayabilir veya doğrudan paylaşabilirsiniz.")
+
+        # --- PREMIUM SHARE TRAY & NOTIFICATION ---
         summary_text_js = summary_text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         
         st.markdown(f"""
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
         <style>
-            .share-tray {{
-                display: flex;
-                flex-wrap: wrap;
-                gap: 15px;
-                justify-content: center;
-                margin: 25px 0;
-                padding: 10px;
+            .share-tray {{ display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; }}
+            .share-btn {{
+                width: 54px; height: 54px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px;
+                display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                text-decoration: none !important; position: relative;
             }}
-            .share-icon {{
-                width: 52px;
-                height: 52px;
-                background: white;
-                border: 1px solid #E2E8F0;
-                border-radius: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.5rem;
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                text-decoration: none !important;
-                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-                position: relative;
+            .share-btn:hover {{ transform: translateY(-8px) scale(1.1); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #CBD5E1; z-index: 100; }}
+            .btn-wa {{ color: #25D366; }} .btn-wa:hover {{ background: #25D366; color: white; }}
+            .btn-li {{ color: #0077B5; }} .btn-li:hover {{ background: #0077B5; color: white; }}
+            .btn-x {{ color: #000000; }} .btn-x:hover {{ background: #000000; color: white; }}
+            .btn-tg {{ color: #0088CC; }} .btn-tg:hover {{ background: #0088CC; color: white; }}
+            .btn-fb {{ color: #1877F2; }} .btn-fb:hover {{ background: #1877F2; color: white; }}
+            .btn-mail {{ color: #G44638; }} .btn-mail:hover {{ background: #D44638; color: white; }}
+            .btn-rd {{ color: #FF4500; }} .btn-rd:hover {{ background: #FF4500; color: white; }}
+            .btn-sl {{ color: #4A154B; }} .btn-sl:hover {{ background: #4A154B; color: white; }}
+            .btn-gc {{ color: #00897B; }} .btn-gc:hover {{ background: #00897B; color: white; }}
+            .btn-pic {{ color: #8B5CF6; }} .btn-pic:hover {{ background: #8B5CF6; color: white; }}
+
+            .notif-tray {{
+                position: fixed; top: 40px; right: 40px; background: #10B981; color: white; 
+                padding: 18px 32px; border-radius: 15px; font-weight: 700; opacity: 0; 
+                transform: translateY(-20px) scale(0.9); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+                z-index: 999999; box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.5);
+                display: flex; align-items: center; gap: 12px; pointer-events: none;
             }}
-            .share-icon:hover {{
-                transform: translateY(-6px) scale(1.08);
-                box-shadow: 0 12px 20px -5px rgba(0,0,0,0.15);
-                border-color: #CBD5E1;
-                z-index: 10;
-            }}
-            .icon-wa {{ color: #25D366; }} .icon-wa:hover {{ background: #25D366; color: white; }}
-            .icon-li {{ color: #0077B5; }} .icon-li:hover {{ background: #0077B5; color: white; }}
-            .icon-x {{ color: #000000; }} .icon-x:hover {{ background: #000000; color: white; }}
-            .icon-tg {{ color: #0088CC; }} .icon-tg:hover {{ background: #0088CC; color: white; }}
-            .icon-fb {{ color: #1877F2; }} .icon-fb:hover {{ background: #1877F2; color: white; }}
-            .icon-mail {{ color: #D44638; }} .icon-mail:hover {{ background: #D44638; color: white; }}
-            .icon-rd {{ color: #FF4500; }} .icon-rd:hover {{ background: #FF4500; color: white; }}
-            .icon-sl {{ color: #4A154B; }} .icon-sl:hover {{ background: #4A154B; color: white; }}
-            .icon-gc {{ color: #00897B; }} .icon-gc:hover {{ background: #00897B; color: white; }}
-            .icon-pic {{ color: #8B5CF6; }} .icon-pic:hover {{ background: #8B5CF6; color: white; }}
-            
-            .copy-notif {{
-                position: fixed; top: 30px; right: 30px; background: #10B981; color: white; 
-                padding: 15px 30px; border-radius: 10px; font-weight: 700; 
-                opacity: 0; pointer-events: none; transition: all 0.4s ease; z-index: 10000;
-                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
-            }}
+            .notif-active {{ opacity: 1; transform: translateY(0) scale(1); }}
         </style>
-        
-        <div id="copyNotif" class="copy-notif">Kopyalandı! ✅</div>
-        
+
+        <div id="trayNotif" class="notif-tray">
+            <i class="fa-solid fa-circle-check" style="font-size: 1.4rem;"></i>
+            <span id="trayMsg" style="font-family: 'Poppins', sans-serif;">Kopyalandı!</span>
+        </div>
+
         <div class="share-tray">
-            <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-icon icon-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-icon icon-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-            <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-icon icon-x" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-icon icon-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-icon icon-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="mailto:?subject=NLP Analiz Raporu - {app_name}&body={encoded_text}" class="share-icon icon-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
-            <a href="https://www.reddit.com/submit?title=NLP Analiz Raporu&text={encoded_text}" target="_blank" class="share-icon icon-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
-            <a href="slack://share?text={encoded_text}" class="share-icon icon-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
-            <div onclick="window.parent.copyToClipTray('{summary_text_js}', true)" class="share-icon icon-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
-            <div onclick="window.parent.copyCardAsImage()" class="share-icon icon-pic" title="Görseli Kopyala"><i class="fa-solid fa-camera"></i></div>
+            <a href="https://api.whatsapp.com/send?text={encoded_text}" target="_blank" class="share-btn btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://cem-evecen.com&summary={encoded_text}" target="_blank" class="share-btn btn-li" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://twitter.com/intent/tweet?text={encoded_text}" target="_blank" class="share-btn btn-x" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="https://t.me/share/url?url=https://cem-evecen.com&text={encoded_text}" target="_blank" class="share-btn btn-tg" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://cem-evecen.com&quote={encoded_text}" target="_blank" class="share-btn btn-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="mailto:?subject=NLP Analiz Raporu&body={encoded_text}" class="share-btn btn-mail" title="E-posta"><i class="fa-solid fa-envelope"></i></a>
+            <a href="https://www.reddit.com/submit?title=NLP Raporu&text={encoded_text}" target="_blank" class="share-btn btn-rd" title="Reddit"><i class="fa-brands fa-reddit-alien"></i></a>
+            <a href="slack://share?text={encoded_text}" class="share-btn btn-sl" title="Slack"><i class="fa-brands fa-slack"></i></a>
+            <div onclick="doCopyText('{summary_text_js}', 'Google Chat')" class="share-btn btn-gc" title="Google Chat"><i class="fa-solid fa-comment-dots"></i></div>
+            <div onclick="doCopyCard()" class="share-btn btn-pic" title="Görseli Kopyala"><i class="fa-solid fa-camera"></i></div>
         </div>
 
         <script>
-            window.parent.copyToClipTray = function(text, isChat) {{
-                const el = document.createElement('textarea');
-                el.value = text;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                
-                const notif = document.getElementById('copyNotif');
-                if(notif) {{
-                    notif.innerText = isChat ? "Google Chat için Metin Kopyalandı! ✅" : "Metin Kopyalandı! ✅";
-                    notif.style.opacity = '1';
-                    setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
-                }}
+            function pushNotif(msg) {{
+                const n = document.getElementById('trayNotif');
+                const m = document.getElementById('trayMsg');
+                if(!n || !m) return;
+                m.innerText = msg;
+                n.classList.add('notif-active');
+                setTimeout(() => {{ n.classList.remove('notif-active'); }}, 4000);
+            }}
+
+            window.doCopyText = function(txt, plat) {{
+                navigator.clipboard.writeText(txt).then(() => {{
+                    if(plat === 'Google Chat') {{
+                        window.open('https://chat.google.com', '_blank');
+                        pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                    }} else {{
+                        pushNotif(plat + " Metni Kopyalandı! ✅");
+                    }}
+                }}).catch(() => {{
+                    const el = document.createElement('textarea');
+                    el.value = txt; document.body.appendChild(el); el.select();
+                    document.execCommand('copy'); document.body.removeChild(el);
+                    if(plat === 'Google Chat') {{
+                        window.open('https://chat.google.com', '_blank');
+                        pushNotif("Google Chat Açılıyor & Metin Kopyalandı! ✅");
+                    }} else {{
+                        pushNotif(plat + " Metni Kopyalandı! ✅");
+                    }}
+                }});
             }};
 
-            window.parent.copyCardAsImage = function() {{
-                const target = window.parent.document.getElementById('nlp-report-card');
-                const notif = document.getElementById('copyNotif');
+            window.doCopyCard = function() {{
+                const target = document.getElementById('nlp-report-card');
+                if(!target) return;
                 
-                if (!target) return;
+                const h2c = window.html2canvas || (window.parent && window.parent.html2canvas);
+                if(!h2c) {{ pushNotif("Sistem Hazırlanıyor... ⏳"); return; }}
                 
-                const captureFunc = window.html2canvas || window.parent.html2canvas;
-                if (!captureFunc) {{
-                    if (notif) {{
-                        notif.innerText = "Sistem hazırlanıyor... ⏳";
-                        notif.style.opacity = '1';
-                        setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
-                    }}
-                    return;
-                }}
-
-                if (notif) {{
-                    notif.innerText = "Görsel hazırlanıyor... ⏳";
-                    notif.style.opacity = '1';
-                }}
-
-                captureFunc(target, {{scale: 2, backgroundColor: '#FFFFFF', useCORS: true}}).then(canvas => {{
+                pushNotif("Görsel Hazırlanıyor... ⏳");
+                h2c(target, {{ scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false }}).then(canvas => {{
                     canvas.toBlob(blob => {{
                         try {{
-                            const item = new ClipboardItem({{ "image/png": blob }});
-                            navigator.clipboard.write([item]).then(() => {{
-                                if (notif) {{
-                                    notif.innerText = "Görsel Kopyalandı! ✅ (X/Slack'e yapıştırabilirsiniz)";
-                                    notif.style.opacity = '1';
-                                    setTimeout(() => {{ notif.style.opacity = '0'; }}, 4000);
-                                }}
-                            }});
-                        }} catch (err) {{
-                            if (notif) {{
-                                notif.innerText = "Hata: Görsel kopyalanamadı. ❌";
-                                notif.style.opacity = '1';
-                                setTimeout(() => {{ notif.style.opacity = '0'; }}, 3000);
-                            }}
+                            const data = [new ClipboardItem({{ [blob.type]: blob }})];
+                            navigator.clipboard.write(data).then(() => {{
+                                pushNotif("Görsel Kopyalandı! ✅");
+                            }}).catch(() => {{ throw new Error(); }});
+                        }} catch(e) {{
+                            const url = canvas.toDataURL();
+                            const link = document.createElement('a');
+                            link.download = 'nlp-report-card.png';
+                            link.href = url;
+                            link.click();
+                            pushNotif("İndirme Başlatıldı ⬇️");
                         }}
-                    }});
+                    }}, 'image/png');
                 }});
             }};
         </script>
