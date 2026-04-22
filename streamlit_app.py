@@ -933,6 +933,10 @@ if st.button("Analizini Yap", use_container_width=True):
         st.warning("Lütfen analiz edilecek bir metin girin veya dosya yükleyin.")
     else:
         bulk_results = []
+        # Eski sonuçları hemen temizle — yeni analiz başlamadan önce
+        if "bulk_results" in st.session_state:
+            del st.session_state["bulk_results"]
+
         time_display = st.empty()  # MOVED: Immediately below button
         progress_bar = st.progress(0)
         status_text = st.empty()
