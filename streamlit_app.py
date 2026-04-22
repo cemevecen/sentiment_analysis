@@ -63,20 +63,39 @@ if is_bulk:
             comments_to_analyze = [line.strip() for line in raw_lines if len(line.strip()) > 2]
             
     with tab2:
-        uploaded_file = st.file_uploader("CSV veya Excel dosyası yükleyin", type=["csv", "xlsx"])
-        if uploaded_file:
-            try:
-                if uploaded_file.name.endswith('.csv'):
-                    df_upload = pd.read_csv(uploaded_file)
-                else:
-                    df_upload = pd.read_excel(uploaded_file)
-                
-                col_name = st.selectbox("Yorumların bulunduğu sütunu seçin:", df_upload.columns)
-                if col_name:
-                    comments_to_analyze = df_upload[col_name].dropna().astype(str).tolist()
-                    st.success(f"{len(comments_to_analyze)} yorum dosyadan yüklendi.")
-            except Exception as e:
-                st.error(f"Dosya okuma hatası: {e}")
+        uploaded_files = st.file_uploader("CSV veya Excel dosyaları yükleyin", type=["csv", "xlsx"], accept_multiple_files=True)
+        if uploaded_files:
+            all_comments = []
+            for uploaded_file in uploaded_files:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        # Try different encodings for CSV files
+                        df_upload = None
+                        for encoding in ['utf-8', 'latin-1', 'utf-16', 'cp1252']:
+                            try:
+                                uploaded_file.seek(0)
+                                df_upload = pd.read_csv(uploaded_file, encoding=encoding)
+                                break
+                            except Exception:
+                                continue
+                        
+                        if df_upload is None:
+                            st.error(f"{uploaded_file.name} okunamadı: Kodlama hatası.")
+                            continue
+                    else:
+                        df_upload = pd.read_excel(uploaded_file)
+                    
+                    st.write(f"--- {uploaded_file.name} ---")
+                    col_name = st.selectbox(f"Yorum sütunu ({uploaded_file.name}):", df_upload.columns, key=f"col_{uploaded_file.name}")
+                    if col_name:
+                        file_comments = df_upload[col_name].dropna().astype(str).tolist()
+                        all_comments.extend(file_comments)
+                except Exception as e:
+                    st.error(f"{uploaded_file.name} okuma hatası: {e}")
+            
+            if all_comments:
+                comments_to_analyze = all_comments
+                st.success(f"Toplam {len(comments_to_analyze)} yorum tüm dosyalardan yüklendi.")
 else:
     text_input = st.text_input("Analiz edilecek metni girin:", placeholder="Örn: Bugün harika bir gün!")
     if text_input:
