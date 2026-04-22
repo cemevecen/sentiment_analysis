@@ -14,9 +14,8 @@ from datetime import datetime, timedelta
 from google_play_scraper import Sort, reviews as play_reviews
 # Removed app-store-scraper due to dependency conflicts with streamlit
 from dotenv import load_dotenv
-
-# Load environment variables (for local testing)
-load_dotenv(override=True)
+if os.path.exists(".env"):
+    load_dotenv(override=True)
 
 # Set Page Config
 st.set_page_config(
@@ -25,22 +24,21 @@ st.set_page_config(
     layout="centered"
 )
 
-# API Configuration
-# Priority: 1. .env (local), 2. st.secrets (cloud)
-API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
+# API Configuration: Optimized via Caching
+@st.cache_resource
+def setup_api():
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY")
+        except:
+            api_key = None
+    if api_key and str(api_key).strip():
+        genai.configure(api_key=str(api_key).strip())
+        return True
+    return False
 
-if not API_KEY:
-    try:
-        API_KEY = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY")
-    except Exception:
-        API_KEY = None
-
-if API_KEY and str(API_KEY).strip():
-    API_KEY = str(API_KEY).strip()
-    genai.configure(api_key=API_KEY)
-    HAS_GEMINI = True
-else:
-    HAS_GEMINI = False
+HAS_GEMINI = setup_api()
 
 # --- UTILS: Content Cleanup Filter ---
 def is_valid_comment(text):
@@ -708,36 +706,36 @@ with tab2:
                                 st.write(", ".join(meta_status) if meta_status else "Yok")
 
 
-                            valid_in_file = 0
-                            for _, row in df_upload.iterrows():
-                                comment_text = str(row[col_name]).strip() if pd.notnull(row[col_name]) else ""
-                                valid_text = is_valid_comment(comment_text)
-                                has_rating = rate_col and pd.notnull(row[rate_col])
-                                
-                                if valid_text or has_rating:
-                                    entry = {"text": comment_text, "is_valid": valid_text}
-                                    
-                                    # Capture Date
-                                    if date_col and pd.notnull(row[date_col]):
-                                        dt_val = row[date_col]
-                                        if not isinstance(dt_val, (int, float)):
-                                            parsed_date = pd.to_datetime(dt_val, errors='coerce')
-                                            # If logic fails for unusual formats, then Try dayfirst
-                                            if pd.isnull(parsed_date):
-                                                parsed_date = pd.to_datetime(dt_val, errors='coerce', dayfirst=True)
+                            # OPTIMIZED: Vectorized Data Processing for performance
+                            valid_masks = df_upload[col_name].astype(str).apply(is_valid_comment)
+                            
+                            processed_df = pd.DataFrame({
+                                "text": df_upload[col_name].astype(str).str.strip(),
+                                "is_valid": valid_masks
+                            })
+                            
+                            # Vectorized Date Capture
+                            if date_col:
+                                try:
+                                    processed_df["date"] = pd.to_datetime(df_upload[date_col], errors='coerce')
+                                    # If mostly failed, try dayfirst
+                                    if processed_df["date"].isnull().sum() > len(processed_df) * 0.5:
+                                        processed_df["date"] = pd.to_datetime(df_upload[date_col], errors='coerce', dayfirst=True)
+                                    # Clean timezone info for st.session_state compatibility
+                                    processed_df["date"] = processed_df["date"].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) and hasattr(x, 'tzinfo') else x)
+                                except:
+                                    pass
+                            
+                            # Vectorized Rating Capture
+                            if rate_col:
+                                processed_df["rating"] = df_upload[rate_col].astype(str)
+                            
+                            # Final Filter: Keep rows that are either valid comments or have a rating
+                            mask = processed_df["is_valid"] | (processed_df["rating"].notnull() if rate_col else False)
+                            final_comments_df = processed_df[mask]
+                            all_comments = final_comments_df.to_dict('records')
+                            valid_in_file = int(final_comments_df["is_valid"].sum())
 
-                                            if pd.notnull(parsed_date) and parsed_date.tzinfo is not None:
-                                                parsed_date = parsed_date.tz_localize(None)
-                                            entry["date"] = parsed_date
-                                    
-                                    # Capture Rating
-                                    if rate_col and pd.notnull(row[rate_col]):
-                                        entry["rating"] = str(row[rate_col])
-                                        
-                                    all_comments.append(entry)
-                                    if valid_text:
-                                        valid_in_file += 1
-                                    
                             st.caption(f"Bu dosyadan {valid_in_file} gecerli yorum eklendi.")
                             
             except Exception as e:

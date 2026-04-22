@@ -2,13 +2,7 @@ streamlit
 google-generativeai
 python-dotenv
 requests
-fastapi
-uvicorn
-pydantic
-python-multipart
 pandas
 openpyxl
 plotly
-# tensorflow  # Opsiyonel: Eğer yerel model (DistilBERT) kullanılacaksa açın
-# transformers # Opsiyonel: Eğer yerel model (DistilBERT) kullanılacaksa açın
 google-play-scraper
