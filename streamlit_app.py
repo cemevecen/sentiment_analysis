@@ -1343,7 +1343,9 @@ with tab1:
         elif st.session_state.get("last_fetch_key") == fetch_key and st.session_state.get("all_fetched_pool"):
             # Cache'den geliyor — geçmişe ekle
             current_url = store_url.strip()
+            # Cache'deki ismi almaya çalış, yoksa session'dakini kullan
             current_name = st.session_state.get("detected_app_name", current_url)
+            
             existing_urls = [h["url"] if isinstance(h, dict) else h for h in st.session_state.url_history]
             if current_url and current_url not in existing_urls:
                 st.session_state.url_history.insert(0, {
@@ -1351,6 +1353,13 @@ with tab1:
                     "name": current_name
                 })
                 st.session_state.url_history = st.session_state.url_history[:5]
+            else:
+                # Zaten varsa ve ismi ID ise, session'daki daha iyi isimle güncelle
+                for h in st.session_state.url_history:
+                    if isinstance(h, dict) and h["url"] == current_url:
+                        if h["name"] == app_id and current_name != app_id:
+                            h["name"] = current_name
+                        break
         else:
             if "bulk_results" in st.session_state:
                 del st.session_state.bulk_results
@@ -1367,22 +1376,24 @@ with tab1:
                 except: pass
             elif platform == "apple":
                 st_for_state = "App Store"
-                # Try iTunes API first for accurate name
-                try:
-                    resp = requests.get(f"https://itunes.apple.com/lookup?id={app_id}&country={country}", timeout=5)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        if data.get('results'):
-                            name_for_state = data['results'][0].get('trackCensoredName', app_id)
-                        elif "apple.com" in u and "/app/" in u:
-                            raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
-                            name_for_state = urllib.parse.unquote(raw_name).title()
-                except:
-                    if "apple.com" in u and "/app/" in u:
-                        try:
-                            raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
-                            name_for_state = urllib.parse.unquote(raw_name).title()
-                        except: pass
+                # Try iTunes API with multiple countries fallback
+                found_name = False
+                for try_country in [country, 'tr', 'us', 'gb']:
+                    try:
+                        resp = requests.get(f"https://itunes.apple.com/lookup?id={app_id}&country={try_country}", timeout=5)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            if data.get('results'):
+                                name_for_state = data['results'][0].get('trackCensoredName', app_id)
+                                found_name = True
+                                break
+                    except: continue
+                
+                if not found_name and "apple.com" in u and "/app/" in u:
+                    try:
+                        raw_name = u.split("/app/")[-1].split("/")[0].replace("-", " ")
+                        name_for_state = urllib.parse.unquote(raw_name).title()
+                    except: pass
 
             with st.container():
                 loading_placeholder = st.empty()
