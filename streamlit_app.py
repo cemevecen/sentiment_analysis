@@ -946,20 +946,22 @@ if "bulk_results" in st.session_state:
                 
                 fig_dist.update_layout(
                     height=450, 
-                    margin={"t": 60, "b": 40, "l": 10, "r": 10},
+                    margin={"t": 60, "b": 100, "l": 10, "r": 10},
                     xaxis_title="",
                     yaxis_title="Yorum / Puan Sayısı",
-                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+                    legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
                     barmode='stack',
                     bargap=0.3,
                     template="plotly_white",
                     paper_bgcolor="#F0F9FF",
                     plot_bgcolor="#F0F9FF",
-                    font={"color": "#1E293B"}
+                    font={"color": "#000000", "family": "Poppins, sans-serif"},
+                    title_font={"color": "#000000", "size": 18}
                 )
                 
-                # Force categorical X axis to avoid interpolation
-                fig_dist.update_xaxes(type='category', tickangle=-45)
+                # Force categorical X axis and black ticks
+                fig_dist.update_xaxes(type='category', tickangle=-45, tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+                fig_dist.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
                 st.plotly_chart(fig_dist, use_container_width=True)
         except Exception as e:
             st.error(f"Grafik oluşturma hatası: {e}")
@@ -984,10 +986,17 @@ if "bulk_results" in st.session_state:
                                custom_data=["Hafta_str", "Baskın Duygu"])
             
             fig_trend.update_layout(height=350, margin={"t": 80, "b": 40, "l": 10, "r": 10},
-                                   legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+                                   legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1, "font": {"color": "#000000"}},
                                    xaxis_title="Tarih (Haftalık)", yaxis_title="Yorum Sayısı",
                                    template="plotly_white",
+                                   paper_bgcolor="#F0F9FF",
+                                   plot_bgcolor="#F0F9FF",
+                                   font={"color": "#000000", "family": "Poppins, sans-serif"},
+                                   title_font={"color": "#000000", "size": 18},
                                    clickmode='event+select')
+            
+            fig_trend.update_xaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
+            fig_trend.update_yaxes(tickfont={"color": "#000000"}, title_font={"color": "#000000"})
             
             # Use on_select for interactivity (Streamlit 1.35+)
             selection = st.plotly_chart(fig_trend, use_container_width=True, on_select="rerun", key=f"chart_{key}")
