@@ -27,14 +27,13 @@ st.set_page_config(
 
 # API Configuration
 # Priority: 1. .env (local), 2. st.secrets (cloud)
-API_KEY = os.getenv("GEMINI_API_KEY")
+API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
 
 if not API_KEY:
     try:
-        # Check if we are running on Streamlit Cloud by checking if secrets are available
-        API_KEY = st.secrets.get("API_KEY")
+        # Check both common secret names in Streamlit Cloud
+        API_KEY = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("API_KEY")
     except Exception:
-        # Fallback to a plain None if secrets are not accessible
         API_KEY = None
 
 if API_KEY:
